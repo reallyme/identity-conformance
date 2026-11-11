@@ -30,7 +30,26 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "${GITHUB_TOKEN}"
+          set +e
           python3 scripts/check_pin_freshness.py --format json > pin-freshness-report.json
+          freshness_status="$?"
+          set -e
+          jq --exit-status '
+            .schema == "reallyme.identity.pin_freshness_report.v1"
+            and (.status == "current" or .status == "stale" or .status == "unavailable")
+          ' pin-freshness-report.json >/dev/null
+          if [[ "${freshness_status}" -eq 0 ]]; then
+            exit 0
+          fi
+          if [[ "${freshness_status}" -eq 2 ]]; then
+            printf 'One or more reviewed pins are stale.\n' >&2
+            exit 2
+          fi
+          if [[ "${freshness_status}" -eq 3 ]]; then
+            printf '::warning title=Authoritative source unavailable::Pin freshness could not be fully evaluated; review the retained report.\n'
+            exit 0
+          fi
+          exit "${freshness_status}"
       - name: Retain freshness report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

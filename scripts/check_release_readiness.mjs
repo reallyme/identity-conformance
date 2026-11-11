@@ -3,6 +3,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+import { readFileSync } from "node:fs";
+
 const coreUrl = process.env.RELEASE_READINESS_CORE_URL;
 if (typeof coreUrl !== "string" || coreUrl.length === 0) {
   console.error("release readiness check failed: pinned core URL is unavailable");
@@ -28,6 +30,7 @@ const {
 
 const workflow = ".github/workflows/release-readiness.yml";
 const releaseCandidateWorkflow = ".github/workflows/release-candidate.yml";
+const pinFreshnessWorkflow = ".github/workflows/pin-freshness.yml";
 const secretScanWorkflow = ".github/workflows/secret-scan.yml";
 const openid4vciCertificationWorkflow =
   ".github/workflows/oidf-openid4vci-certification.yml";
@@ -475,6 +478,12 @@ for (const candidateNeedle of [
 ]) {
   assertContains(releaseCandidateWorkflow, candidateNeedle);
 }
+if (readFileSync(releaseCandidateWorkflow, "utf8").includes("check_pin_freshness.py")) {
+  fail("release candidate must not depend on live publisher availability");
+}
+assertContains(pinFreshnessWorkflow, 'freshness_status="$?"');
+assertContains(pinFreshnessWorkflow, '.status == "unavailable"');
+assertContains(pinFreshnessWorkflow, "Authoritative source unavailable");
 assertContains(
   workflow,
   "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",

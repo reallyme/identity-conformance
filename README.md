@@ -90,7 +90,9 @@ vendored.
 Two scheduled workflows support maintenance:
 
 - `pin-freshness.yml` compares every machine-checkable pin with authoritative
-  upstream metadata and fails when a reviewed baseline is stale.
+  upstream metadata and fails when a reviewed baseline is stale. Temporary
+  publisher unavailability produces a warning and a retained unavailable
+  report rather than misreporting the baseline as stale.
 - `upstream-update-proposal.yml` produces a review-only OIDF proposal containing
   the current suite release, master commit, publication digests, and source-tag
   commits.
@@ -99,6 +101,12 @@ Neither workflow changes repository files, opens a pull request, publishes a
 release, or promotes a new baseline. A maintainer reviews a proposal, updates
 the locks, fetches the exact suite revision, regenerates the OIDF snapshots,
 and runs the complete release gate.
+
+Framework release construction does not contact external standards publishers.
+It validates and digest-binds the reviewed locks so a release is reproducible
+and cannot fail solely because an ISO, ETSI, IETF, W3C, or OpenID endpoint is
+temporarily unavailable. Pin freshness remains a separate maintenance gate and
+must be reviewed before a baseline is promoted.
 
 ```sh
 python3 scripts/check_pin_freshness.py

@@ -4,7 +4,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
+import json
 import sys
 import unittest
 import urllib.error
@@ -32,6 +35,35 @@ FRESHNESS = load_script()
 
 
 class PinFreshnessTests(unittest.TestCase):
+    def test_json_report_records_authoritative_source_unavailability(self) -> None:
+        output = io.StringIO()
+        errors = io.StringIO()
+
+        with (
+            patch.object(
+                FRESHNESS,
+                "run_checks",
+                side_effect=FRESHNESS.FreshnessError("source unavailable"),
+            ),
+            patch.object(
+                sys,
+                "argv",
+                ["check_pin_freshness.py", "--format", "json"],
+            ),
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(errors),
+        ):
+            status = FRESHNESS.main()
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(status, FRESHNESS.EXIT_UNAVAILABLE)
+        self.assertEqual(report["status"], "unavailable")
+        self.assertEqual(
+            report["error"], {"code": "authoritative_source_unavailable"}
+        )
+        self.assertEqual(report["checks"], [])
+        self.assertEqual(errors.getvalue(), "")
+
     def test_transient_publication_failure_is_retried(self) -> None:
         response = MagicMock()
         response.__enter__.return_value.read.return_value = b"publication"

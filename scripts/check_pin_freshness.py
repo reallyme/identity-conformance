@@ -1057,6 +1057,20 @@ def main() -> int:
     try:
         results, manual_sources = run_checks()
     except FreshnessError as error:
+        if args.format == "json":
+            print(
+                json.dumps(
+                    {
+                        "schema": "reallyme.identity.pin_freshness_report.v1",
+                        "status": "unavailable",
+                        "checks": [],
+                        "manual_sources": [],
+                        "error": {"code": "authoritative_source_unavailable"},
+                    },
+                    indent=2,
+                )
+            )
+            return EXIT_UNAVAILABLE
         fail(str(error), EXIT_UNAVAILABLE)
     stale = [result for result in results if result.status == "stale"]
     if args.format == "json":

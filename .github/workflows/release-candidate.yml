@@ -82,13 +82,8 @@ jobs:
       - name: Lint GitHub workflows
         working-directory: identity-conformance
         run: scripts/run_actionlint.sh
-      - name: Verify authoritative pin freshness
-        working-directory: identity-conformance
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          test -n "${GITHUB_TOKEN}"
-          python3 scripts/check_pin_freshness.py
+      # Release construction binds the reviewed locks and must remain deterministic.
+      # Live publisher availability is monitored by pin-freshness.yml.
       - name: Build deterministic candidate manifest
         working-directory: identity-conformance
         env:
