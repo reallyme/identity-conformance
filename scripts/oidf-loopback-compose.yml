@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+services:
+  nginx:
+    ports: !override
+      - target: 8443
+        published: "8443"
+        host_ip: 127.0.0.1
+        protocol: tcp
+      - target: 8444
+        published: "8444"
+        host_ip: 127.0.0.1
+        protocol: tcp
+      - target: 8443
+        published: "8443"
+        host_ip: "::1"
+        protocol: tcp
+      - target: 8444
+        published: "8444"
+        host_ip: "::1"
+        protocol: tcp
+      - target: 8080
+        published: "8080"
+        host_ip: 127.0.0.1
+        protocol: tcp
+      - target: 8080
+        published: "8080"
+        host_ip: "::1"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ${OIDF_LOOPBACK_NGINX_CONFIG:?OIDF_LOOPBACK_NGINX_CONFIG is required}
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${OIDF_LOOPBACK_TLS_CERT:?OIDF_LOOPBACK_TLS_CERT is required}
+        target: /etc/ssl/certs/nginx-selfsigned.crt
+        read_only: true
+      - type: bind
+        source: ${OIDF_LOOPBACK_TLS_KEY:?OIDF_LOOPBACK_TLS_KEY is required}
+        target: /etc/ssl/private/nginx-selfsigned.key
+        read_only: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 500k
+        max-file: "1"
+  server:
+    # Publish only the proxy: the backend trusts proxy-supplied forwarding headers.
+    ports: !override []
+    command:
+      - java
+      - -Djdk.tls.maxHandshakeMessageSize=65536
+      - -jar
+      - /server/fapi-test-suite.jar
+      - --fintechlabs.base_url=https://localhost:8443
+      - --fintechlabs.base_mtls_url=https://localhost:8444
+      - --fintechlabs.base_http_url=http://localhost:8080
+      - --fintechlabs.devmode=true
+      - --fintechlabs.makeDummyUserAdminInDevMode=false
+      - --fintechlabs.startredir=true

@@ -1,0 +1,41 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-upstream-sources-v2.json",
+  "title": "Pinned EUDI upstream source inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "copyright", "license", "observed_at", "purpose", "sources"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "copyright": {"const": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved"},
+    "license": {"const": "MIT OR Apache-2.0"},
+    "observed_at": {"type": "string", "format": "date"},
+    "purpose": {"const": "eudi-wallet-conformance-and-interoperability-source-pins"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/source"}
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "role", "coverage_class", "repository", "ref", "update_strategy", "commit", "license", "certification_claim", "local_checkout"],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^eudi-[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "role": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"},
+        "coverage_class": {"enum": ["normative_baseline", "assessment_methodology", "engineering_reference", "official_test_asset", "interoperability_target", "legacy_compatibility", "monitor_only"]},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/eu-digital-identity-wallet/[A-Za-z0-9_.-]+$"},
+        "ref": {"type": "string", "minLength": 1, "maxLength": 128},
+        "update_strategy": {"enum": ["latest_release", "latest_tag", "default_branch"]},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "license": {"type": "string", "minLength": 1, "maxLength": 64},
+        "certification_ready": {"const": false},
+        "certification_claim": {"const": false},
+        "local_checkout": {"type": "string", "pattern": "^upstream/eudi/checkouts/[A-Za-z0-9_.-]+$"}
+      }
+    }
+  }
+}

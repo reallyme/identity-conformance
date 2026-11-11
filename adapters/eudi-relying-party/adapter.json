@@ -1,0 +1,55 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "adapter_id": "eudi_relying_party_control_plane",
+  "plan_path": "plans/eudi/relying-party-control-plane.json",
+  "upstream_lock_path": "upstream/eudi/sources.lock.json",
+  "legal_sources_lock_path": "upstream/eudi/legal-sources.lock.json",
+  "component": {
+    "component_id": "candidate",
+    "repository_policy": "reallyme_owned",
+    "features": ["live_probe"]
+  },
+  "dependent_artifacts": [
+    {"component_id": "trust_service", "artifact_id": "trust_service"},
+    {"component_id": "credential_authority", "artifact_id": "credential_authority"}
+  ],
+  "execution_sources": [
+    "eudi-arf",
+    "eudi-fcaf",
+    "eudi-technical-specifications",
+    "eudi-relying-party-registration-service"
+  ],
+  "source_bindings": [
+    {"source_id": "eudi-arf", "field": "ref_without_v", "attestation_check_id": "upstream_binding.eudi_arf"},
+    {"source_id": "eudi-technical-specifications", "field": "commit", "attestation_check_id": "upstream_binding.eudi_technical_specifications"},
+    {"source_id": "eudi-relying-party-registration-service", "field": "commit", "attestation_check_id": "upstream_binding.eudi_relying_party_registration_service"}
+  ],
+  "probes": {
+    "profile": {
+      "arguments": ["profile"],
+      "required_output_tokens": ["profile=ts5_v1_6", "role=normative_primary", "network_activity=none", "ts6_version=1.2.2", "arf_version=3.0.0"]
+    },
+    "invalid_command": {"arguments": ["reference-profile"], "expected_success": false},
+    "journal": {
+      "initialize_argument": "journal-initialize",
+      "health_argument": "journal-health",
+      "required_output": "journal=ready schema_version=17\n"
+    },
+    "live_ts5": {
+      "argument": "ts5-conformance",
+      "required_output_tokens": ["operation=public_read_conformance", "state=qualified", "endpoints=4"]
+    },
+    "deployed_services": [
+      {"service_id": "trust_service", "required_status": 200, "required_media_type": "application/json", "required_body": {"service": "trust_service", "status": "ready"}},
+      {"service_id": "credential_authority", "required_status": 200, "required_media_type": "application/json", "required_body": {"service": "credential_authority", "status": "ready"}}
+    ]
+  },
+  "evidence_policy": {
+    "contains_sensitive_data": false,
+    "raw_process_output_retained": false,
+    "transaction_content_retained": false,
+    "private_key_material_retained": false,
+    "credentials_retained": false
+  }
+}

@@ -1,0 +1,137 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: EUDI Wallet Engineering Conformance
+run-name: EUDI Wallet engineering conformance @ ${{ github.sha }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Exact identity-conformance commit selected by the caller
+        required: true
+        type: string
+      release_artifact_path:
+        description: Absolute path to the wallet release artifact on the ephemeral runner
+        required: true
+        type: string
+      component_attestation_path:
+        description: Absolute path to the wallet component attestation
+        required: true
+        type: string
+    secrets:
+      EUDI_WALLET_DEPLOYMENT_MANIFEST_B64:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eudi-wallet-engineering-conformance
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    runs-on: [self-hosted, linux, x64, eudi-wallet-conformance]
+    timeout-minutes: 360
+    steps:
+      - name: Require the wallet caller and immutable framework revision
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+        run: |
+          [[ "${GITHUB_REPOSITORY}" == "reallyme/wallet" ]]
+          [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Materialize and validate deployment manifest
+        env:
+          DEPLOYMENT_MANIFEST_B64: ${{ secrets.EUDI_WALLET_DEPLOYMENT_MANIFEST_B64 }}
+        run: |
+          umask 077
+          input_dir="${RUNNER_TEMP}/eudi-wallet-conformance-inputs"
+          mkdir -p "${input_dir}"
+          test -n "${DEPLOYMENT_MANIFEST_B64}"
+          printf '%s' "${DEPLOYMENT_MANIFEST_B64}" | base64 --decode > "${input_dir}/deployment.json"
+          python3 identity-conformance/scripts/verify_eudi_wallet_deployment_manifest.py \
+            --manifest "${input_dir}/deployment.json"
+
+      - name: Resolve exact wallet source revision
+        id: source
+        run: |
+          commit="$(jq -er '.component.commit' "${RUNNER_TEMP}/eudi-wallet-conformance-inputs/deployment.json")"
+          [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
+          printf 'commit=%s\n' "${commit}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact wallet source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/wallet
+          ref: ${{ steps.source.outputs.commit }}
+          path: components/wallet
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.99.1
+
+      - name: Validate protected artifact paths
+        env:
+          RELEASE_ARTIFACT: ${{ inputs.release_artifact_path }}
+          COMPONENT_ATTESTATION: ${{ inputs.component_attestation_path }}
+        run: |
+          test -n "${RELEASE_ARTIFACT}"
+          test -f "${RELEASE_ARTIFACT}"
+          test ! -L "${RELEASE_ARTIFACT}"
+          test -n "${COMPONENT_ATTESTATION}"
+          test -f "${COMPONENT_ATTESTATION}"
+          test ! -L "${COMPONENT_ATTESTATION}"
+
+      - name: Execute EUDI Wallet engineering lane
+        env:
+          RELEASE_ARTIFACT: ${{ inputs.release_artifact_path }}
+          COMPONENT_ATTESTATION: ${{ inputs.component_attestation_path }}
+        run: |
+          result="${RUNNER_TEMP}/eudi-wallet-conformance-result.json"
+          python3 identity-conformance/scripts/run_eudi_wallet_conformance.py \
+            --deployment-manifest "${RUNNER_TEMP}/eudi-wallet-conformance-inputs/deployment.json" \
+            --source components/wallet \
+            --release-artifact "${RELEASE_ARTIFACT}" \
+            --component-attestation "${COMPONENT_ATTESTATION}" \
+            --output "${result}"
+          python3 identity-conformance/scripts/verify_eudi_wallet_execution_result.py \
+            --result "${result}"
+
+      - name: Upload validated EUDI Wallet result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: eudi-wallet-conformance-${{ github.sha }}
+          path: ${{ runner.temp }}/eudi-wallet-conformance-result.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Best-effort remove protected working material
+        if: always()
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-wallet-conformance-inputs"
+          result="${RUNNER_TEMP}/eudi-wallet-conformance-result.json"
+          if [[ -d "${input_dir}" ]] && command -v shred >/dev/null 2>&1; then
+            find "${input_dir}" -type f -exec shred --force --remove --zero {} + 2>/dev/null || true
+          fi
+          if [[ -f "${result}" ]] && command -v shred >/dev/null 2>&1; then
+            shred --force --remove --zero "${result}" 2>/dev/null || true
+          fi
+          rm -rf -- "${input_dir}" "${result}" "${GITHUB_WORKSPACE}/components"

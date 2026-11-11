@@ -1,0 +1,44 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-legal-sources-v1.json",
+  "title": "ReallyMe EUDI legal-source identity lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "observed_at", "pin_policy", "sources", "current_consolidations"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.eudi_legal_sources.v1"},
+    "observed_at": {"type": "string", "format": "date"},
+    "pin_policy": {"const": "immutable_eli_and_celex_identifiers"},
+    "sources": {"type": "array", "minItems": 14, "maxItems": 14, "items": {"$ref": "#/$defs/source"}},
+    "current_consolidations": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/consolidation"}}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "kind", "celex", "eli", "adopted_on", "title"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/identifier"},
+        "kind": {"enum": ["governing_regulation", "governing_amendment", "implementing_regulation", "implementing_amendment"]},
+        "celex": {"type": "string", "pattern": "^320[0-9]{2}R[0-9]{4}$"},
+        "eli": {"type": "string", "pattern": "^https://data\\.europa\\.eu/eli/(?:reg|reg_impl)/[0-9]{4}/[0-9]+/oj$"},
+        "adopted_on": {"type": "string", "format": "date"},
+        "title": {"type": "string", "minLength": 10, "maxLength": 256},
+        "amends": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "amended_by": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}}
+      }
+    },
+    "consolidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "as_of", "eli"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/identifier"},
+        "as_of": {"type": "string", "format": "date"},
+        "eli": {"type": "string", "pattern": "^https://data\\.europa\\.eu/eli/reg_impl/[0-9]{4}/[0-9]+/[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+      }
+    }
+  }
+}

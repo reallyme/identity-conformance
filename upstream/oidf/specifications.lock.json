@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "observed_at": "2026-11-11",
+  "purpose": "oidf-normative-publication-and-source-pins",
+  "publications": [
+    {
+      "specification_id": "openid4vci-1.0-final",
+      "canonical_url": "https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html",
+      "sha256": "f123c3178cacd27688b15b762098a045e9eb35eccfe2f5f18a357c3815e06ba7",
+      "content_length": 504445,
+      "source_repository": "https://github.com/openid/OpenID4VCI",
+      "source_ref": "1.0-final",
+      "source_commit": "423354bffcd6a01e1cbda2ab2050ae4d67e0830c"
+    },
+    {
+      "specification_id": "openid4vp-1.0-final",
+      "canonical_url": "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html",
+      "sha256": "e4f0abc689afd0a4f6c41b83954d7f970c5263a26143ad861216aea9918993bb",
+      "content_length": 515401,
+      "source_repository": "https://github.com/openid/OpenID4VP",
+      "source_ref": "1.0-final",
+      "source_commit": "e819ed379abe9b0f6e93037e22d678837992e8b2"
+    },
+    {
+      "specification_id": "openid4vc-haip-1.0-final",
+      "canonical_url": "https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0-final.html",
+      "sha256": "3996e0479d06b72d6d68668b8ae3cd39fddfc29ae9220c0c3fead7dc060ec4fb",
+      "content_length": 150031,
+      "source_repository": "https://github.com/openid/oid4vc-haip",
+      "source_binding": "publication_only_no_final_source_tag"
+    }
+  ],
+  "engineering_sources": [
+    {
+      "specification_id": "openid4vc-haip-working-source",
+      "repository": "https://github.com/openid/oid4vc-haip",
+      "ref": "main",
+      "commit": "cf7207c940b717162fb78fe4c4756fed8047aaae",
+      "certification_claim": false
+    }
+  ]
+}

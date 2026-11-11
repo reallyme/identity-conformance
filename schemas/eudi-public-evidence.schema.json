@@ -1,0 +1,102 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-public-evidence-v1.json",
+  "title": "ReallyMe public EUDI relying-party conformance evidence commitment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "classification", "authority", "certification_claim", "plan_id", "framework", "candidate", "execution", "source_locks", "upstream_sources", "assertions", "redaction_review", "public_disclosure_review"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.eudi_public_evidence.v1"},
+    "classification": {"const": "public"},
+    "authority": {"const": "internal_non_certification_evidence"},
+    "certification_claim": {"const": false},
+    "plan_id": {"const": "eudi-relying-party-control-plane-v1"},
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_version", "manifest_sha256"],
+      "properties": {
+        "release_version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+        "required": ["artifact_sha256", "trust_artifact_sha256", "credential_authority_artifact_sha256", "private_source_attestation_sha256"],
+      "properties": {
+        "artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "trust_artifact_sha256": {"$ref": "#/$defs/sha256"},
+          "credential_authority_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "private_source_attestation_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "private_result_sha256"],
+      "properties": {
+        "mode": {"enum": ["engineering", "deployed", "live_ts5"]},
+        "private_result_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "source_locks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eudi_sources_sha256", "eudi_legal_sources_sha256", "eudi_publications_sha256"],
+      "properties": {
+        "eudi_sources_sha256": {"$ref": "#/$defs/sha256"},
+        "eudi_legal_sources_sha256": {"$ref": "#/$defs/sha256"},
+        "eudi_publications_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "upstream_sources": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "repository", "ref", "commit"],
+        "properties": {
+          "source_id": {"$ref": "#/$defs/identifier"},
+          "repository": {"type": "string", "pattern": "^https://github\\.com/eu-digital-identity-wallet/[A-Za-z0-9_.-]+$"},
+          "ref": {"type": "string", "minLength": 1, "maxLength": 128},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "minItems": 19,
+      "maxItems": 19,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["family_id", "assertion_id", "result"],
+        "properties": {
+          "family_id": {"$ref": "#/$defs/identifier"},
+          "assertion_id": {"$ref": "#/$defs/identifier"},
+          "result": {"const": "passed"}
+        }
+      }
+    },
+    "redaction_review": {"$ref": "#/$defs/review"},
+    "public_disclosure_review": {"$ref": "#/$defs/review"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed", "reviewer_role", "reviewed_at"],
+      "properties": {
+        "completed": {"const": true},
+        "reviewer_role": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{2,63}$"},
+        "reviewed_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Taxonomy coverage
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  coverage-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: identity-conformance
+          persist-credentials: false
+      - name: Read taxonomy pin
+        id: taxonomy
+        working-directory: identity-conformance
+        run: echo "revision=$(jq -r '.revision' references/taxonomy-advisory/taxonomy.lock.json)" >> "$GITHUB_OUTPUT"
+      - name: Checkout pinned taxonomy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-taxonomy
+          ref: ${{ steps.taxonomy.outputs.revision }}
+          path: identity-taxonomy
+          persist-credentials: false
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: "3.3"
+      - name: Verify taxonomy revision and inventory digest
+        working-directory: identity-conformance
+        run: ruby ../identity-taxonomy/scripts/verify_taxonomy_source_lock.rb --lock references/taxonomy-advisory/taxonomy.lock.json --taxonomy-root ../identity-taxonomy
+      - name: Generate complete repository ledger
+        working-directory: identity-conformance
+        env:
+          REALLYME_IDENTITY_TAXONOMY_ROOT: ${{ github.workspace }}/identity-taxonomy
+        run: ruby scripts/generate_taxonomy_ledger.rb --output "${RUNNER_TEMP}/identity-conformance-ledger.json"
+      - name: Audit evidence and every owned disposition
+        working-directory: identity-conformance
+        run: >-
+          ruby ../identity-taxonomy/scripts/audit_conformance_ledger.rb
+          --input "${RUNNER_TEMP}/identity-conformance-ledger.json"
+          --consumer-root .
+          --taxonomy ../identity-taxonomy/taxonomy/taxonomy.yaml
+          --mode development

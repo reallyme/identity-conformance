@@ -1,0 +1,311 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: OIDF OpenID4VCI Certification
+run-name: OIDF OpenID4VCI certification @ ${{ github.sha }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Exact identity-conformance commit selected by the caller
+        required: true
+        type: string
+    secrets:
+      REALLYME_CI_TOKEN:
+        required: true
+      OIDF_VCI_ISSUER_CONFIG_B64:
+        required: true
+      OIDF_VCI_WALLET_CONFIG_B64:
+        required: true
+      OIDF_DEPLOYMENT_MANIFEST_B64:
+        required: true
+      OIDF_CONFORMANCE_SERVER:
+        required: true
+      OIDF_CONFORMANCE_SERVER_MTLS:
+        required: true
+      OIDF_CONFORMANCE_TOKEN:
+        required: true
+      OPENID4VCI_ISSUER_BASE_URL:
+        required: true
+      OPENID4VCI_WALLET_HARNESS_ENDPOINT:
+        required: true
+      OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT:
+        required: true
+      OPENID4VCI_WALLET_HARNESS_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oidf-openid4vci-certification
+  cancel-in-progress: false
+
+jobs:
+  certify-openid4vci:
+    name: Execute all OpenID4VCI certification profiles
+    runs-on: [self-hosted, linux, x64, oidf-certification]
+    timeout-minutes: 360
+    environment: oidf-certification
+    steps:
+      - name: Require the Identity caller and immutable framework revision
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+        run: |
+          [[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]
+          [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Resolve the release BOM
+        id: release-bom
+        working-directory: identity-conformance
+        run: |
+          for component in openid4vci openid4vp wallet ssi identity cose; do
+            revision="$(jq -er --arg component "${component}" \
+              '[.repositories[] | select(.component_id == $component)]
+               | if length == 1 then .[0].commit
+                 else error("component revision must be unique")
+                 end' \
+              components.lock.json)"
+            release_ref="$(jq -er --arg component "${component}" \
+              '[.repositories[] | select(.component_id == $component)]
+               | if length == 1 then .[0].release_ref
+                 else error("component release reference must be unique")
+                 end
+               | select(type == "string" and length > 0)' \
+              components.lock.json)"
+            [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
+            [[ "${release_ref}" =~ ^[A-Za-z0-9._-]+$ ]]
+            printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
+          done
+
+      - name: Require cross-repository checkout credential
+        env:
+          REALLYME_CI_TOKEN: ${{ secrets.REALLYME_CI_TOKEN }}
+        run: test -n "${REALLYME_CI_TOKEN}"
+
+      - name: Checkout pinned OpenID4VCI
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vci
+          ref: ${{ steps.release-bom.outputs.openid4vci }}
+          path: openid4vci
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned OpenID4VP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vp
+          ref: ${{ steps.release-bom.outputs.openid4vp }}
+          path: openid4vp
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned wallet
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/wallet
+          ref: ${{ steps.release-bom.outputs.wallet }}
+          path: wallet
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned SSI
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/ssi
+          ref: ${{ steps.release-bom.outputs.ssi }}
+          path: ssi
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned Identity
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity
+          ref: ${{ steps.release-bom.outputs.identity }}
+          path: identity
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned COSE
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/cose
+          ref: ${{ steps.release-bom.outputs.cose }}
+          path: cose
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned OIDF conformance suite
+        working-directory: identity-conformance
+        run: |
+          suite_commit="$(jq -er '.suite.commit' ../openid4vci/conformance/oidf/profile-matrix.json)"
+          [[ "${suite_commit}" =~ ^[0-9a-f]{40}$ ]]
+          git init upstream/oidf/openid-conformance-suite
+          git -C upstream/oidf/openid-conformance-suite remote add origin https://gitlab.com/openid/conformance-suite.git
+          git -C upstream/oidf/openid-conformance-suite fetch --depth 1 origin "${suite_commit}"
+          git -C upstream/oidf/openid-conformance-suite checkout --detach FETCH_HEAD
+          test "$(git -C upstream/oidf/openid-conformance-suite rev-parse HEAD)" = "${suite_commit}"
+
+      - name: Build patched Maven toolchain
+        working-directory: identity-conformance
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --file scripts/oidf-maven.Dockerfile \
+            --tag reallyme/oidf-maven:3.9.16-patched \
+            scripts
+
+      - name: Scan patched Maven toolchain
+        working-directory: identity-conformance
+        run: scripts/scan_oidf_maven_image.sh
+
+      - name: Build pinned OIDF conformance suite
+        working-directory: identity-conformance/upstream/oidf/openid-conformance-suite
+        run: |
+          maven_home="${RUNNER_TEMP}/identity-conformance-oidf-maven"
+          mkdir -p "${maven_home}/repository"
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -e HOME=/maven-home \
+            -e MAVEN_CONFIG=/maven-home \
+            -v "${maven_home}:/maven-home" \
+            -v "${PWD}:/workspace" \
+            -w /workspace \
+            reallyme/oidf-maven:3.9.16-patched \
+            mvn -B -Dmaven.repo.local=/maven-home/repository \
+              -Dmaven.test.skip -Dpmd.skip clean package
+
+      - name: Install hash-locked OIDF runner dependencies
+        run: |
+          runner_venv="${RUNNER_TEMP}/identity-conformance-oidf-python"
+          python3 -m venv "${runner_venv}"
+          "${runner_venv}/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-input \
+            --only-binary=:all: \
+            --require-hashes \
+            -r identity-conformance/scripts/oidf-runner-requirements.lock
+          echo "${runner_venv}/bin" >> "${GITHUB_PATH}"
+
+      - name: Materialize owner-only certification inputs
+        env:
+          OIDF_VCI_ISSUER_CONFIG_B64: ${{ secrets.OIDF_VCI_ISSUER_CONFIG_B64 }}
+          OIDF_VCI_WALLET_CONFIG_B64: ${{ secrets.OIDF_VCI_WALLET_CONFIG_B64 }}
+          OIDF_DEPLOYMENT_MANIFEST_B64: ${{ secrets.OIDF_DEPLOYMENT_MANIFEST_B64 }}
+        run: |
+          umask 077
+          input_dir="${RUNNER_TEMP}/oidf-openid4vci-inputs"
+          mkdir -p "${input_dir}"
+          test -n "${OIDF_VCI_ISSUER_CONFIG_B64}"
+          test -n "${OIDF_VCI_WALLET_CONFIG_B64}"
+          test -n "${OIDF_DEPLOYMENT_MANIFEST_B64}"
+          printf '%s' "${OIDF_VCI_ISSUER_CONFIG_B64}" | base64 --decode > "${input_dir}/issuer.json"
+          printf '%s' "${OIDF_VCI_WALLET_CONFIG_B64}" | base64 --decode > "${input_dir}/wallet.json"
+          printf '%s' "${OIDF_DEPLOYMENT_MANIFEST_B64}" | base64 --decode > "${input_dir}/deployment.json"
+          python3 -m json.tool "${input_dir}/issuer.json" >/dev/null
+          python3 -m json.tool "${input_dir}/wallet.json" >/dev/null
+          python3 -m json.tool "${input_dir}/deployment.json" >/dev/null
+
+      - name: Validate protected runner artifact paths
+        env:
+          OPENID4VCI_ISSUER_BIN: ${{ vars.OPENID4VCI_ISSUER_BIN }}
+          OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT: ${{ vars.OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT }}
+          OPENID4VCI_ISSUER_TLS_CERT: ${{ vars.OPENID4VCI_ISSUER_TLS_CERT }}
+          OPENID4VCI_ISSUER_TLS_KEY: ${{ vars.OPENID4VCI_ISSUER_TLS_KEY }}
+          OPENID4VCI_WALLET_HARNESS_BINARY: ${{ vars.OPENID4VCI_WALLET_HARNESS_BINARY }}
+          OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT: ${{ vars.OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT }}
+        run: |
+          command -v shred >/dev/null
+          test -n "${OPENID4VCI_ISSUER_BIN}"
+          test -n "${OPENID4VCI_WALLET_HARNESS_BINARY}"
+          test -x "${OPENID4VCI_ISSUER_BIN}"
+          test -f "${OPENID4VCI_WALLET_HARNESS_BINARY}"
+          test ! -L "${OPENID4VCI_ISSUER_BIN}"
+          test ! -L "${OPENID4VCI_WALLET_HARNESS_BINARY}"
+          if [[ -n "${OPENID4VCI_ISSUER_TLS_CERT}" || -n "${OPENID4VCI_ISSUER_TLS_KEY}" ]]; then
+            test -n "${OPENID4VCI_ISSUER_TLS_CERT}"
+            test -n "${OPENID4VCI_ISSUER_TLS_KEY}"
+          fi
+          if [[ -n "${OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT}" ]]; then
+            test -f "${OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT}"
+            test ! -L "${OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT}"
+          fi
+          if [[ -n "${OPENID4VCI_ISSUER_TLS_CERT}" ]]; then
+            test -r "${OPENID4VCI_ISSUER_TLS_CERT}"
+            test -f "${OPENID4VCI_ISSUER_TLS_CERT}"
+            test ! -L "${OPENID4VCI_ISSUER_TLS_CERT}"
+          fi
+          if [[ -n "${OPENID4VCI_ISSUER_TLS_KEY}" ]]; then
+            test -r "${OPENID4VCI_ISSUER_TLS_KEY}"
+            test -f "${OPENID4VCI_ISSUER_TLS_KEY}"
+            test ! -L "${OPENID4VCI_ISSUER_TLS_KEY}"
+          fi
+          if [[ -n "${OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT}" ]]; then
+            test -f "${OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT}"
+            test ! -L "${OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT}"
+          fi
+
+      - name: Execute all OpenID4VCI certification profiles
+        working-directory: identity-conformance
+        env:
+          OIDF_CONFORMANCE_SUITE_DIR: ${{ github.workspace }}/identity-conformance/upstream/oidf/openid-conformance-suite
+          OIDF_OPENID4VCI_RESULT_DIR: ${{ runner.temp }}/openid4vci-certification
+          OIDF_VCI_ISSUER_CONFIG: ${{ runner.temp }}/oidf-openid4vci-inputs/issuer.json
+          OIDF_VCI_WALLET_CONFIG: ${{ runner.temp }}/oidf-openid4vci-inputs/wallet.json
+          OIDF_DEPLOYMENT_MANIFEST: ${{ runner.temp }}/oidf-openid4vci-inputs/deployment.json
+          CONFORMANCE_SERVER: ${{ secrets.OIDF_CONFORMANCE_SERVER }}
+          CONFORMANCE_SERVER_MTLS: ${{ secrets.OIDF_CONFORMANCE_SERVER_MTLS }}
+          CONFORMANCE_TOKEN: ${{ secrets.OIDF_CONFORMANCE_TOKEN }}
+          OPENID4VCI_ISSUER_BIN: ${{ vars.OPENID4VCI_ISSUER_BIN }}
+          OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT: ${{ vars.OPENID4VCI_ISSUER_DEPLOYMENT_ARTIFACT }}
+          OPENID4VCI_ISSUER_BASE_URL: ${{ secrets.OPENID4VCI_ISSUER_BASE_URL }}
+          OPENID4VCI_ISSUER_BIND: ${{ vars.OPENID4VCI_ISSUER_BIND }}
+          OPENID4VCI_ISSUER_HEALTHCHECK_BASE_URL: ${{ vars.OPENID4VCI_ISSUER_HEALTHCHECK_BASE_URL }}
+          OPENID4VCI_ISSUER_TLS_CERT: ${{ vars.OPENID4VCI_ISSUER_TLS_CERT }}
+          OPENID4VCI_ISSUER_TLS_KEY: ${{ vars.OPENID4VCI_ISSUER_TLS_KEY }}
+          OPENID4VCI_WALLET_HARNESS_BINARY: ${{ vars.OPENID4VCI_WALLET_HARNESS_BINARY }}
+          OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT: ${{ vars.OPENID4VCI_WALLET_DEPLOYMENT_ARTIFACT }}
+          OPENID4VCI_WALLET_SOURCE_REPOSITORY_DIR: ${{ github.workspace }}/identity
+          OPENID4VCI_WALLET_HARNESS_ENDPOINT: ${{ secrets.OPENID4VCI_WALLET_HARNESS_ENDPOINT }}
+          OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT: ${{ secrets.OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT }}
+          OPENID4VCI_WALLET_HARNESS_TOKEN: ${{ secrets.OPENID4VCI_WALLET_HARNESS_TOKEN }}
+        run: scripts/run_oidf_openid4vci_certification.sh
+
+      - name: Upload validated certification evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oidf-openid4vci-certification-${{ github.sha }}
+          path: ${{ runner.temp }}/openid4vci-certification
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Best-effort remove materialized private data
+        if: always()
+        run: |
+          input_dir="${RUNNER_TEMP}/oidf-openid4vci-inputs"
+          result_dir="${RUNNER_TEMP}/openid4vci-certification"
+          if [[ -d "${input_dir}" ]]; then
+            find "${input_dir}" -type f -exec shred --force --remove --zero {} \;
+            rmdir "${input_dir}"
+          fi
+          if [[ -d "${result_dir}" ]]; then
+            find "${result_dir}" -type f -exec shred --force --remove --zero {} \;
+            find "${result_dir}" -depth -type d -empty -delete
+          fi

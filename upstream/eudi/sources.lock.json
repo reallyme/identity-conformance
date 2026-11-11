@@ -1,0 +1,169 @@
+{
+  "schema_version": 2,
+  "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "observed_at": "2026-11-11",
+  "purpose": "eudi-wallet-conformance-and-interoperability-source-pins",
+  "sources": [
+    {
+      "source_id": "eudi-arf", "role": "released_architecture_reference", "coverage_class": "normative_baseline",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework", "ref": "v3.0.0", "update_strategy": "latest_release", "commit": "c64f2cbb19aee37c571c58af66d359c4d5be29c8", "license": "CC-BY-4.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-doc-architecture-and-reference-framework"
+    },
+    {
+      "source_id": "eudi-fcaf", "role": "draft_functional_conformance_baseline", "coverage_class": "assessment_methodology",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment", "ref": "v0.0.10", "update_strategy": "latest_release", "commit": "944b8f89cc17873c47026a05dfa9d212e89b0ee3", "license": "CC-BY-4.0", "certification_ready": false, "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-doc-functional-conformance-assessment"
+    },
+    {
+      "source_id": "eudi-technical-specifications", "role": "engineering_reference_catalog", "coverage_class": "engineering_reference",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications", "ref": "main", "update_strategy": "default_branch", "commit": "cfc383e44294d65cfa6cccbbff6c927f0df91f9a", "license": "CC-BY-4.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-doc-standards-and-technical-specifications"
+    },
+    {
+      "source_id": "eudi-attestation-rulebooks", "role": "engineering_reference_catalog", "coverage_class": "engineering_reference",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog", "ref": "main", "update_strategy": "default_branch", "commit": "36f8adcf914ac06cac18d685add04e0a8a06d685", "license": "unverified_no_root_license", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-doc-attestation-rulebooks-catalog"
+    },
+    {
+      "source_id": "eudi-age-verification-specification", "role": "released_age_verification_and_zkp_profile", "coverage_class": "engineering_reference",
+      "repository": "https://github.com/eu-digital-identity-wallet/av-doc-technical-specification", "ref": "v1.0.6", "update_strategy": "latest_tag", "commit": "febecb892435c544e539f44d0adefd580076dd3e", "license": "CC-BY-4.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/av-doc-technical-specification"
+    },
+    {
+      "source_id": "eudi-functional-tests", "role": "released_engineering_test_asset", "coverage_class": "official_test_asset",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-doc-testing-application", "ref": "2026.Q1", "update_strategy": "latest_tag", "commit": "62c4ba73007ea25440e6ba24a651937bc692629b", "license": "unverified_no_root_license", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-doc-testing-application"
+    },
+    {
+      "source_id": "eudi-itb", "role": "engineering_interoperability_testbed", "coverage_class": "official_test_asset",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-itb", "ref": "main", "update_strategy": "default_branch", "commit": "b0e222435401242e2a2a62181500bc2403e6e0dd", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-itb"
+    },
+    {
+      "source_id": "eudi-issuer-wallet-tester", "role": "openid4vci_draft_13_compatibility_tester", "coverage_class": "legacy_compatibility",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-app-web-wallet-tester-py", "ref": "v0.5.2", "update_strategy": "latest_release", "commit": "7605672f5a4b22c5f867490cd9b4889e1ec5f748", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-app-web-wallet-tester-py"
+    },
+    {
+      "source_id": "eudi-rqes-wallet-driven-tester", "role": "released_rqes_wallet_driven_test_asset", "coverage_class": "official_test_asset",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-app-web-walletdriven-tester-py", "ref": "v0.3", "update_strategy": "latest_release", "commit": "bdfdd85295abb0eeed5c63f3958731c6a344bd57", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-app-web-walletdriven-tester-py"
+    },
+    {
+      "source_id": "eudi-relying-party-registration-service", "role": "compatibility_reference_implementation", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-web-relyingparty-registration-py", "ref": "main", "update_strategy": "default_branch", "commit": "d85ba47ac134b4e9e219673da871c3c2942ef8ff", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-web-relyingparty-registration-py"
+    },
+    {
+      "source_id": "eudi-pid-issuer", "role": "released_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-pid-issuer", "ref": "v0.11.2", "update_strategy": "latest_release", "commit": "bdd5ea0bb9d6de685ecfb3c8ad8db06e6a168647", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-pid-issuer"
+    },
+    {
+      "source_id": "eudi-verifier-endpoint", "role": "released_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint", "ref": "v0.12.0", "update_strategy": "latest_release", "commit": "19537e72a633b25c94b7450bf582760f52ab2cc9", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-verifier-endpoint"
+    },
+    {
+      "source_id": "eudi-wallet-provider-service", "role": "released_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-wallet-provider", "ref": "v0.2.1", "update_strategy": "latest_release", "commit": "02791863d0cb2d3a2f19739cd752241b66145e33", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-wallet-provider"
+    },
+    {
+      "source_id": "eudi-android-wallet-ui", "role": "released_mobile_wallet_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui", "ref": "Wallet/Demo_Version=2026.10.43-Demo_Build=43", "update_strategy": "latest_release", "commit": "4b295477f69351c1015ae253006bf240dd02d8ef", "license": "EUPL-1.2", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-app-android-wallet-ui"
+    },
+    {
+      "source_id": "eudi-android-wallet-core", "role": "released_mobile_wallet_core_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-android-wallet-core", "ref": "v0.32.0", "update_strategy": "latest_release", "commit": "d5e2c51ce594c976e3e4955415dee40ba8a5d50e", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-android-wallet-core"
+    },
+    {
+      "source_id": "eudi-ios-wallet-ui", "role": "released_mobile_wallet_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-app-ios-wallet-ui", "ref": "Wallet/Demo_2026.10.43-Demo_Build=43", "update_strategy": "latest_release", "commit": "92ac8f7080ae104f4e3615c48c5cd9e40aada33f", "license": "EUPL-1.2", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-app-ios-wallet-ui"
+    },
+    {
+      "source_id": "eudi-ios-wallet-kit", "role": "released_mobile_wallet_core_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit", "ref": "v0.60.1", "update_strategy": "latest_release", "commit": "0670c20f8d8b8455220f1826148994fa4f292bd3", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-ios-wallet-kit"
+    },
+    {
+      "source_id": "eudi-multiplatform-verifier-ui", "role": "released_wallet_presentation_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-app-multiplatform-verifier-ui", "ref": "Verifier/Public_Version=2026.05.6-Public_Build=6", "update_strategy": "latest_release", "commit": "c59e1846213e5dc5020ecd9cbe384b2ba9127072", "license": "EUPL-1.2", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-app-multiplatform-verifier-ui"
+    },
+    {
+      "source_id": "eudi-web-verifier", "role": "released_wallet_presentation_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-web-verifier", "ref": "v0.13.0", "update_strategy": "latest_release", "commit": "763efa70e5b00eb6bccddc7166b97bd1bca36e8d", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-web-verifier"
+    },
+    {
+      "source_id": "eudi-trust-validator", "role": "released_trust_validation_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator", "ref": "v0.3.1-alpha", "update_strategy": "latest_release", "commit": "9553b504da25d46a142e4abefc51c00744074800", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-trust-validator"
+    },
+    {
+      "source_id": "eudi-status-validator", "role": "released_status_validation_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-status-validator-py", "ref": "v0.1.0", "update_strategy": "latest_release", "commit": "af0e7fa55ee04dff048c8452376c04f7ae2ce93d", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-status-validator-py"
+    },
+    {
+      "source_id": "eudi-status-list-service", "role": "released_status_list_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-statuslist-py", "ref": "v0.10.0", "update_strategy": "latest_release", "commit": "5da16aea1ff066db32ec70567785572100613c2e", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-statuslist-py"
+    },
+    {
+      "source_id": "eudi-trusted-list-manager", "role": "released_trusted_list_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustedlist-manager-py", "ref": "v0.2.0", "update_strategy": "latest_release", "commit": "482b91abee4bd46520961bdfa7ae455b0ede3953", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-web-trustedlist-manager-py"
+    },
+    {
+      "source_id": "eudi-etsi-1196x2-library", "role": "released_etsi_trust_list_interoperability_library", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-kmp-etsi-1196x2", "ref": "v0.5.0-alpha.1", "update_strategy": "latest_release", "commit": "a9b1e7e575fbcaa18caba9eb0057d74f3fb0d679", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-kmp-etsi-1196x2"
+    },
+    {
+      "source_id": "eudi-android-rqes-core", "role": "released_rqes_wallet_interoperability_library", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-android-rqes-core", "ref": "v0.8.0", "update_strategy": "latest_release", "commit": "053ca8628781acf5d8a3f3a9659bb37c7cf672af", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-android-rqes-core"
+    },
+    {
+      "source_id": "eudi-ios-rqes-kit", "role": "released_rqes_wallet_interoperability_library", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-rqes-kit", "ref": "v0.11.3", "update_strategy": "latest_release", "commit": "223fcda52ec969bdbd1291228fa70f5ae43682cd", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-ios-rqes-kit"
+    },
+    {
+      "source_id": "eudi-jvm-rqes-csc-library", "role": "released_rqes_csc_interoperability_library", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-jvm-rqes-csc-kt", "ref": "v0.9.0", "update_strategy": "latest_release", "commit": "7f4037d8f7f090330ea20c9fbd2d90f3c94a9764", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-jvm-rqes-csc-kt"
+    },
+    {
+      "source_id": "eudi-ios-rqes-csc-library", "role": "released_rqes_csc_interoperability_library", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-rqes-csc-swift", "ref": "v0.11.0", "update_strategy": "latest_release", "commit": "c793a74c3f1ac5a675636aefd4165eb3a48e7e63", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-lib-ios-rqes-csc-swift"
+    },
+    {
+      "source_id": "eudi-rqes-qtsp-service", "role": "released_rqes_qtsp_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-web-walletdriven-rpcentric-signer-qtsp-java", "ref": "0.7.1", "update_strategy": "latest_release", "commit": "5fd001e391e4c066a5e25ca2af26198e812c38e3", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-web-walletdriven-rpcentric-signer-qtsp-java"
+    },
+    {
+      "source_id": "eudi-rqes-external-sca-service", "role": "released_rqes_external_sca_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-web-walletdriven-signer-external-sca-java", "ref": "v0.5.0", "update_strategy": "latest_release", "commit": "b52dfe1ac9a8a73022b9b452797fe00fd619a61b", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-web-walletdriven-signer-external-sca-java"
+    },
+    {
+      "source_id": "eudi-rqes-wallet-driven-relying-party", "role": "released_rqes_relying_party_interoperability_target", "coverage_class": "interoperability_target",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-srv-web-walletdriven-signer-relyingparty-py", "ref": "v0.4.0", "update_strategy": "latest_tag", "commit": "f396d859d9b54cd62f8eef7c32cfe0ee6aa326c6", "license": "Apache-2.0", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-srv-web-walletdriven-signer-relyingparty-py"
+    },
+    {
+      "source_id": "eudi-documentation-site", "role": "official_documentation_portal_source", "coverage_class": "monitor_only",
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-docs-site", "ref": "main", "update_strategy": "default_branch", "commit": "6178f0a394624392daf4b5cee248f978602ffa75", "license": "CC-BY-4.0-or-later", "certification_claim": false,
+      "local_checkout": "upstream/eudi/checkouts/eudi-docs-site"
+    }
+  ]
+}

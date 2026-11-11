@@ -1,0 +1,172 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.pin_policy.v1",
+  "observed_at": "2026-11-11",
+  "github_release_monitors": [
+    {
+      "id": "release-readiness",
+      "repository": "reallyme/release-readiness",
+      "tag": "v0.7.0",
+      "commit": "18a6d91d99837e80f92e41fe04effb0b043d754e",
+      "consumers": [
+        ".github/workflows/release-readiness.yml",
+        "scripts/check_publication_readiness.sh",
+        "scripts/check_release_readiness.mjs"
+      ]
+    },
+    {
+      "id": "gitleaks",
+      "repository": "gitleaks/gitleaks",
+      "tag": "v8.30.1",
+      "consumers": [
+        ".github/workflows/secret-scan.yml",
+        "scripts/check_publication_readiness.sh",
+        "scripts/check_release_readiness.mjs"
+      ]
+    },
+    {
+      "id": "trivy",
+      "repository": "aquasecurity/trivy",
+      "tag": "v0.76.2",
+      "consumers": [
+        "scripts/scan_oidf_maven_image.sh",
+        "scripts/check_release_readiness.mjs"
+      ]
+    },
+    {
+      "id": "actionlint",
+      "repository": "rhysd/actionlint",
+      "tag": "v1.7.12",
+      "consumers": [
+        "scripts/run_actionlint.sh"
+      ]
+    }
+  ],
+  "github_ref_monitors": [
+    {
+      "id": "actions-checkout",
+      "repository": "actions/checkout",
+      "ref": "tags/v7.0.1",
+      "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "consumers": [".github/workflows"]
+    },
+    {
+      "id": "actions-setup-node",
+      "repository": "actions/setup-node",
+      "ref": "tags/v7.1.0",
+      "commit": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "consumers": [".github/workflows/release-readiness.yml"]
+    },
+    {
+      "id": "actions-setup-python",
+      "repository": "actions/setup-python",
+      "ref": "tags/v7.1.0",
+      "commit": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "consumers": [".github/workflows"]
+    },
+    {
+      "id": "actions-upload-artifact",
+      "repository": "actions/upload-artifact",
+      "ref": "tags/v7.0.2",
+      "commit": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "consumers": [".github/workflows"]
+    },
+    {
+      "id": "ruby-setup-ruby",
+      "repository": "ruby/setup-ruby",
+      "ref": "heads/v1",
+      "commit": "b3aaceaef7e0ee231b499e7b5f49c03fc1d32199",
+      "consumers": [".github/workflows/taxonomy-coverage.yml"]
+    },
+    {
+      "id": "dtolnay-rust-toolchain",
+      "repository": "dtolnay/rust-toolchain",
+      "ref": "heads/master",
+      "commit": "683b588c487a69d01f6c6ddf40f036ff682cc2c8",
+      "consumers": [
+        ".github/workflows/eudi-wallet-conformance.yml",
+        ".github/workflows/zk-conformance.yml"
+      ]
+    }
+  ],
+  "docker_image_monitors": [
+    {
+      "id": "oidf-maven-base",
+      "namespace": "library",
+      "repository": "maven",
+      "tag": "3.9.16-eclipse-temurin-21-noble",
+      "digest": "sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320",
+      "consumers": ["scripts/oidf-maven.Dockerfile"]
+    }
+  ],
+  "pypi_release_monitors": [
+    {
+      "id": "oidf-runner-httpx",
+      "package": "httpx",
+      "version": "0.28.1",
+      "consumers": ["scripts/oidf-runner-requirements.lock"]
+    }
+  ],
+  "python_release_monitors": [
+    {
+      "id": "python-latest",
+      "version": "3.15.2",
+      "latest_stable": true,
+      "consumers": [
+        ".github/workflows",
+        "scripts/check_release_readiness.mjs"
+      ]
+    },
+    {
+      "id": "python-compatibility",
+      "version": "3.12.16",
+      "series": "3.12",
+      "consumers": [
+        ".github/workflows/release-readiness.yml",
+        "scripts/check_release_readiness.mjs"
+      ]
+    }
+  ],
+  "maven_release_monitors": [
+    {
+      "id": "oidf-maven-guava",
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.8.0-jre",
+      "consumers": ["scripts/oidf-maven.Dockerfile"]
+    }
+  ],
+  "rust_toolchain_monitors": [
+    {
+      "id": "conformance-rust-toolchain",
+      "channel": "stable",
+      "version": "1.99.1",
+      "consumers": [
+        ".github/workflows/eudi-wallet-conformance.yml",
+        ".github/workflows/zk-conformance.yml"
+      ]
+    }
+  ],
+  "manual_sources": [
+    {
+      "id": "identity",
+      "reason": "no authoritative remote release is available"
+    },
+    {
+      "id": "wallet",
+      "reason": "no authoritative remote release is available"
+    },
+    {
+      "id": "identity-taxonomy",
+      "reason": "the pinned inventory is not present on the published default branch"
+    },
+    {
+      "id": "normative-sources",
+      "reason": "ETSI editions and EU legal amendments require clause review; CELEX and ELI identities are validated but cannot be promoted mechanically"
+    },
+    {
+      "id": "oidf-maven-os-packages",
+      "reason": "Ubuntu security package promotion is validated by rebuilding the pinned image and running the fail-closed Trivy scan"
+    }
+  ]
+}

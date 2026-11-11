@@ -1,0 +1,430 @@
+{
+  "schema_version": 1,
+  "plan_id": "eudi-relying-party-control-plane-v1",
+  "authority": "internal_non_certification_evidence",
+  "certification_claim": false,
+  "execution_status": "executable",
+  "taxonomy_program": "eudi_relying_party_control_plane",
+  "system_under_test": {
+    "component_id": "eudi-relying-party-control-plane",
+    "adapter_contract": "adapters/eudi-relying-party/README.md"
+  },
+  "sources": {
+    "required": [
+      "eu_regulation_910_2014",
+      "cir_2025_848",
+      "cir_2026_1730",
+      "ec_ts5_wallet_relying_party_registration",
+      "ec_ts6_wallet_relying_party_information",
+      "etsi_ts_119_411_8",
+      "etsi_ts_119_475"
+    ],
+    "execution_sources": [
+      {
+        "source_id": "eudi-arf",
+        "use": "requirements_baseline",
+        "required_checkout": true
+      },
+      {
+        "source_id": "eudi-fcaf",
+        "use": "assessment_methodology",
+        "required_checkout": true
+      },
+      {
+        "source_id": "eudi-technical-specifications",
+        "use": "ts5_ts6_wire_contracts",
+        "required_checkout": true
+      },
+      {
+        "source_id": "eudi-relying-party-registration-service",
+        "use": "explicit_compatibility_profile",
+        "required_checkout": true
+      }
+    ],
+    "legacy_reference": {
+      "repository": "eu-digital-identity-wallet/eudi-srv-web-relyingparty-registration-py",
+      "commit": "d85ba47ac134b4e9e219673da871c3c2942ef8ff",
+      "profile": "explicit_compatibility_only"
+    }
+  },
+  "evidence_policy": {
+    "plan_is_evidence": false,
+    "production_code_under_test_required": true,
+    "exact_repository_revisions_required": true,
+    "negative_input_evidence_required": true,
+    "oversized_input_evidence_required": true,
+    "reviewed_redacted_results_required": true,
+    "transaction_content_prohibited": true
+  },
+  "assertion_families": [
+    {
+      "family_id": "regulatory_identity_and_representation",
+      "assertions": [
+        {
+          "assertion_id": "customer_regulatory_identity_preserved",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.customer_regulatory_identity"
+          ],
+          "source_refs": [
+            "eu_regulation_910_2014",
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "state_transition_test"
+          ],
+          "evidence_contracts": [
+            "attestation.customer_regulatory_identity_preserved"
+          ]
+        },
+        {
+          "assertion_id": "representative_mandate_is_scoped",
+          "taxonomy_refs": [
+            "identity.mandates.representation_contexts.eudi_wallet_relying_party_registration"
+          ],
+          "source_refs": [
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "authorization_test"
+          ],
+          "evidence_contracts": [
+            "attestation.representative_mandate_is_scoped"
+          ]
+        },
+        {
+          "assertion_id": "technical_intermediary_is_distinct",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.technical_intermediation"
+          ],
+          "source_refs": [
+            "eu_regulation_910_2014"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "state_transition_test"
+          ],
+          "evidence_contracts": [
+            "attestation.technical_intermediary_is_distinct"
+          ]
+        }
+      ]
+    },
+    {
+      "family_id": "service_level_intermediary_association",
+      "assertions": [
+        {
+          "assertion_id": "association_is_service_to_service",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.intermediary_associations.relationship_model"
+          ],
+          "source_refs": [
+            "ec_ts6_wallet_relying_party_information",
+            "cir_2026_1730"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "round_trip_test"
+          ],
+          "evidence_contracts": [
+            "attestation.association_is_service_to_service"
+          ]
+        },
+        {
+          "assertion_id": "wrpac_binds_association_and_register_reference",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.access_certificates.checks.validate"
+          ],
+          "source_refs": [
+            "cir_2026_1730",
+            "etsi_ts_119_411_8"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "trust_test"
+          ],
+          "evidence_contracts": [
+            "attestation.wrpac_binds_association_and_register_reference"
+          ]
+        }
+      ]
+    },
+    {
+      "family_id": "authenticated_and_trusted_registry_observation",
+      "assertions": [
+        {
+          "assertion_id": "current_ts5_signed_envelope_is_strict",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.checks.validate"
+          ],
+          "source_refs": [
+            "ec_ts5_wallet_relying_party_registration",
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "oversized_input_test",
+            "downgrade_test"
+          ],
+          "evidence_contracts": [
+            "attestation.current_ts5_signed_envelope_is_strict"
+          ]
+        },
+        {
+          "assertion_id": "signer_trust_is_exactly_bound",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.authoritative_state"
+          ],
+          "source_refs": [
+            "cir_2025_848",
+            "ec_ts5_wallet_relying_party_registration"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "trust_test",
+            "substitution_test"
+          ],
+          "evidence_contracts": [
+            "attestation.signer_trust_is_exactly_bound"
+          ]
+        },
+        {
+          "assertion_id": "legacy_profile_cannot_synthesize_current_claims",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.authoritative_state"
+          ],
+          "source_refs": [
+            "ec_ts5_wallet_relying_party_registration"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "downgrade_test"
+          ],
+          "evidence_contracts": [
+            "attestation.legacy_profile_cannot_synthesize_current_claims"
+          ]
+        },
+        {
+          "assertion_id": "reconciliation_is_revision_bound",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.authoritative_state"
+          ],
+          "source_refs": [
+            "cir_2025_848",
+            "ec_ts5_wallet_relying_party_registration"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "state_transition_test",
+            "concurrency_test"
+          ],
+          "evidence_contracts": [
+            "attestation.reconciliation_is_revision_bound"
+          ]
+        },
+        {
+          "assertion_id": "deletion_requires_authoritative_absence",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.deletion_completion"
+          ],
+          "source_refs": [
+            "cir_2025_848",
+            "ec_ts5_wallet_relying_party_registration"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "state_transition_test",
+            "crash_recovery_test",
+            "downgrade_test"
+          ],
+          "evidence_contracts": [
+            "attestation.deletion_requires_authoritative_absence"
+          ]
+        }
+      ]
+    },
+    {
+      "family_id": "recoverable_registration_mutation",
+      "assertions": [
+        {
+          "assertion_id": "dispatch_intent_precedes_non_idempotent_io",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.commands.register"
+          ],
+          "source_refs": [
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "state_transition_test",
+            "crash_recovery_test"
+          ],
+          "evidence_contracts": [
+            "attestation.dispatch_intent_precedes_non_idempotent_io"
+          ]
+        },
+        {
+          "assertion_id": "unknown_outcome_forbids_blind_retry",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.commands.register"
+          ],
+          "source_refs": [
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "state_transition_test",
+            "crash_recovery_test"
+          ],
+          "evidence_contracts": [
+            "attestation.unknown_outcome_forbids_blind_retry"
+          ]
+        },
+        {
+          "assertion_id": "legacy_administration_is_not_normative_ts5",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.commands.update"
+          ],
+          "source_refs": [
+            "ec_ts5_wallet_relying_party_registration"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "unsupported_operation_test",
+            "downgrade_test"
+          ],
+          "evidence_contracts": [
+            "attestation.legacy_administration_is_not_normative_ts5"
+          ]
+        }
+      ]
+    },
+    {
+      "family_id": "independent_wrpac_and_wrprc_lifecycle",
+      "assertions": [
+        {
+          "assertion_id": "wrprc_is_bound_per_service_and_intended_use",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.registration_certificates"
+          ],
+          "source_refs": [
+            "cir_2026_1730",
+            "etsi_ts_119_475"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "state_transition_test",
+            "trust_test"
+          ],
+          "evidence_contracts": [
+            "attestation.wrprc_is_bound_per_service_and_intended_use"
+          ]
+        },
+        {
+          "assertion_id": "legacy_wrprc_shape_cannot_satisfy_strict_profile",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.registration_certificates"
+          ],
+          "source_refs": [
+            "etsi_ts_119_475"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "downgrade_test"
+          ],
+          "evidence_contracts": [
+            "attestation.legacy_wrprc_shape_cannot_satisfy_strict_profile"
+          ]
+        },
+        {
+          "assertion_id": "wrpac_lifecycle_is_separate_from_registration",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.access_certificates"
+          ],
+          "source_refs": [
+            "cir_2025_848",
+            "cir_2026_1730",
+            "etsi_ts_119_411_8"
+          ],
+          "required_evidence": [
+            "behavior_test",
+            "invalid_input_test",
+            "state_transition_test",
+            "trust_test"
+          ],
+          "evidence_contracts": [
+            "attestation.wrpac_lifecycle_is_separate_from_registration"
+          ]
+        },
+        {
+          "assertion_id": "private_key_material_remains_external",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.access_certificates"
+          ],
+          "source_refs": [
+            "etsi_ts_119_411_8"
+          ],
+          "required_evidence": [
+            "boundary_test",
+            "invalid_input_test",
+            "storage_policy_test"
+          ],
+          "evidence_contracts": [
+            "attestation.private_key_material_remains_external"
+          ]
+        }
+      ]
+    },
+    {
+      "family_id": "transaction_content_non_retention",
+      "assertions": [
+        {
+          "assertion_id": "transaction_content_is_outside_control_plane_storage",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.control_plane_boundary"
+          ],
+          "source_refs": [
+            "eu_regulation_910_2014"
+          ],
+          "required_evidence": [
+            "architecture_test",
+            "storage_policy_test",
+            "telemetry_policy_test"
+          ],
+          "evidence_contracts": [
+            "attestation.transaction_content_is_outside_control_plane_storage"
+          ]
+        },
+        {
+          "assertion_id": "retained_evidence_is_control_plane_only",
+          "taxonomy_refs": [
+            "identity.eudi.subresources.relying_parties.operating_model.control_plane_boundary"
+          ],
+          "source_refs": [
+            "eu_regulation_910_2014",
+            "cir_2025_848"
+          ],
+          "required_evidence": [
+            "architecture_test",
+            "storage_policy_test",
+            "redaction_test"
+          ],
+          "evidence_contracts": [
+            "attestation.retained_evidence_is_control_plane_only"
+          ]
+        }
+      ]
+    }
+  ]
+}

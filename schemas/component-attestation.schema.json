@@ -1,0 +1,98 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/component-attestation-v1.json",
+  "title": "ReallyMe component release attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "classification", "component", "release", "artifacts", "dependency_lock", "toolchain", "checks", "created_at", "evidence_policy"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.component_attestation.v1"},
+    "classification": {"const": "internal"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "repository", "source_commit"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/identifier"},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9_.-]+$"},
+        "source_commit": {"$ref": "#/$defs/git_commit"}
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "source_ref"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"},
+        "source_ref": {"type": "string", "pattern": "^[A-Za-z0-9._/-]{1,128}$"}
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "kind", "sha256"],
+        "properties": {
+          "artifact_id": {"$ref": "#/$defs/identifier"},
+          "kind": {"enum": ["binary", "oci_image", "archive", "package", "circuit_artifact", "metadata"]},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "dependency_lock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": {"enum": ["cargo", "npm", "mixed", "other"]},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identifier", "version"],
+      "properties": {
+        "identifier": {"$ref": "#/$defs/identifier"},
+        "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$"}
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check_id", "category", "result", "evidence_sha256"],
+        "properties": {
+          "check_id": {"$ref": "#/$defs/identifier"},
+          "category": {"enum": ["format", "lint", "unit", "integration", "property", "fuzz", "vector", "security", "build"]},
+          "result": {"const": "passed"},
+          "evidence_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_sensitive_data", "raw_process_output_retained", "credentials_retained", "private_key_material_retained"],
+      "properties": {
+        "contains_sensitive_data": {"const": false},
+        "raw_process_output_retained": {"const": false},
+        "credentials_retained": {"const": false},
+        "private_key_material_retained": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,2409 @@
+{
+  "schema_version": 1,
+  "source_copyright": "Copyright (c) 2019-2020 OpenID Foundation and other upstream contributors",
+  "source_license": "MIT",
+  "curation_copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "curation_license": "MIT OR Apache-2.0",
+  "suite_ref": "release-v5.3.4",
+  "suite_commit": "23353b36957d6466010de767c812d2c91ed37638",
+  "inventory_scope": "non_certification_final_engineering",
+  "inventory_authority": "OpenID conformance-suite VariantService using POST /api/plan-equivalent default and applicability resolution",
+  "plan_configuration_count": 26,
+  "module_execution_count": 318,
+  "plans": [
+    {
+      "plan_id": "oid4vci-1_0-issuer-test-plan",
+      "evidence_class": "engineering_only_non_certification",
+      "configurations": [
+        {
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]",
+          "selected_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response"
+          },
+          "resolved_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 20,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test-signed",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-additional-requests",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-multiple-clients",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-skip-notification",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-batch-issuance",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-jwt-proof-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-key-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-pop-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-exp-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-no-sub",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-pop-wrong-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-mismatched-client-attestation-pop-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-missing-proof",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-configuration",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-identifier",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-on-access-token-in-query",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]",
+          "selected_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response"
+          },
+          "resolved_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 20,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test-signed",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-additional-requests",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-multiple-clients",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-skip-notification",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-batch-issuance",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-jwt-proof-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-key-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-pop-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-exp-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-no-sub",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-pop-wrong-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-mismatched-client-attestation-pop-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-missing-proof",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-configuration",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-identifier",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-on-access-token-in-query",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=issuer_initiated][credential_format=sd_jwt_vc]",
+          "selected_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response"
+          },
+          "resolved_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 20,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test-signed",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-additional-requests",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-multiple-clients",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-skip-notification",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-batch-issuance",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-jwt-proof-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-key-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-pop-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-exp-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-no-sub",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-pop-wrong-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-mismatched-client-attestation-pop-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-missing-proof",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-configuration",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-identifier",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-on-access-token-in-query",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=issuer_initiated][credential_format=mdoc]",
+          "selected_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response"
+          },
+          "resolved_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_encryption": "plain",
+            "openid": "plain_oauth",
+            "fapi_response_mode": "plain_response",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 20,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-metadata-test-signed",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-additional-requests",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-multiple-clients",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-happy-flow-skip-notification",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-batch-issuance",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-jwt-proof-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-key-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-invalid-client-attestation-pop-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-exp-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-no-sub",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-client-attestation-pop-wrong-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-mismatched-client-attestation-pop-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-missing-proof",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-configuration",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-unknown-credential-identifier",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-issuer-fail-on-access-token-in-query",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vci-1_0-wallet-test-plan",
+      "evidence_class": "engineering_only_non_certification",
+      "configurations": [
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]",
+          "selected_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled",
+            "vci_credential_offer_variant": "by_value"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]",
+          "selected_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "wallet_initiated",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled",
+            "vci_credential_offer_variant": "by_value"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=sd_jwt_vc]",
+          "selected_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_value",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_value",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=sd_jwt_vc]",
+          "selected_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_reference",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "sd_jwt_vc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_reference",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=mdoc]",
+          "selected_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_value",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_value",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=mdoc]",
+          "selected_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_reference",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain"
+          },
+          "resolved_variants": {
+            "credential_format": "mdoc",
+            "vci_authorization_code_flow_variant": "issuer_initiated",
+            "vci_credential_offer_variant": "by_reference",
+            "fapi_profile": "vci",
+            "sender_constrain": "dpop",
+            "fapi_request_method": "unsigned",
+            "client_auth_type": "client_attestation",
+            "vci_grant_type": "authorization_code",
+            "authorization_request_type": "simple",
+            "vci_credential_issuance_mode": "immediate",
+            "vci_credential_encryption": "plain",
+            "grant_management": "disabled"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-credential-issuance-notification",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-happy-path-with-scopes-without-authorization-details-in-token-response",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-client-attestation-challenge",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            },
+            {
+              "testModule": "oid4vci-1_0-wallet-test-batch-credential-issuance",
+              "variant": {
+                "fapi_client_type": "plain_oauth",
+                "fapi_response_mode": "plain_response"
+              },
+              "instances": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-verifier-test-plan",
+      "evidence_class": "engineering_only_non_certification",
+      "configurations": [
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 12,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-minimal-cnf-jwk",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-credential-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-sd-hash",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-future",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-wrong-vct",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post.jwt][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post.jwt",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post.jwt",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 12,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-minimal-cnf-jwk",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-credential-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-sd-hash",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-future",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-wrong-vct",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 14,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-minimal-cnf-jwk",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-fetched-twice",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-credential-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-sd-hash",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-future",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-wrong-vct",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 14,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-minimal-cnf-jwk",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-fetched-twice",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-credential-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-sd-hash",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-kb-jwt-aud",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-past",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-kb-jwt-iat-in-future",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-wrong-vct",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-session-transcript",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-on-identifier-list",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post.jwt][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 5,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-session-transcript",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-on-identifier-list",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 7,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-fetched-twice",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-session-transcript",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-on-identifier-list",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 7,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-verifier-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-request-uri-fetched-twice",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-invalid-session-transcript",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-revoked-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-on-identifier-list",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-verifier-present-credential-without-status",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-wallet-test-plan",
+      "evidence_class": "engineering_only_non_certification",
+      "configurations": [
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 16,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-index",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-all-elements",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-object-member",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-response-uri-not-client-id",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-redirect-uri-with-direct-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 21,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-ignores-unusable-encryption-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-index",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-all-elements",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-object-member",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-mismatched-client-id",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-redirect-uri-with-direct-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=dc_api][request_method=request_uri_unsigned][client_id_prefix=web-origin]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "dc_api",
+            "request_method": "request_uri_unsigned",
+            "client_id_prefix": "web-origin"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "dc_api",
+            "request_method": "request_uri_unsigned",
+            "client_id_prefix": "web-origin"
+          },
+          "suite_profile_labels": [],
+          "module_count": 13,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-index",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-all-elements",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-object-member",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=dc_api.jwt][request_method=request_uri_multisigned][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "dc_api.jwt",
+            "request_method": "request_uri_multisigned",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "sd_jwt_vc",
+            "credential_type": "eudi_pid",
+            "response_mode": "dc_api.jwt",
+            "request_method": "request_uri_multisigned",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 20,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-ignores-unusable-encryption-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-index",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-array-all-elements",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-pid-claims-path-object-member",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-multisigned-one-invalid-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-wrong-expected-origins",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "direct_post",
+            "request_method": "url_query",
+            "client_id_prefix": "redirect_uri"
+          },
+          "suite_profile_labels": [],
+          "module_count": 14,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-age-over-18",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-response-uri-not-client-id",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-redirect-uri-with-direct-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "direct_post.jwt",
+            "request_method": "request_uri_signed",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 19,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-request-uri-method-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-ignores-unusable-encryption-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-age-over-18",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-mismatched-client-id",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-redirect-uri-with-direct-post",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=dc_api][request_method=request_uri_unsigned][client_id_prefix=web-origin]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "dc_api",
+            "request_method": "request_uri_unsigned",
+            "client_id_prefix": "web-origin"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "dc_api",
+            "request_method": "request_uri_unsigned",
+            "client_id_prefix": "web-origin"
+          },
+          "suite_profile_labels": [],
+          "module_count": 11,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-age-over-18",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        },
+        {
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=dc_api.jwt][request_method=request_uri_multisigned][client_id_prefix=x509_hash]",
+          "selected_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "dc_api.jwt",
+            "request_method": "request_uri_multisigned",
+            "client_id_prefix": "x509_hash"
+          },
+          "resolved_variants": {
+            "vp_profile": "plain_vp",
+            "credential_format": "iso_mdl",
+            "credential_type": "mdl",
+            "response_mode": "dc_api.jwt",
+            "request_method": "request_uri_multisigned",
+            "client_id_prefix": "x509_hash"
+          },
+          "suite_profile_labels": [],
+          "module_count": 18,
+          "modules": [
+            {
+              "testModule": "oid4vp-1final-wallet-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-alternate-happy-flow",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-ignores-unusable-encryption-key",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-all-mandatory-claims",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-age-over-18",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-fewer-claims-than-available",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-optional-credential-set",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-no-claims-in-dcql-query",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-request-object-typ",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-multisigned-one-invalid-signature",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-missing-nonce",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-wrong-expected-origins",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-invalid-client-id-prefix",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-unknown-transaction-data-type",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-required-non-matching-credential",
+              "variant": {},
+              "instances": []
+            },
+            {
+              "testModule": "oid4vp-1final-wallet-negative-test-claim-not-in-credential",
+              "variant": {},
+              "instances": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

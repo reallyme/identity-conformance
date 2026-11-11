@@ -1,0 +1,140 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-relying-party-control-plane-plan-v1.json",
+  "title": "ReallyMe EUDI relying-party control-plane conformance plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "authority", "certification_claim", "execution_status", "taxonomy_program", "system_under_test", "sources", "evidence_policy", "assertion_families"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_id": {"const": "eudi-relying-party-control-plane-v1"},
+    "authority": {"const": "internal_non_certification_evidence"},
+    "certification_claim": {"const": false},
+    "execution_status": {"const": "executable"},
+    "taxonomy_program": {"const": "eudi_relying_party_control_plane"},
+    "system_under_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "adapter_contract"],
+      "properties": {
+        "component_id": {"const": "eudi-relying-party-control-plane"},
+        "adapter_contract": {"const": "adapters/eudi-relying-party/README.md"}
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "execution_sources", "legacy_reference"],
+      "properties": {
+        "required": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "execution_sources": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source_id", "use", "required_checkout"],
+            "properties": {
+              "source_id": {"enum": ["eudi-arf", "eudi-fcaf", "eudi-technical-specifications", "eudi-relying-party-registration-service"]},
+              "use": {"enum": ["requirements_baseline", "assessment_methodology", "ts5_ts6_wire_contracts", "explicit_compatibility_profile"]},
+              "required_checkout": {"const": true}
+            }
+          }
+        },
+        "legacy_reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "commit", "profile"],
+          "properties": {
+            "repository": {"const": "eu-digital-identity-wallet/eudi-srv-web-relyingparty-registration-py"},
+            "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "profile": {"const": "explicit_compatibility_only"}
+          }
+        }
+      }
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_is_evidence", "production_code_under_test_required", "exact_repository_revisions_required", "negative_input_evidence_required", "oversized_input_evidence_required", "reviewed_redacted_results_required", "transaction_content_prohibited"],
+      "properties": {
+        "plan_is_evidence": {"const": false},
+        "production_code_under_test_required": {"const": true},
+        "exact_repository_revisions_required": {"const": true},
+        "negative_input_evidence_required": {"const": true},
+        "oversized_input_evidence_required": {"const": true},
+        "reviewed_redacted_results_required": {"const": true},
+        "transaction_content_prohibited": {"const": true}
+      }
+    },
+    "assertion_families": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/assertion_family"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,95}$"
+    },
+    "evidence_contract": {
+      "type": "string",
+      "pattern": "^attestation\\.[a-z][a-z0-9_]{0,95}$"
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assertion_id", "taxonomy_refs", "source_refs", "required_evidence", "evidence_contracts"],
+      "properties": {
+        "assertion_id": {"$ref": "#/$defs/identifier"},
+        "taxonomy_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^identity\\.[a-z0-9_.]+$"}
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "required_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "evidence_contracts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/evidence_contract"}
+        }
+      }
+    },
+    "assertion_family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family_id", "assertions"],
+      "properties": {
+        "family_id": {"$ref": "#/$defs/identifier"},
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/assertion"}
+        }
+      }
+    }
+  }
+}

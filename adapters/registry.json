@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "adapters": [
+    {
+      "adapter_id": "openid4vci_issuer",
+      "protocol": "openid4vci",
+      "role": "issuer",
+      "contract_path": "adapters/openid4vci",
+      "component_repositories": [
+        "https://github.com/reallyme/openid4vci",
+        "https://github.com/reallyme/ssi",
+        "https://github.com/reallyme/cose"
+      ],
+      "configuration_env": "OIDF_VCI_ISSUER_CONFIG",
+      "plan_ids": [
+        "oid4vci-1_0-issuer-haip-test-plan",
+        "oid4vci-1_0-issuer-test-plan"
+      ]
+    },
+    {
+      "adapter_id": "openid4vci_wallet",
+      "protocol": "openid4vci",
+      "role": "wallet",
+      "contract_path": "adapters/wallet",
+      "component_repositories": [
+        "https://github.com/reallyme/openid4vci",
+        "https://github.com/reallyme/wallet",
+        "https://github.com/reallyme/ssi",
+        "https://github.com/reallyme/identity",
+        "https://github.com/reallyme/cose"
+      ],
+      "configuration_env": "OIDF_VCI_WALLET_CONFIG",
+      "plan_ids": [
+        "oid4vci-1_0-wallet-haip-test-plan",
+        "oid4vci-1_0-wallet-test-plan"
+      ]
+    },
+    {
+      "adapter_id": "openid4vp_verifier",
+      "protocol": "openid4vp",
+      "role": "verifier",
+      "contract_path": "adapters/openid4vp",
+      "component_repositories": [
+        "https://github.com/reallyme/openid4vp",
+        "https://github.com/reallyme/ssi",
+        "https://github.com/reallyme/identity",
+        "https://github.com/reallyme/cose"
+      ],
+      "configuration_env": "OIDF_VP_VERIFIER_CONFIG",
+      "plan_ids": [
+        "oid4vp-1final-verifier-haip-test-plan",
+        "oid4vp-1final-verifier-test-plan"
+      ]
+    },
+    {
+      "adapter_id": "openid4vp_wallet",
+      "protocol": "openid4vp",
+      "role": "wallet",
+      "contract_path": "adapters/wallet",
+      "component_repositories": [
+        "https://github.com/reallyme/openid4vp",
+        "https://github.com/reallyme/wallet",
+        "https://github.com/reallyme/ssi",
+        "https://github.com/reallyme/identity",
+        "https://github.com/reallyme/cose"
+      ],
+      "configuration_env": "OIDF_VP_WALLET_CONFIG",
+      "plan_ids": [
+        "oid4vp-1final-wallet-haip-test-plan",
+        "oid4vp-1final-wallet-test-plan"
+      ]
+    },
+    {
+      "adapter_id": "eudi_relying_party_control_plane",
+      "protocol": "eudi_wallet_relying_party_registration",
+      "role": "control_plane",
+      "contract_path": "adapters/eudi-relying-party",
+      "component_repositories": [
+        "https://github.com/reallyme/platform",
+        "https://github.com/reallyme/ssi"
+      ],
+      "configuration_env": "EUDI_DEPLOYMENT_MANIFEST",
+      "plan_ids": [
+        "eudi-relying-party-control-plane-v1"
+      ]
+    },
+    {
+      "adapter_id": "eudi_wallet_engineering",
+      "protocol": "eudi_wallet",
+      "role": "wallet",
+      "contract_path": "adapters/eudi-wallet",
+      "component_repositories": [
+        "https://github.com/reallyme/wallet"
+      ],
+      "configuration_env": "EUDI_WALLET_DEPLOYMENT_MANIFEST",
+      "plan_ids": [
+        "eudi-wallet-engineering-v1"
+      ]
+    },
+    {
+      "adapter_id": "zk_presentation_proofs",
+      "protocol": "reallyme_zk_presentation",
+      "role": "proof_provider",
+      "contract_path": "adapters/zk",
+      "component_repositories": [
+        "https://github.com/reallyme/zk"
+      ],
+      "configuration_env": "ZK_DEPLOYMENT_MANIFEST",
+      "plan_ids": [
+        "zk-presentation-proofs-v1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/ssi-conformance-bundle-v1.json",
+  "title": "ReallyMe SSI Conformance Evidence Bundle",
+  "description": "Manifest for public, non-runtime SSI release conformance reports generated from a clean release commit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "classification",
+    "contains_runtime_data",
+    "generated_at",
+    "release",
+    "repository",
+    "dependencies",
+    "reports"
+  ],
+  "properties": {
+    "schema": { "const": "reallyme.ssi.conformance.bundle.v1" },
+    "classification": { "const": "public" },
+    "contains_runtime_data": { "const": false },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": { "$ref": "#/$defs/semver" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "commit", "dirty"],
+      "properties": {
+        "name": { "const": "reallyme/ssi" },
+        "url": { "const": "https://github.com/reallyme/ssi" },
+        "commit": { "$ref": "#/$defs/gitCommit" },
+        "dirty": { "const": false }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reallyme/crypto"],
+      "properties": {
+        "reallyme/crypto": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "package", "version", "cargo_lock_sha256"],
+          "properties": {
+            "source": { "const": "crates.io" },
+            "package": { "const": "reallyme-crypto" },
+            "version": { "$ref": "#/$defs/semver" },
+            "cargo_lock_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "reports": {
+      "type": "array",
+      "minItems": 18,
+      "maxItems": 18,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*\\.json$"
+          },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "gitCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "semver": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-upstream-coverage-v1.json",
+  "title": "EUDI upstream coverage and execution boundary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema", "source_lock_path", "scope", "current_claims", "executed_controls", "source_groups"],
+  "properties": {
+    "$comment": {"type": "string"},
+    "schema": {"const": "reallyme.identity.eudi_upstream_coverage.v1"},
+    "source_lock_path": {"const": "upstream/eudi/sources.lock.json"},
+    "scope": {"const": ["wallet", "eidas_2", "oidf"]},
+    "current_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["official_ui_suite_executed", "itb_suite_executed", "fcaf_conformity_established", "rqes_tester_executed", "eu_certification_claim"],
+      "properties": {
+        "official_ui_suite_executed": {"const": false},
+        "itb_suite_executed": {"const": false},
+        "fcaf_conformity_established": {"const": false},
+        "rqes_tester_executed": {"const": false},
+        "eu_certification_claim": {"const": false}
+      }
+    },
+    "executed_controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lane", "execution_owner", "scope", "external_suite"],
+        "properties": {
+          "lane": {"enum": ["relying_party", "wallet"]},
+          "execution_owner": {"const": "reallyme"},
+          "scope": {"type": "string", "minLength": 1},
+          "external_suite": {"const": false}
+        }
+      }
+    },
+    "source_groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["coverage_id", "source_ids", "coverage_class", "source_binding", "execution_state", "prerequisites", "certification_claim"],
+        "properties": {
+          "coverage_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^eudi-[a-z0-9]+(?:-[a-z0-9]+)*$"}},
+          "coverage_class": {"enum": ["normative_baseline", "assessment_methodology", "engineering_reference", "official_test_asset", "interoperability_target", "legacy_compatibility", "monitor_only"]},
+          "source_binding": {"enum": ["verified_checkout", "lock_digest", "freshness_monitor"]},
+          "execution_state": {"enum": ["reallyme_control_execution", "component_attestation_only", "external_runner_required", "interoperability_target_only", "compatibility_only", "monitor_only"]},
+          "prerequisites": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+          "certification_claim": {"const": false}
+        }
+      }
+    }
+  }
+}

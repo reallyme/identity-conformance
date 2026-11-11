@@ -1,0 +1,26 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "adapter_id": "eudi_wallet_engineering",
+  "plan_path": "plans/eudi/wallet.json",
+  "component": {
+    "repository": "https://github.com/reallyme/wallet",
+    "source_ref": "main",
+    "commit": "0acca29b91ca2d4b9e0404bebb44f41c99211e5f"
+  },
+  "source_artifacts": [
+    {"artifact_id": "cargo-lock", "path": "Cargo.lock", "sha256": "3f7b40d828200b4d28aef39cac56fdb0a1da72f8b78b7fc5076b809a6f43ee52"},
+    {"artifact_id": "wallet-sources-lock", "path": "conformance/sources.lock", "sha256": "dff8e3a3cd3268ecac1f3d154187d89b2afd1f74545cebd7108ac256d7999449"},
+    {"artifact_id": "reference-implementation-lock", "path": "conformance/eudi/reference-implementation.lock", "sha256": "889b29c842b3f9fd7abdd17f3f041ba0303a7b0800e6fe4ed3c69ac978491ef4"},
+    {"artifact_id": "upstream-tests", "path": "conformance/eudi/upstream-tests.json", "sha256": "89d07258224f21bfb9f3f03d5a0f97bfcff5292e30954af97b05d06c03005c3d"},
+    {"artifact_id": "eudi-wallet-minimums", "path": "conformance/requirements/eudi-wallet-minimums.json", "sha256": "a82e3145e4d622846dca6bfe469e1701490df762f8127cecb29005776d114609"}
+  ],
+  "cargo_packages": ["reallyme-wallet-conformance"],
+  "required_attestation_categories": ["format", "lint", "unit", "integration", "vector", "security", "build"],
+  "evidence_policy": {
+    "contains_sensitive_data": false,
+    "raw_process_output_retained": false,
+    "credential_payloads_retained": false,
+    "private_key_material_retained": false
+  }
+}

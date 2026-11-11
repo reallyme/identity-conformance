@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+schema: reallyme.identity.conformance_artifact_map.v1
+repository: reallyme/identity-conformance
+artifacts:
+  specialized-audit:etsi_eaa_pid_requirement_trace:
+    artifact_id: etsi-eaa-pid-requirement-trace
+    kind: etsi_eaa_pid_requirement_trace
+    path: references/etsi-eaa-pid/requirement-trace.json

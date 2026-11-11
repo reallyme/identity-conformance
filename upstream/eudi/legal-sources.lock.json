@@ -1,0 +1,136 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.eudi_legal_sources.v1",
+  "observed_at": "2026-11-11",
+  "pin_policy": "immutable_eli_and_celex_identifiers",
+  "sources": [
+    {
+      "source_id": "eu-regulation-910-2014",
+      "kind": "governing_regulation",
+      "celex": "32014R0910",
+      "eli": "https://data.europa.eu/eli/reg/2014/910/oj",
+      "adopted_on": "2014-07-23",
+      "title": "Regulation (EU) No 910/2014 on electronic identification and trust services",
+      "amended_by": ["eu-regulation-2024-1183"]
+    },
+    {
+      "source_id": "eu-regulation-2024-1183",
+      "kind": "governing_amendment",
+      "celex": "32024R1183",
+      "eli": "https://data.europa.eu/eli/reg/2024/1183/oj",
+      "adopted_on": "2024-04-11",
+      "title": "Regulation (EU) 2024/1183 establishing the European Digital Identity Framework",
+      "amends": ["eu-regulation-910-2014"]
+    },
+    {
+      "source_id": "cir-2024-2977",
+      "kind": "implementing_regulation",
+      "celex": "32024R2977",
+      "eli": "https://data.europa.eu/eli/reg_impl/2024/2977/oj",
+      "adopted_on": "2024-11-28",
+      "title": "Person identification data and electronic attestations of attributes issued to wallets",
+      "amended_by": ["cir-2026-1731"]
+    },
+    {
+      "source_id": "cir-2024-2979",
+      "kind": "implementing_regulation",
+      "celex": "32024R2979",
+      "eli": "https://data.europa.eu/eli/reg_impl/2024/2979/oj",
+      "adopted_on": "2024-11-28",
+      "title": "Integrity and core functionalities of European Digital Identity Wallets",
+      "amended_by": ["cir-2026-1731"]
+    },
+    {
+      "source_id": "cir-2024-2980",
+      "kind": "implementing_regulation",
+      "celex": "32024R2980",
+      "eli": "https://data.europa.eu/eli/reg_impl/2024/2980/oj",
+      "adopted_on": "2024-11-28",
+      "title": "Notifications concerning the European Digital Identity Wallet ecosystem",
+      "amended_by": ["cir-2026-1731"]
+    },
+    {
+      "source_id": "cir-2024-2981",
+      "kind": "implementing_regulation",
+      "celex": "32024R2981",
+      "eli": "https://data.europa.eu/eli/reg_impl/2024/2981/oj",
+      "adopted_on": "2024-11-28",
+      "title": "Certification of European Digital Identity Wallets"
+    },
+    {
+      "source_id": "cir-2024-2982",
+      "kind": "implementing_regulation",
+      "celex": "32024R2982",
+      "eli": "https://data.europa.eu/eli/reg_impl/2024/2982/oj",
+      "adopted_on": "2024-11-28",
+      "title": "Protocols and interfaces supported by the European Digital Identity Framework",
+      "amended_by": ["cir-2026-1731"]
+    },
+    {
+      "source_id": "cir-2025-846",
+      "kind": "implementing_regulation",
+      "celex": "32025R0846",
+      "eli": "https://data.europa.eu/eli/reg_impl/2025/846/oj",
+      "adopted_on": "2025-05-06",
+      "title": "Cross-border identity matching of natural persons"
+    },
+    {
+      "source_id": "cir-2025-847",
+      "kind": "implementing_regulation",
+      "celex": "32025R0847",
+      "eli": "https://data.europa.eu/eli/reg_impl/2025/847/oj",
+      "adopted_on": "2025-05-06",
+      "title": "Reactions to security breaches of European Digital Identity Wallets"
+    },
+    {
+      "source_id": "cir-2025-848",
+      "kind": "implementing_regulation",
+      "celex": "32025R0848",
+      "eli": "https://data.europa.eu/eli/reg_impl/2025/848/oj",
+      "adopted_on": "2025-05-06",
+      "title": "Registration of wallet-relying parties",
+      "amended_by": ["cir-2026-1730"]
+    },
+    {
+      "source_id": "cir-2025-849",
+      "kind": "implementing_regulation",
+      "celex": "32025R0849",
+      "eli": "https://data.europa.eu/eli/reg_impl/2025/849/oj",
+      "adopted_on": "2025-05-06",
+      "title": "Submission of information for the list of certified European Digital Identity Wallets"
+    },
+    {
+      "source_id": "cir-2025-1569",
+      "kind": "implementing_regulation",
+      "celex": "32025R1569",
+      "eli": "https://data.europa.eu/eli/reg_impl/2025/1569/oj",
+      "adopted_on": "2025-07-29",
+      "title": "Qualified and public-sector electronic attestations of attributes"
+    },
+    {
+      "source_id": "cir-2026-1730",
+      "kind": "implementing_amendment",
+      "celex": "32026R1730",
+      "eli": "https://data.europa.eu/eli/reg_impl/2026/1730/oj",
+      "adopted_on": "2026-07-15",
+      "title": "Amendment of wallet-relying-party registration standards and specifications",
+      "amends": ["cir-2025-848"]
+    },
+    {
+      "source_id": "cir-2026-1731",
+      "kind": "implementing_amendment",
+      "celex": "32026R1731",
+      "eli": "https://data.europa.eu/eli/reg_impl/2026/1731/oj",
+      "adopted_on": "2026-07-15",
+      "title": "Amendment of wallet standards and specifications",
+      "amends": ["cir-2024-2977", "cir-2024-2979", "cir-2024-2980", "cir-2024-2982"]
+    }
+  ],
+  "current_consolidations": [
+    {"source_id": "cir-2024-2977", "as_of": "2026-08-11", "eli": "https://data.europa.eu/eli/reg_impl/2024/2977/2026-08-11"},
+    {"source_id": "cir-2024-2979", "as_of": "2026-08-11", "eli": "https://data.europa.eu/eli/reg_impl/2024/2979/2026-08-11"},
+    {"source_id": "cir-2024-2980", "as_of": "2026-08-11", "eli": "https://data.europa.eu/eli/reg_impl/2024/2980/2026-08-11"},
+    {"source_id": "cir-2024-2982", "as_of": "2026-08-11", "eli": "https://data.europa.eu/eli/reg_impl/2024/2982/2026-08-11"},
+    {"source_id": "cir-2025-848", "as_of": "2026-08-11", "eli": "https://data.europa.eu/eli/reg_impl/2025/848/2026-08-11"}
+  ]
+}

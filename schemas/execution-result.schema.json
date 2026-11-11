@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/execution-result-v1.json",
+  "title": "ReallyMe local OIDF execution result",
+  "description": "Local index for raw OIDF output. The indexed directory is sensitive and must remain untracked.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scope",
+    "suite_commit",
+    "created_at",
+    "contains_sensitive_data",
+    "output_directory",
+    "plan_expressions"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scope": { "enum": ["certification", "engineering", "all"] },
+    "suite_commit": { "const": "23353b36957d6466010de767c812d2c91ed37638" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "contains_sensitive_data": { "const": true },
+    "output_directory": {
+      "type": "string",
+      "pattern": "^results/local/[A-Za-z0-9][A-Za-z0-9._/-]*$",
+      "not": { "pattern": "(^|/)\\.\\.(/|$)" }
+    },
+    "plan_expressions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048,
+        "not": { "pattern": ":" }
+      }
+    }
+  }
+}

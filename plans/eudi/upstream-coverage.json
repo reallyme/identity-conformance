@@ -1,0 +1,83 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.eudi_upstream_coverage.v1",
+  "source_lock_path": "upstream/eudi/sources.lock.json",
+  "scope": ["wallet", "eidas_2", "oidf"],
+  "current_claims": {
+    "official_ui_suite_executed": false,
+    "itb_suite_executed": false,
+    "fcaf_conformity_established": false,
+    "rqes_tester_executed": false,
+    "eu_certification_claim": false
+  },
+  "executed_controls": [
+    {"lane": "relying_party", "execution_owner": "reallyme", "scope": "TS5 and TS6 control-plane requirements and bounded deployment probes", "external_suite": false},
+    {"lane": "wallet", "execution_owner": "reallyme", "scope": "digest-bound wallet component checks for issuance, presentation, malicious input, and release quality", "external_suite": false}
+  ],
+  "source_groups": [
+    {
+      "coverage_id": "architecture_baseline", "source_ids": ["eudi-arf"], "coverage_class": "normative_baseline",
+      "source_binding": "verified_checkout", "execution_state": "reallyme_control_execution", "prerequisites": [], "certification_claim": false
+    },
+    {
+      "coverage_id": "assessment_methodology", "source_ids": ["eudi-fcaf"], "coverage_class": "assessment_methodology",
+      "source_binding": "verified_checkout", "execution_state": "component_attestation_only", "prerequisites": ["fcaf_stable_baseline"], "certification_claim": false
+    },
+    {
+      "coverage_id": "technical_specifications", "source_ids": ["eudi-technical-specifications"], "coverage_class": "engineering_reference",
+      "source_binding": "verified_checkout", "execution_state": "reallyme_control_execution", "prerequisites": [], "certification_claim": false
+    },
+    {
+      "coverage_id": "attestation_rulebooks", "source_ids": ["eudi-attestation-rulebooks"], "coverage_class": "engineering_reference",
+      "source_binding": "lock_digest", "execution_state": "component_attestation_only", "prerequisites": ["future_rulebook_controls"], "certification_claim": false
+    },
+    {
+      "coverage_id": "age_verification_zkp", "source_ids": ["eudi-age-verification-specification"], "coverage_class": "engineering_reference",
+      "source_binding": "lock_digest", "execution_state": "external_runner_required", "prerequisites": ["deployed_age_verification_profile", "future_age_verification_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "official_wallet_ui_tests", "source_ids": ["eudi-functional-tests"], "coverage_class": "official_test_asset",
+      "source_binding": "lock_digest", "execution_state": "external_runner_required", "prerequisites": ["published_wallet_builds", "android_device_farm", "ios_device_farm", "macos_runner"], "certification_claim": false
+    },
+    {
+      "coverage_id": "interoperability_testbed", "source_ids": ["eudi-itb"], "coverage_class": "official_test_asset",
+      "source_binding": "lock_digest", "execution_state": "external_runner_required", "prerequisites": ["deployed_itb", "deployed_wallet"], "certification_claim": false
+    },
+    {
+      "coverage_id": "legacy_issuer_wallet_tester", "source_ids": ["eudi-issuer-wallet-tester"], "coverage_class": "legacy_compatibility",
+      "source_binding": "freshness_monitor", "execution_state": "compatibility_only", "prerequisites": ["openid4vci_draft_13_profile"], "certification_claim": false
+    },
+    {
+      "coverage_id": "rqes_wallet_driven_tester", "source_ids": ["eudi-rqes-wallet-driven-tester"], "coverage_class": "official_test_asset",
+      "source_binding": "lock_digest", "execution_state": "external_runner_required", "prerequisites": ["deployed_wallet", "deployed_qtsp", "deployed_external_sca", "deployed_rqes_relying_party"], "certification_claim": false
+    },
+    {
+      "coverage_id": "relying_party_registration", "source_ids": ["eudi-relying-party-registration-service"], "coverage_class": "interoperability_target",
+      "source_binding": "verified_checkout", "execution_state": "reallyme_control_execution", "prerequisites": [], "certification_claim": false
+    },
+    {
+      "coverage_id": "issuance_and_presentation_targets", "source_ids": ["eudi-pid-issuer", "eudi-verifier-endpoint", "eudi-wallet-provider-service", "eudi-multiplatform-verifier-ui", "eudi-web-verifier"], "coverage_class": "interoperability_target",
+      "source_binding": "lock_digest", "execution_state": "interoperability_target_only", "prerequisites": ["deployed_interoperability_stack", "future_interoperability_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "mobile_wallet_reference_targets", "source_ids": ["eudi-android-wallet-ui", "eudi-android-wallet-core", "eudi-ios-wallet-ui", "eudi-ios-wallet-kit"], "coverage_class": "interoperability_target",
+      "source_binding": "lock_digest", "execution_state": "interoperability_target_only", "prerequisites": ["android_device_farm", "ios_device_farm", "macos_runner", "future_interoperability_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "trust_and_status_targets", "source_ids": ["eudi-trust-validator", "eudi-status-validator", "eudi-status-list-service", "eudi-trusted-list-manager", "eudi-etsi-1196x2-library"], "coverage_class": "interoperability_target",
+      "source_binding": "lock_digest", "execution_state": "interoperability_target_only", "prerequisites": ["deployed_trust_stack", "future_trust_status_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "rqes_wallet_and_csc_libraries", "source_ids": ["eudi-android-rqes-core", "eudi-ios-rqes-kit", "eudi-jvm-rqes-csc-library", "eudi-ios-rqes-csc-library"], "coverage_class": "interoperability_target",
+      "source_binding": "lock_digest", "execution_state": "interoperability_target_only", "prerequisites": ["future_rqes_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "rqes_reference_services", "source_ids": ["eudi-rqes-qtsp-service", "eudi-rqes-external-sca-service", "eudi-rqes-wallet-driven-relying-party"], "coverage_class": "interoperability_target",
+      "source_binding": "lock_digest", "execution_state": "external_runner_required", "prerequisites": ["deployed_qtsp", "deployed_external_sca", "deployed_rqes_relying_party", "future_rqes_adapter"], "certification_claim": false
+    },
+    {
+      "coverage_id": "documentation_portal", "source_ids": ["eudi-documentation-site"], "coverage_class": "monitor_only",
+      "source_binding": "freshness_monitor", "execution_state": "monitor_only", "prerequisites": [], "certification_claim": false
+    }
+  ]
+}

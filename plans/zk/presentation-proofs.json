@@ -1,0 +1,27 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "plan_id": "zk-presentation-proofs-v1",
+  "execution_status": "executable",
+  "certification_claim": false,
+  "source_baseline": {
+    "repository": "https://github.com/reallyme/zk",
+    "release_ref": "v0.3.0",
+    "commit": "4684a9e4895df50a53c51173427ab5caf55b7088"
+  },
+  "assertions": [
+    {"assertion_id": "toolchain_identity", "required_checks": ["source.toolchain-lock", "attestation.build"]},
+    {"assertion_id": "artifact_identity", "required_checks": ["source.provider-manifest", "artifact.release-bundle"]},
+    {"assertion_id": "canonical_vectors", "required_checks": ["cargo.reallyme-zk-conformance", "attestation.vector"]},
+    {"assertion_id": "malicious_proof_rejection", "required_checks": ["cargo.reallyme-zk-proto-codec", "attestation.security"]},
+    {"assertion_id": "request_binding", "required_checks": ["cargo.reallyme-zk-conformance", "cargo.reallyme-zk-proto-codec"]},
+    {"assertion_id": "artifact_substitution_rejection", "required_checks": ["cargo.reallyme-zk-artifacts", "attestation.security"]},
+    {"assertion_id": "provider_release_quality", "required_checks": ["attestation.format", "attestation.lint", "attestation.integration"]}
+  ],
+  "evidence_policy": {
+    "contains_sensitive_data": false,
+    "raw_process_output_retained": false,
+    "witness_material_retained": false,
+    "private_key_material_retained": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright \u00a9 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "repository": "https://gitlab.com/openid/conformance-suite.git",
+  "pinned_ref": "master",
+  "commit": "410812ef6bc72a84723c1685725edce3558e31e3",
+  "local_checkout": "upstream/oidf/openid-conformance-suite",
+  "observed_at": "2026-11-11"
+}

@@ -1,0 +1,51 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "plan_id": "eudi-wallet-engineering-v1",
+  "execution_status": "executable",
+  "certification_claim": false,
+  "source_baseline": {
+    "repository": "https://github.com/reallyme/wallet",
+    "source_ref": "main",
+    "commit": "0acca29b91ca2d4b9e0404bebb44f41c99211e5f"
+  },
+  "upstream_source_ids": [
+    "eudi-arf",
+    "eudi-fcaf",
+    "eudi-technical-specifications",
+    "eudi-attestation-rulebooks",
+    "eudi-functional-tests",
+    "eudi-itb"
+  ],
+  "legal_source_ids": [
+    "eu-regulation-910-2014",
+    "eu-regulation-2024-1183",
+    "cir-2024-2977",
+    "cir-2024-2979",
+    "cir-2024-2980",
+    "cir-2024-2981",
+    "cir-2024-2982",
+    "cir-2025-846",
+    "cir-2025-847",
+    "cir-2025-848",
+    "cir-2025-849",
+    "cir-2025-1569",
+    "cir-2026-1730",
+    "cir-2026-1731"
+  ],
+  "assertions": [
+    {"assertion_id": "source_baseline_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock"]},
+    {"assertion_id": "upstream_reference_binding", "required_checks": ["source.reference-implementation-lock", "source.upstream-tests", "framework.eudi-source-lock", "framework.eudi-legal-source-lock", "framework.eudi-publications-lock"]},
+    {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "cargo.reallyme-wallet-conformance"]},
+    {"assertion_id": "issuance_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.integration"]},
+    {"assertion_id": "presentation_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.vector"]},
+    {"assertion_id": "malicious_input_rejection", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.security"]},
+    {"assertion_id": "wallet_release_quality", "required_checks": ["attestation.format", "attestation.lint", "attestation.unit", "attestation.build"]}
+  ],
+  "evidence_policy": {
+    "contains_sensitive_data": false,
+    "raw_process_output_retained": false,
+    "credential_payloads_retained": false,
+    "private_key_material_retained": false
+  }
+}

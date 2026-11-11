@@ -1,0 +1,437 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright \u00a9 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "observed_at": "2026-11-09",
+  "scope": "non_certification_final_engineering",
+  "certification_baseline": "plans/oidf/certification.json",
+  "scope_contract": {
+    "purpose": "Additional OpenID4VCI and OpenID4VP 1.0 Final coverage outside the HAIP certification plans.",
+    "upstream_status": "The pinned suite labels these base plans alpha and not currently part of the certification program.",
+    "run_every_returned_module": true,
+    "module_selector_allowed": false,
+    "requested_dimensions": {
+      "openid4vci_roles": [
+        "issuer",
+        "wallet"
+      ],
+      "openid4vci_profiles": [
+        "haip",
+        "non_haip"
+      ],
+      "openid4vci_credential_formats": [
+        "sd_jwt_vc",
+        "mdoc"
+      ],
+      "openid4vci_initiation_modes": [
+        "wallet_initiated",
+        "issuer_initiated"
+      ],
+      "openid4vp_roles": [
+        "verifier",
+        "wallet"
+      ],
+      "openid4vp_version": "1.0 Final",
+      "openid4vp_credential_formats": [
+        "sd_jwt_vc",
+        "iso_mdl"
+      ]
+    },
+    "coverage_definition": "All modules returned by the pinned suite for every configuration below, plus every configuration in the certification baseline. This is not the Cartesian product of every optional suite variant.",
+    "fixed_policy": "Use DPoP, client attestation, authorization code, simple authorization details, plain OAuth, and unsigned authorization requests for the non-HAIP VCI comparison. Use representative valid combinations covering every VP request and response mode.",
+    "not_expanded_as_independent_dimensions": [
+      "vci_pre_authorization_code",
+      "vci_rar",
+      "vci_mtls",
+      "vci_private_key_jwt",
+      "vci_issuer_initiated_dc_api",
+      "every_vp_client_id_prefix"
+    ]
+  },
+  "suite_target": {
+    "lock_file": "upstream/oidf/engineering-master.lock.json",
+    "repository": "https://gitlab.com/openid/conformance-suite.git",
+    "local_checkout": "upstream/oidf/openid-conformance-suite",
+    "pinned_ref": "master",
+    "commit": "410812ef6bc72a84723c1685725edce3558e31e3"
+  },
+  "plans": [
+    {
+      "plan_id": "oid4vci-1_0-issuer-test-plan",
+      "protocol": "openid4vci",
+      "role": "issuer",
+      "evidence_class": "engineering_only_non_certification",
+      "engineering_runs": [
+        {
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_encryption": "plain",
+          "openid": "plain_oauth",
+          "fapi_response_mode": "plain_response",
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_encryption": "plain",
+          "openid": "plain_oauth",
+          "fapi_response_mode": "plain_response",
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]"
+        },
+        {
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_encryption": "plain",
+          "openid": "plain_oauth",
+          "fapi_response_mode": "plain_response",
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=issuer_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_encryption": "plain",
+          "openid": "plain_oauth",
+          "fapi_response_mode": "plain_response",
+          "expression": "oid4vci-1_0-issuer-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_encryption=plain][openid=plain_oauth][fapi_response_mode=plain_response][vci_authorization_code_flow_variant=issuer_initiated][credential_format=mdoc]"
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vci-1_0-wallet-test-plan",
+      "protocol": "openid4vci",
+      "role": "wallet",
+      "evidence_class": "engineering_only_non_certification",
+      "engineering_runs": [
+        {
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]"
+        },
+        {
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_value",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=sd_jwt_vc]"
+        },
+        {
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_reference",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=sd_jwt_vc]"
+        },
+        {
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_value",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=mdoc]"
+        },
+        {
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_reference",
+          "fapi_profile": "vci",
+          "sender_constrain": "dpop",
+          "fapi_request_method": "unsigned",
+          "client_auth_type": "client_attestation",
+          "vci_grant_type": "authorization_code",
+          "authorization_request_type": "simple",
+          "vci_credential_issuance_mode": "immediate",
+          "vci_credential_encryption": "plain",
+          "expression": "oid4vci-1_0-wallet-test-plan[fapi_profile=vci][sender_constrain=dpop][fapi_request_method=unsigned][client_auth_type=client_attestation][vci_grant_type=authorization_code][authorization_request_type=simple][vci_credential_issuance_mode=immediate][vci_credential_encryption=plain][vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=mdoc]"
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-verifier-test-plan",
+      "protocol": "openid4vp",
+      "role": "verifier",
+      "evidence_class": "engineering_only_non_certification",
+      "engineering_runs": [
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "response_mode": "direct_post",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "response_mode": "direct_post.jwt",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post.jwt][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "response_mode": "direct_post",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "response_mode": "direct_post.jwt",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "response_mode": "direct_post",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "response_mode": "direct_post.jwt",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post.jwt][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "response_mode": "direct_post",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "response_mode": "direct_post.jwt",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-verifier-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        }
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-wallet-test-plan",
+      "protocol": "openid4vp",
+      "role": "wallet",
+      "evidence_class": "engineering_only_non_certification",
+      "credential_type_by_credential_format": {
+        "sd_jwt_vc": "eudi_pid",
+        "iso_mdl": "mdl"
+      },
+      "engineering_runs": [
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "direct_post",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "direct_post.jwt",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "dc_api",
+          "request_method": "request_uri_unsigned",
+          "client_id_prefix": "web-origin",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=dc_api][request_method=request_uri_unsigned][client_id_prefix=web-origin]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "dc_api.jwt",
+          "request_method": "request_uri_multisigned",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=dc_api.jwt][request_method=request_uri_multisigned][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "direct_post",
+          "request_method": "url_query",
+          "client_id_prefix": "redirect_uri",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=direct_post][request_method=url_query][client_id_prefix=redirect_uri]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "direct_post.jwt",
+          "request_method": "request_uri_signed",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=direct_post.jwt][request_method=request_uri_signed][client_id_prefix=x509_hash]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "dc_api",
+          "request_method": "request_uri_unsigned",
+          "client_id_prefix": "web-origin",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=dc_api][request_method=request_uri_unsigned][client_id_prefix=web-origin]"
+        },
+        {
+          "vp_profile": "plain_vp",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "dc_api.jwt",
+          "request_method": "request_uri_multisigned",
+          "client_id_prefix": "x509_hash",
+          "expression": "oid4vp-1final-wallet-test-plan[vp_profile=plain_vp][credential_format=iso_mdl][credential_type=mdl][response_mode=dc_api.jwt][request_method=request_uri_multisigned][client_id_prefix=x509_hash]"
+        }
+      ]
+    }
+  ],
+  "suite_source_assertions": [
+    {
+      "path": "src/main/java/net/openid/conformance/vci10issuer/VCIIssuerTestPlan.java",
+      "required_tokens": [
+        "oid4vci-1_0-issuer-test-plan",
+        "certifiable = false",
+        "alpha = true",
+        "VCIIssuerHappyFlow.class",
+        "VCIIssuerFailOnRequestWithAccessTokenInQuery.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vci10wallet/VCIWalletTestPlan.java",
+      "required_tokens": [
+        "oid4vci-1_0-wallet-test-plan",
+        "certifiable = false",
+        "alpha = true",
+        "VCIWalletTestCredentialIssuance.class",
+        "VCIWalletTestBatchCredentialIssuance.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierTestPlan.java",
+      "required_tokens": [
+        "oid4vp-1final-verifier-test-plan",
+        "certifiable = false",
+        "alpha = true",
+        "VP1FinalVerifierHappyFlow.class",
+        "VP1FinalVerifierKbJwtIatInFuture.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletTestPlan.java",
+      "required_tokens": [
+        "oid4vp-1final-wallet-test-plan",
+        "certifiable = false",
+        "alpha = true",
+        "VP1FinalWalletHappyFlow.class",
+        "VP1FinalWalletRequiredNonMatchingCredential.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierResponseMode.java",
+      "required_tokens": [
+        "DIRECT_POST(\"direct_post\")",
+        "DIRECT_POST_JWT(\"direct_post.jwt\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletResponseMode.java",
+      "required_tokens": [
+        "DIRECT_POST(\"direct_post\")",
+        "DIRECT_POST_JWT(\"direct_post.jwt\")",
+        "DC_API(\"dc_api\")",
+        "DC_API_JWT(\"dc_api.jwt\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletRequestMethod.java",
+      "required_tokens": [
+        "URL_QUERY(\"url_query\")",
+        "REQUEST_URI_UNSIGNED(\"request_uri_unsigned\")",
+        "REQUEST_URI_SIGNED(\"request_uri_signed\")",
+        "REQUEST_URI_MULTISIGNED(\"request_uri_multisigned\")"
+      ]
+    }
+  ]
+}

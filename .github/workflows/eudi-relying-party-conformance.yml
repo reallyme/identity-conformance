@@ -1,0 +1,309 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: EUDI Relying-Party Conformance
+run-name: EUDI relying-party conformance @ ${{ github.sha }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Exact identity-conformance commit selected by the private caller
+        required: true
+        type: string
+      candidate_binary_path:
+        description: Absolute path to the candidate executable on the ephemeral runner
+        required: true
+        type: string
+      trust_service_artifact_path:
+        description: Absolute path to the trust-service release artifact
+        required: true
+        type: string
+      credential_authority_artifact_path:
+        description: Absolute path to the credential-authority release artifact
+        required: true
+        type: string
+      service_ca_certificate_path:
+        description: Absolute path to the private service CA certificate for deployed modes
+        required: false
+        default: ""
+        type: string
+      journal_path:
+        description: Absolute path to the durable TS5 journal for live mode
+        required: false
+        default: ""
+        type: string
+    secrets:
+      REALLYME_CI_TOKEN:
+        required: true
+      EUDI_DEPLOYMENT_MANIFEST_B64:
+        required: true
+      EUDI_COMPONENT_ATTESTATION_B64:
+        required: true
+      EUDI_TRUST_SERVICE_HEALTH_ENDPOINT:
+        required: false
+      EUDI_TRUST_SERVICE_TOKEN:
+        required: false
+      EUDI_CREDENTIAL_AUTHORITY_HEALTH_ENDPOINT:
+        required: false
+      EUDI_CREDENTIAL_AUTHORITY_TOKEN:
+        required: false
+      EUDI_LIVE_CONFIG_B64:
+        required: false
+      EUDI_RELYING_PARTY_ID:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eudi-relying-party-conformance
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    name: Execute the EUDI relying-party control-plane plan
+    runs-on: [self-hosted, linux, x64, eudi-conformance]
+    timeout-minutes: 360
+    steps:
+      - name: Require a ReallyMe caller
+        run: |
+          [[ "${GITHUB_REPOSITORY_OWNER}" == "reallyme" ]]
+          [[ "${GITHUB_REPOSITORY}" != "reallyme/identity-conformance" ]]
+          [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Verify the selected framework revision
+        run: test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+
+      - name: Materialize and validate the protected deployment manifest
+        env:
+          EUDI_DEPLOYMENT_MANIFEST_B64: ${{ secrets.EUDI_DEPLOYMENT_MANIFEST_B64 }}
+        run: |
+          umask 077
+          input_dir="${RUNNER_TEMP}/eudi-conformance-inputs"
+          mkdir -p "${input_dir}"
+          test -n "${EUDI_DEPLOYMENT_MANIFEST_B64}"
+          printf '%s' "${EUDI_DEPLOYMENT_MANIFEST_B64}" | base64 --decode > "${input_dir}/deployment.json"
+          python3 identity-conformance/scripts/verify_eudi_deployment_manifest.py \
+            --manifest "${input_dir}/deployment.json" \
+            --candidate-repository "https://github.com/${GITHUB_REPOSITORY}"
+
+      - name: Resolve immutable source revisions
+        id: revisions
+        run: |
+          manifest="${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json"
+          for component in candidate platform ssi; do
+            revision="$(jq -er --arg component "${component}" \
+              '[.components[] | select(.component_id == $component)] \
+               | if length == 1 then .[0].commit else error("component revision must be unique") end' \
+              "${manifest}")"
+            [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
+            printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
+          done
+          while IFS=$'\t' read -r source_id commit; do
+            [[ "${source_id}" =~ ^[a-z0-9-]+$ ]]
+            [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
+            printf '%s=%s\n' "${source_id}" "${commit}" >> "${GITHUB_OUTPUT}"
+          done < <(jq -er \
+            '.sources[] \
+             | select(.source_id == "eudi-arf" or \
+                      .source_id == "eudi-fcaf" or \
+                      .source_id == "eudi-technical-specifications" or \
+                      .source_id == "eudi-relying-party-registration-service") \
+             | [.source_id, .commit] | @tsv' \
+            identity-conformance/upstream/eudi/sources.lock.json)
+
+      - name: Require component checkout credential
+        env:
+          REALLYME_CI_TOKEN: ${{ secrets.REALLYME_CI_TOKEN }}
+        run: test -n "${REALLYME_CI_TOKEN}"
+
+      - name: Checkout candidate component
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.revisions.outputs.candidate }}
+          path: components/candidate
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned Platform dependency
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/platform
+          ref: ${{ steps.revisions.outputs.platform }}
+          path: components/platform
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned SSI dependency
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/ssi
+          ref: ${{ steps.revisions.outputs.ssi }}
+          path: components/ssi
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout pinned ARF
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework
+          ref: ${{ steps.revisions.outputs.eudi-arf }}
+          path: upstream/eudi/eudi-doc-architecture-and-reference-framework
+          persist-credentials: false
+
+      - name: Checkout pinned FCAF
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment
+          ref: ${{ steps.revisions.outputs.eudi-fcaf }}
+          path: upstream/eudi/eudi-doc-functional-conformance-assessment
+          persist-credentials: false
+
+      - name: Checkout pinned TS5 and TS6 specifications
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications
+          ref: ${{ steps.revisions.outputs.eudi-technical-specifications }}
+          path: upstream/eudi/eudi-doc-standards-and-technical-specifications
+          persist-credentials: false
+
+      - name: Checkout pinned relying-party reference service
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-srv-web-relyingparty-registration-py
+          ref: ${{ steps.revisions.outputs.eudi-relying-party-registration-service }}
+          path: upstream/eudi/eudi-srv-web-relyingparty-registration-py
+          persist-credentials: false
+
+      - name: Validate protected runner inputs
+        env:
+          EUDI_CANDIDATE_BINARY: ${{ inputs.candidate_binary_path }}
+          EUDI_TRUST_SERVICE_ARTIFACT: ${{ inputs.trust_service_artifact_path }}
+          EUDI_CREDENTIAL_AUTHORITY_ARTIFACT: ${{ inputs.credential_authority_artifact_path }}
+          EUDI_COMPONENT_ATTESTATION_B64: ${{ secrets.EUDI_COMPONENT_ATTESTATION_B64 }}
+        run: |
+          test -n "${EUDI_CANDIDATE_BINARY}"
+          test -x "${EUDI_CANDIDATE_BINARY}"
+          test -f "${EUDI_CANDIDATE_BINARY}"
+          test ! -L "${EUDI_CANDIDATE_BINARY}"
+          test -n "${EUDI_TRUST_SERVICE_ARTIFACT}"
+          test -f "${EUDI_TRUST_SERVICE_ARTIFACT}"
+          test ! -L "${EUDI_TRUST_SERVICE_ARTIFACT}"
+          test -n "${EUDI_CREDENTIAL_AUTHORITY_ARTIFACT}"
+          test -f "${EUDI_CREDENTIAL_AUTHORITY_ARTIFACT}"
+          test ! -L "${EUDI_CREDENTIAL_AUTHORITY_ARTIFACT}"
+          test -n "${EUDI_COMPONENT_ATTESTATION_B64}"
+          printf '%s' "${EUDI_COMPONENT_ATTESTATION_B64}" | base64 --decode > \
+            "${RUNNER_TEMP}/eudi-conformance-inputs/component-attestation.json"
+          python3 identity-conformance/scripts/verify_component_attestation.py \
+            --attestation "${RUNNER_TEMP}/eudi-conformance-inputs/component-attestation.json"
+
+      - name: Materialize optional live inputs
+        env:
+          EUDI_LIVE_CONFIG_B64: ${{ secrets.EUDI_LIVE_CONFIG_B64 }}
+        run: |
+          mode="$(jq -er '.mode' "${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json")"
+          if [[ "${mode}" == "live_ts5" ]]; then
+            test -n "${EUDI_LIVE_CONFIG_B64}"
+            printf '%s' "${EUDI_LIVE_CONFIG_B64}" | base64 --decode > \
+              "${RUNNER_TEMP}/eudi-conformance-inputs/live-config.jsonc"
+            chmod 600 "${RUNNER_TEMP}/eudi-conformance-inputs/live-config.jsonc"
+          fi
+
+      - name: Execute the EUDI conformance plan
+        env:
+          EUDI_CANDIDATE_BINARY: ${{ inputs.candidate_binary_path }}
+          EUDI_TRUST_SERVICE_ARTIFACT: ${{ inputs.trust_service_artifact_path }}
+          EUDI_CREDENTIAL_AUTHORITY_ARTIFACT: ${{ inputs.credential_authority_artifact_path }}
+          EUDI_TRUST_SERVICE_HEALTH_ENDPOINT: ${{ secrets.EUDI_TRUST_SERVICE_HEALTH_ENDPOINT }}
+          EUDI_TRUST_SERVICE_TOKEN: ${{ secrets.EUDI_TRUST_SERVICE_TOKEN }}
+          EUDI_CREDENTIAL_AUTHORITY_HEALTH_ENDPOINT: ${{ secrets.EUDI_CREDENTIAL_AUTHORITY_HEALTH_ENDPOINT }}
+          EUDI_CREDENTIAL_AUTHORITY_TOKEN: ${{ secrets.EUDI_CREDENTIAL_AUTHORITY_TOKEN }}
+          EUDI_SERVICE_CA_CERTIFICATE: ${{ inputs.service_ca_certificate_path }}
+          EUDI_JOURNAL: ${{ inputs.journal_path }}
+          EUDI_RELYING_PARTY_ID: ${{ secrets.EUDI_RELYING_PARTY_ID }}
+        run: |
+          manifest="${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json"
+          result_dir="${RUNNER_TEMP}/eudi-relying-party-conformance"
+          arguments=(
+            --deployment-manifest "${manifest}"
+            --candidate-source components/candidate
+            --platform-source components/platform
+            --ssi-source components/ssi
+            --upstream-root upstream/eudi
+            --binary "${EUDI_CANDIDATE_BINARY}"
+            --trust-artifact "${EUDI_TRUST_SERVICE_ARTIFACT}"
+            --credential-authority-artifact "${EUDI_CREDENTIAL_AUTHORITY_ARTIFACT}"
+            --component-attestation "${RUNNER_TEMP}/eudi-conformance-inputs/component-attestation.json"
+            --result-dir "${result_dir}"
+          )
+          mode="$(jq -er '.mode' "${manifest}")"
+          if [[ "${mode}" == "deployed" || "${mode}" == "live_ts5" ]]; then
+            test -n "${EUDI_TRUST_SERVICE_HEALTH_ENDPOINT}"
+            test -n "${EUDI_TRUST_SERVICE_TOKEN}"
+            test -n "${EUDI_CREDENTIAL_AUTHORITY_HEALTH_ENDPOINT}"
+            test -n "${EUDI_CREDENTIAL_AUTHORITY_TOKEN}"
+            test -n "${EUDI_SERVICE_CA_CERTIFICATE}"
+            arguments+=(
+              --trust-service-health-endpoint "${EUDI_TRUST_SERVICE_HEALTH_ENDPOINT}"
+              --trust-service-token "${EUDI_TRUST_SERVICE_TOKEN}"
+              --credential-authority-health-endpoint "${EUDI_CREDENTIAL_AUTHORITY_HEALTH_ENDPOINT}"
+              --credential-authority-token "${EUDI_CREDENTIAL_AUTHORITY_TOKEN}"
+              --service-ca-certificate "${EUDI_SERVICE_CA_CERTIFICATE}"
+            )
+          fi
+          if [[ "${mode}" == "live_ts5" ]]; then
+            test -n "${EUDI_JOURNAL}"
+            test -n "${EUDI_RELYING_PARTY_ID}"
+            arguments+=(
+              --live-config "${RUNNER_TEMP}/eudi-conformance-inputs/live-config.jsonc"
+              --journal "${EUDI_JOURNAL}"
+              --relying-party-id "${EUDI_RELYING_PARTY_ID}"
+            )
+          fi
+          python3 identity-conformance/scripts/run_eudi_relying_party_conformance.py \
+            "${arguments[@]}"
+          python3 identity-conformance/scripts/verify_eudi_execution_result.py \
+            --result "${result_dir}/result.json"
+
+      - name: Upload validated EUDI result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: eudi-relying-party-conformance-${{ github.sha }}
+          path: ${{ runner.temp }}/eudi-relying-party-conformance/result.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Best-effort remove private working material
+        if: always()
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-conformance-inputs"
+          result_dir="${RUNNER_TEMP}/eudi-relying-party-conformance"
+          private_source_dir="${GITHUB_WORKSPACE}/components"
+          for sensitive_dir in "${input_dir}" "${result_dir}"; do
+            if [[ -d "${sensitive_dir}" ]] && command -v shred >/dev/null 2>&1; then
+              find "${sensitive_dir}" -type f \
+                -exec shred --force --remove --zero {} + 2>/dev/null || true
+            fi
+          done
+          rm -rf -- "${input_dir}" "${result_dir}" "${private_source_dir}"

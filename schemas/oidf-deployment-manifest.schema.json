@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reallyme.com/schemas/oidf-deployment-manifest.schema.json",
+  "title": "OIDF certification deployment bill of materials",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "purpose",
+    "legal_entity",
+    "product_name",
+    "product_version",
+    "environment",
+    "roles",
+    "capabilities"
+  ],
+  "properties": {
+    "schema_version": { "const": 4 },
+    "purpose": { "const": "oidf-certification-deployment-bom" },
+    "legal_entity": { "$ref": "#/$defs/boundedString" },
+    "product_name": { "$ref": "#/$defs/boundedString" },
+    "product_version": { "$ref": "#/$defs/boundedString" },
+    "environment": { "enum": ["preproduction", "production"] },
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "openid4vci_issuer",
+        "openid4vci_wallet",
+        "openid4vp_verifier",
+        "openid4vp_wallet"
+      ],
+      "properties": {
+        "openid4vci_issuer": {
+          "$ref": "#/$defs/openid4vciIssuerDeployment"
+        },
+        "openid4vci_wallet": {
+          "$ref": "#/$defs/openid4vciWalletDeployment"
+        },
+        "openid4vp_verifier": {
+          "$ref": "#/$defs/openid4vpVerifierDeployment"
+        },
+        "openid4vp_wallet": {
+          "$ref": "#/$defs/openid4vpWalletDeployment"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["zk_presentations"],
+      "properties": {
+        "zk_presentations": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled"],
+              "properties": {"enabled": {"const": false}}
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "plan_id", "source_repository", "source_commit", "release_artifact", "component_attestation_sha256"],
+              "properties": {
+                "enabled": {"const": true},
+                "plan_id": {"const": "zk-presentation-proofs-v1"},
+                "source_repository": {"const": "https://github.com/reallyme/zk"},
+                "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "release_artifact": {"$ref": "#/$defs/zkArtifact"},
+                "component_attestation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "boundedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "httpsEndpoint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "identifier", "sha256"],
+      "properties": {
+        "kind": {
+          "enum": ["binary", "mobile_application", "oci_image", "web_bundle"]
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "zkArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "kind", "sha256"],
+      "properties": {
+        "artifact_id": {"const": "zk-release-bundle"},
+        "kind": {"const": "archive"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "deploymentBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_repository", "source_commit", "artifact", "endpoints"],
+      "properties": {
+        "source_repository": {
+          "type": "string",
+          "pattern": "^https://github\\.com/reallyme/[^/]+$"
+        },
+        "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "artifact": { "$ref": "#/$defs/artifact" },
+        "endpoints": { "type": "object" }
+      }
+    },
+    "openid4vciIssuerDeployment": {
+      "allOf": [
+        { "$ref": "#/$defs/deploymentBase" },
+        {
+          "properties": {
+            "endpoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["issuer_base_url"],
+              "properties": {
+                "issuer_base_url": { "$ref": "#/$defs/httpsEndpoint" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "openid4vciWalletDeployment": {
+      "allOf": [
+        { "$ref": "#/$defs/deploymentBase" },
+        {
+          "properties": {
+            "endpoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "wallet_harness_endpoint",
+                "wallet_harness_health_endpoint"
+              ],
+              "properties": {
+                "wallet_harness_endpoint": { "$ref": "#/$defs/httpsEndpoint" },
+                "wallet_harness_health_endpoint": {
+                  "$ref": "#/$defs/httpsEndpoint"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "openid4vpVerifierDeployment": {
+      "allOf": [
+        { "$ref": "#/$defs/deploymentBase" },
+        {
+          "properties": {
+            "endpoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "verifier_base_url",
+                "verifier_evidence_endpoint",
+                "verifier_launch_endpoint",
+                "verifier_health_endpoint"
+              ],
+              "properties": {
+                "verifier_base_url": { "$ref": "#/$defs/httpsEndpoint" },
+                "verifier_evidence_endpoint": { "$ref": "#/$defs/httpsEndpoint" },
+                "verifier_launch_endpoint": { "$ref": "#/$defs/httpsEndpoint" },
+                "verifier_health_endpoint": { "$ref": "#/$defs/httpsEndpoint" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "openid4vpWalletDeployment": {
+      "allOf": [
+        { "$ref": "#/$defs/deploymentBase" },
+        {
+          "properties": {
+            "endpoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "wallet_harness_endpoint",
+                "wallet_harness_health_endpoint"
+              ],
+              "properties": {
+                "wallet_harness_endpoint": { "$ref": "#/$defs/httpsEndpoint" },
+                "wallet_harness_health_endpoint": {
+                  "$ref": "#/$defs/httpsEndpoint"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

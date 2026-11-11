@@ -1,0 +1,36 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/zk-deployment-manifest-v1.json",
+  "title": "ReallyMe ZK conformance deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "plan_id", "component", "release_artifact", "component_attestation_sha256", "evidence_policy"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.zk_deployment_manifest.v1"},
+    "plan_id": {"const": "zk-presentation-proofs-v1"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "release_ref", "commit"],
+      "properties": {
+        "repository": {"const": "https://github.com/reallyme/zk"},
+        "release_ref": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "release_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "kind", "sha256"],
+      "properties": {
+        "artifact_id": {"const": "zk-release-bundle"},
+        "kind": {"const": "archive"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "component_attestation_sha256": {"$ref": "#/$defs/sha256"},
+    "evidence_policy": {"$ref": "zk-conformance-plan.schema.json#/$defs/evidence_policy"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

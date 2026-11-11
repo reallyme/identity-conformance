@@ -1,0 +1,150 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.normative_sources.v1",
+  "sources": [
+    {
+      "id": "etsi-ts-119-612-v2.4.1",
+      "title": "ETSI TS 119 612 Electronic Signatures and Trust Infrastructures (ESI); Trusted Lists",
+      "publisher": "ETSI",
+      "version": "V2.4.1",
+      "publication_date": "2025-08",
+      "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf",
+      "sha256": "83285a1069e369d225cf16a0051a46b1f9d8961b6ad5d66bb7650351309a5196",
+      "content_length": 596996,
+      "verified_on": "2026-09-17",
+      "vendoring_policy": "reference_only_copyrighted_source",
+      "reviewed_clauses": [
+        "5.1.2",
+        "5.1.4",
+        "5.3.5",
+        "5.4.3",
+        "5.5.3",
+        "5.5.9.2.2.2",
+        "5.5.9.3",
+        "5.6.3",
+        "5.7.1",
+        "6.2.1.1",
+        "Annex B.0",
+        "Annex E.2"
+      ],
+      "implementation_evidence": [
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/trust/tsl-core/tests/fixtures/live-v6/README.md"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/trust/tsl-core/tests/fixtures/live-v6/manifest.tsv"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/trust/tsl-core/tests/tsl_parse/etsi_119612_v2_4_1_tests.rs"
+        }
+      ],
+      "clause_review": "references/etsi-ts-119-612-v2.4.1.md"
+    },
+    {
+      "id": "etsi-ts-119-472-1-v1.2.1",
+      "title": "ETSI TS 119 472-1 Profiles for Electronic Attestation of Attributes; Part 1 Common semantic requirements and common formats",
+      "publisher": "ETSI",
+      "version": "V1.2.1",
+      "publication_date": "2026-02",
+      "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/11947201/01.02.01_60/ts_11947201v010201p.pdf",
+      "sha256": "0f76ce7cad5f046802146b0c2a9cd8af9db3c1db77db5eeca86d2a4559fcfc3f",
+      "content_length": 523959,
+      "verified_on": "2026-09-21",
+      "vendoring_policy": "reference_only_copyrighted_source",
+      "reviewed_clauses": [
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "implementation_evidence": [
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/src/validate.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/src/pid.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/requirements/etsi-ts-119-472.tsv"
+        }
+      ],
+      "clause_review": "references/etsi-ts-119-472-series.md"
+    },
+    {
+      "id": "etsi-ts-119-472-2-v1.3.1",
+      "title": "ETSI TS 119 472-2 Profiles for Electronic Attestation of Attributes; Part 2 Profiles for EAA/PID Presentations to Relying Party",
+      "publisher": "ETSI",
+      "version": "V1.3.1",
+      "publication_date": "2026-07",
+      "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/11947202/01.03.01_60/ts_11947202v010301p.pdf",
+      "sha256": "e403e7d5a4c70d04868989cc623b57d379a5f3dfe282f9f98f7390c8e327310b",
+      "content_length": 174632,
+      "verified_on": "2026-09-21",
+      "vendoring_policy": "reference_only_copyrighted_source",
+      "reviewed_clauses": [
+        "4",
+        "5",
+        "6",
+        "Annex A",
+        "Annex C",
+        "Annex D"
+      ],
+      "implementation_evidence": [
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/src/presentation.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/tests/conformance_tests.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/requirements/etsi-ts-119-472.tsv"
+        }
+      ],
+      "clause_review": "references/etsi-ts-119-472-series.md"
+    },
+    {
+      "id": "etsi-ts-119-472-3-v1.1.1",
+      "title": "ETSI TS 119 472-3 Profiles for Electronic Attestation of Attributes; Part 3 Profiles for issuance of EAA or PID",
+      "publisher": "ETSI",
+      "version": "V1.1.1",
+      "publication_date": "2026-03",
+      "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/11947203/01.01.01_60/ts_11947203v010101p.pdf",
+      "sha256": "2919437478c7469881afc5acd5aa68d847a4cfdc1bbf6da9224f4c9fae7167ba",
+      "content_length": 143808,
+      "verified_on": "2026-09-21",
+      "vendoring_policy": "reference_only_copyrighted_source",
+      "reviewed_clauses": [
+        "4",
+        "5",
+        "6",
+        "Annex A",
+        "Annex B"
+      ],
+      "implementation_evidence": [
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/src/issuance.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/tests/conformance_tests.rs"
+        },
+        {
+          "repository": "reallyme/ssi",
+          "path": "crates/eudi/etsi-eaa-conformance/requirements/etsi-ts-119-472.tsv"
+        }
+      ],
+      "clause_review": "references/etsi-ts-119-472-series.md"
+    }
+  ]
+}

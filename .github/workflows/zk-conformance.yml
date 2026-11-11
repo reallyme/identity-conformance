@@ -1,0 +1,138 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: ZK Presentation-Proof Conformance
+run-name: ZK presentation-proof conformance @ ${{ github.sha }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Exact identity-conformance commit selected by the caller
+        required: true
+        type: string
+      release_artifact_path:
+        description: Absolute path to the ZK release artifact on the ephemeral runner
+        required: true
+        type: string
+      component_attestation_path:
+        description: Absolute path to the ZK component attestation
+        required: true
+        type: string
+    secrets:
+      ZK_DEPLOYMENT_MANIFEST_B64:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zk-presentation-proof-conformance
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    runs-on: [self-hosted, linux, x64, zk-conformance]
+    timeout-minutes: 360
+    steps:
+      - name: Require the ZK caller and immutable framework revision
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+        run: |
+          [[ "${GITHUB_REPOSITORY}" == "reallyme/zk" ]]
+          [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Materialize and validate deployment manifest
+        env:
+          ZK_DEPLOYMENT_MANIFEST_B64: ${{ secrets.ZK_DEPLOYMENT_MANIFEST_B64 }}
+        run: |
+          umask 077
+          input_dir="${RUNNER_TEMP}/zk-conformance-inputs"
+          mkdir -p "${input_dir}"
+          test -n "${ZK_DEPLOYMENT_MANIFEST_B64}"
+          printf '%s' "${ZK_DEPLOYMENT_MANIFEST_B64}" | base64 --decode > "${input_dir}/deployment.json"
+          python3 identity-conformance/scripts/verify_zk_deployment_manifest.py \
+            --manifest "${input_dir}/deployment.json"
+
+      - name: Resolve exact ZK source revision
+        id: source
+        run: |
+          commit="$(jq -er '.component.commit' "${RUNNER_TEMP}/zk-conformance-inputs/deployment.json")"
+          [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
+          printf 'commit=%s\n' "${commit}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact ZK source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/zk
+          ref: ${{ steps.source.outputs.commit }}
+          path: components/zk
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.99.1
+
+      - name: Validate protected artifact paths
+        env:
+          ZK_RELEASE_ARTIFACT: ${{ inputs.release_artifact_path }}
+          ZK_COMPONENT_ATTESTATION: ${{ inputs.component_attestation_path }}
+        run: |
+          test -n "${ZK_RELEASE_ARTIFACT}"
+          test -f "${ZK_RELEASE_ARTIFACT}"
+          test ! -L "${ZK_RELEASE_ARTIFACT}"
+          test -n "${ZK_COMPONENT_ATTESTATION}"
+          test -f "${ZK_COMPONENT_ATTESTATION}"
+          test ! -L "${ZK_COMPONENT_ATTESTATION}"
+
+      - name: Execute ZK conformance lane
+        env:
+          ZK_RELEASE_ARTIFACT: ${{ inputs.release_artifact_path }}
+          ZK_COMPONENT_ATTESTATION: ${{ inputs.component_attestation_path }}
+        run: |
+          result="${RUNNER_TEMP}/zk-conformance-result.json"
+          python3 identity-conformance/scripts/run_zk_conformance.py \
+            --deployment-manifest "${RUNNER_TEMP}/zk-conformance-inputs/deployment.json" \
+            --source components/zk \
+            --release-artifact "${ZK_RELEASE_ARTIFACT}" \
+            --component-attestation "${ZK_COMPONENT_ATTESTATION}" \
+            --output "${result}"
+          python3 identity-conformance/scripts/verify_zk_execution_result.py \
+            --result "${result}"
+
+      - name: Upload validated ZK result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zk-conformance-${{ github.sha }}
+          path: ${{ runner.temp }}/zk-conformance-result.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Best-effort remove private working material
+        if: always()
+        run: |
+          input_dir="${RUNNER_TEMP}/zk-conformance-inputs"
+          result="${RUNNER_TEMP}/zk-conformance-result.json"
+          if [[ -d "${input_dir}" ]] && command -v shred >/dev/null 2>&1; then
+            find "${input_dir}" -type f -exec shred --force --remove --zero {} + 2>/dev/null || true
+          fi
+          if [[ -f "${result}" ]] && command -v shred >/dev/null 2>&1; then
+            shred --force --remove --zero "${result}" 2>/dev/null || true
+          fi
+          rm -rf -- "${input_dir}" "${result}" "${GITHUB_WORKSPACE}/components"

@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: build conformance framework release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version for the candidate manifest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: identity-conformance
+          persist-credentials: false
+      - name: Install Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+      - name: Run shared release readiness
+        working-directory: identity-conformance
+        run: npm exec --yes --allow-remote=root --package=github:reallyme/release-readiness#18a6d91d99837e80f92e41fe04effb0b043d754e -- reallyme-release-readiness
+      - name: Run repository tests
+        working-directory: identity-conformance
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Lint GitHub workflows
+        working-directory: identity-conformance
+        run: scripts/run_actionlint.sh
+      - name: Verify authoritative pin freshness
+        working-directory: identity-conformance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test -n "${GITHUB_TOKEN}"
+          python3 scripts/check_pin_freshness.py
+      - name: Build deterministic candidate manifest
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/build_release_manifest.py \
+            --version "${{ inputs.version }}" \
+            --repository-commit "${{ github.sha }}" \
+            --output dist/conformance-framework-release.json
+      - name: Retain candidate manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: conformance-framework-release-${{ inputs.version }}
+          path: identity-conformance/dist/conformance-framework-release.json
+          if-no-files-found: error
+          retention-days: 30

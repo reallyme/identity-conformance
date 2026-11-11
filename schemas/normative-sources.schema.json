@@ -1,0 +1,49 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/normative-sources-v1.json",
+  "title": "ReallyMe normative source reference ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema", "sources"],
+  "properties": {
+    "$comment": {"type": "string"},
+    "schema": {"const": "reallyme.identity.normative_sources.v1"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "publisher", "version", "publication_date", "canonical_url", "sha256", "content_length", "verified_on", "vendoring_policy", "reviewed_clauses", "implementation_evidence", "clause_review"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"},
+          "title": {"type": "string", "minLength": 1},
+          "publisher": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "publication_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$"},
+          "canonical_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "content_length": {"type": "integer", "minimum": 1},
+          "verified_on": {"type": "string", "format": "date"},
+          "vendoring_policy": {"const": "reference_only_copyrighted_source"},
+          "reviewed_clauses": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "implementation_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["repository", "path"],
+              "properties": {
+                "repository": {"type": "string", "pattern": "^reallyme/[A-Za-z0-9_.-]+$"},
+                "path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"}
+              }
+            }
+          },
+          "clause_review": {"type": "string", "pattern": "^references/[A-Za-z0-9_.-]+\\.md$"}
+        }
+      }
+    }
+  }
+}

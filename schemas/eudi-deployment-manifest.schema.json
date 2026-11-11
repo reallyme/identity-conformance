@@ -1,0 +1,77 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-deployment-manifest-v1.json",
+  "title": "ReallyMe EUDI relying-party conformance deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "purpose", "plan_id", "mode", "components", "artifact", "trust_artifact", "credential_authority_artifact", "component_attestation_sha256", "upstream_lock_sha256", "legal_sources_lock_sha256", "publications_lock_sha256", "evidence_policy"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "purpose": {"const": "eudi-relying-party-conformance-deployment"},
+    "plan_id": {"const": "eudi-relying-party-control-plane-v1"},
+    "mode": {"enum": ["engineering", "deployed", "live_ts5"]},
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/component"}
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": {"const": "binary"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "trust_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": {"const": "binary"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "credential_authority_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": {"enum": ["binary", "deployment_bundle"]},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "component_attestation_sha256": {"$ref": "#/$defs/sha256"},
+    "upstream_lock_sha256": {"$ref": "#/$defs/sha256"},
+    "legal_sources_lock_sha256": {"$ref": "#/$defs/sha256"},
+    "publications_lock_sha256": {"$ref": "#/$defs/sha256"},
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_process_output_retained", "transaction_content_retained", "private_key_material_retained", "credentials_retained"],
+      "properties": {
+        "raw_process_output_retained": {"const": false},
+        "transaction_content_retained": {"const": false},
+        "private_key_material_retained": {"const": false},
+        "credentials_retained": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "repository", "commit"],
+      "properties": {
+        "component_id": {"enum": ["candidate", "platform", "ssi"]},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9_.-]+$"},
+        "commit": {"$ref": "#/$defs/git_commit"}
+      }
+    }
+  }
+}

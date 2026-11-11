@@ -1,0 +1,73 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.eudi_publications.v1",
+  "observed_on": "2026-11-11",
+  "scope": ["wallet", "eidas_2", "oidf"],
+  "publications": [
+    {
+      "id": "iso-iec-18013-5-2021", "title": "ISO/IEC 18013-5:2021 Mobile driving licence application", "publisher": "ISO/IEC", "edition": "1", "publication_date": "2021-09", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/69084.html", "certification_claim": false,
+      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC 18013-5:2021", "copyright_restricted": true, "local_copy_allowed": false}
+    },
+    {
+      "id": "iso-iec-ts-18013-6-2025", "title": "ISO/IEC TS 18013-6:2025 mDL test methods", "publisher": "ISO/IEC", "edition": "2", "publication_date": "2025-11", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/91153.html", "certification_claim": false,
+      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 18013-6:2025", "copyright_restricted": true, "local_copy_allowed": false}
+    },
+    {
+      "id": "iso-iec-ts-18013-7-2025", "title": "ISO/IEC TS 18013-7:2025 mDL add-on functions", "publisher": "ISO/IEC", "edition": "2", "publication_date": "2025-05", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/91154.html", "certification_claim": false,
+      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 18013-7:2025", "copyright_restricted": true, "local_copy_allowed": false}
+    },
+    {
+      "id": "iso-iec-ts-23220-2-2024", "title": "ISO/IEC TS 23220-2:2024 data objects and encoding rules for generic eID systems", "publisher": "ISO/IEC", "edition": "1", "publication_date": "2024-07", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/86782.html", "certification_claim": false,
+      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 23220-2:2024", "copyright_restricted": true, "local_copy_allowed": false}
+    },
+    {
+      "id": "rfc-5280", "title": "RFC 5280 Internet X.509 Public Key Infrastructure Certificate and CRL Profile", "publisher": "IETF", "edition": "RFC 5280", "publication_date": "2008-05", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc5280.txt", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "a2f2628c0a83b873fc4786abd921f9b2c02395954b655d190bf16b831633345d", "content_length": 352580}
+    },
+    {
+      "id": "rfc-8949", "title": "RFC 8949 Concise Binary Object Representation", "publisher": "IETF", "edition": "RFC 8949", "publication_date": "2020-12", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc8949.txt", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a", "content_length": 185226}
+    },
+    {
+      "id": "rfc-9052", "title": "RFC 9052 CBOR Object Signing and Encryption Structures and Process", "publisher": "IETF", "edition": "RFC 9052", "publication_date": "2022-08", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc9052.txt", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "01eecd7f646537600e7aad665b1fa581ce6ec33dae4ef4add0997aaf38cd0a45", "content_length": 149835}
+    },
+    {
+      "id": "rfc-9053", "title": "RFC 9053 CBOR Object Signing and Encryption Algorithms", "publisher": "IETF", "edition": "RFC 9053", "publication_date": "2022-08", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc9053.txt", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "3d470615875620375f8453ba25b8dce7e4d0271e76b0b79a46df34ccb2d56ab0", "content_length": 120315}
+    },
+    {
+      "id": "rfc-9901", "title": "RFC 9901 Selective Disclosure for JSON Web Tokens", "publisher": "IETF", "edition": "RFC 9901", "publication_date": "2025-11", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc9901.txt", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "fd4cb79184162fa7ef95f4f63abab8ee6d03c9a04c19b8f83758946464b284eb", "content_length": 177316}
+    },
+    {
+      "id": "w3c-vc-data-model-2.0", "title": "W3C Verifiable Credentials Data Model v2.0", "publisher": "W3C", "edition": "Recommendation 15 May 2025", "publication_date": "2025-05", "maturity": "published_standard", "canonical_url": "https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "a9196a3d0b6601356c4e127bad24f8c7f2c17f6ed22e41b35755a910104156f8", "content_length": 1023165}
+    },
+    {
+      "id": "w3c-digital-credentials-2026-11-05", "title": "W3C Digital Credentials API", "publisher": "W3C", "edition": "Working Draft 5 November 2026", "publication_date": "2026-11", "maturity": "working_draft", "canonical_url": "https://www.w3.org/TR/2026/WD-digital-credentials-20261105/", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "712e3393e41805639f6588a96c808dbdf3468ec707192ecab222084acbdbfaf3", "content_length": 740618}
+    },
+    {
+      "id": "etsi-ts-119-411-8-v1.1.1", "title": "ETSI TS 119 411-8 Access Certificate Policy for EUDI Wallet Relying Parties", "publisher": "ETSI", "edition": "V1.1.1", "publication_date": "2025-10", "maturity": "published_standard", "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/11941108/01.01.01_60/ts_11941108v010101p.pdf", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "2bbfffeca655b96b09e52d937a930744215c2c9e3ee7f41f14d990968c845fe3", "content_length": 116429}
+    },
+    {
+      "id": "etsi-ts-119-432-v1.3.1", "title": "ETSI TS 119 432 Protocols for remote digital signature creation", "publisher": "ETSI", "edition": "V1.3.1", "publication_date": "2026-03", "maturity": "published_standard", "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/119432/01.03.01_60/ts_119432v010301p.pdf", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "6a660566d6a2a1fa57f7cd5c0526ae1127714590a6197ef3adf2b5ee02df3b54", "content_length": 2061868}
+    },
+    {
+      "id": "etsi-ts-119-475-v1.2.1", "title": "ETSI TS 119 475 Relying party attributes supporting EUDI Wallet authorization decisions", "publisher": "ETSI", "edition": "V1.2.1", "publication_date": "2026-03", "maturity": "published_standard", "canonical_url": "https://www.etsi.org/deliver/etsi_ts/119400_119499/119475/01.02.01_60/ts_119475v010201p.pdf", "certification_claim": false,
+      "binding": {"kind": "content_sha256", "sha256": "77bf8e71715c495494113da23ccba89c0af8bf6b457fe2da38b5a12738ace55f", "content_length": 362008}
+    }
+  ],
+  "delegated_bindings": [
+    {"publication_id": "openid4vci-1.0-final", "lock_path": "upstream/oidf/specifications.lock.json", "target_id": "openid4vci-1.0-final"},
+    {"publication_id": "openid4vp-1.0-final", "lock_path": "upstream/oidf/specifications.lock.json", "target_id": "openid4vp-1.0-final"},
+    {"publication_id": "openid4vc-haip-1.0-final", "lock_path": "upstream/oidf/specifications.lock.json", "target_id": "openid4vc-haip-1.0-final"},
+    {"publication_id": "etsi-ts-119-612-v2.4.1", "lock_path": "references/normative-sources.lock.json", "target_id": "etsi-ts-119-612-v2.4.1"},
+    {"publication_id": "etsi-ts-119-472-1-v1.2.1", "lock_path": "references/normative-sources.lock.json", "target_id": "etsi-ts-119-472-1-v1.2.1"},
+    {"publication_id": "etsi-ts-119-472-2-v1.3.1", "lock_path": "references/normative-sources.lock.json", "target_id": "etsi-ts-119-472-2-v1.3.1"},
+    {"publication_id": "etsi-ts-119-472-3-v1.1.1", "lock_path": "references/normative-sources.lock.json", "target_id": "etsi-ts-119-472-3-v1.1.1"}
+  ]
+}

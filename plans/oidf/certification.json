@@ -1,0 +1,539 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "observed_at": "2026-11-09",
+  "certification_program": {
+    "launched_at": "2026-08-07",
+    "openid4vci_version": "1.0 Final",
+    "openid4vp_version": "1.0 Final",
+    "haip_version": "1.0 Final",
+    "certification_requires_haip": true,
+    "credential_formats_are_certified_separately": true,
+    "normative_specifications": [
+      {
+        "id": "openid4vci-1.0",
+        "url": "https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html"
+      },
+      {
+        "id": "openid4vp-1.0",
+        "url": "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html"
+      },
+      {
+        "id": "haip-1.0-final",
+        "url": "https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0-final.html"
+      }
+    ],
+    "roles": [
+      "openid4vci_issuer",
+      "openid4vci_wallet",
+      "openid4vp_verifier",
+      "openid4vp_wallet"
+    ],
+    "guidance": {
+      "openid4vci": "https://openid.net/certification/conformance-testing-for-openid-for-verifiable-credential-issuance/",
+      "openid4vp": "https://openid.net/certification/conformance-testing-for-openid-for-verifiable-presentations/",
+      "submission": "https://openid.net/certification/how-to-submit-your-certification-request/",
+      "fees": "https://openid.net/certification/fees/"
+    }
+  },
+  "suite_target": {
+    "lock_file": "upstream/oidf/conformance-suite.lock.json",
+    "repository": "https://gitlab.com/openid/conformance-suite.git",
+    "local_checkout": "upstream/oidf/openid-conformance-suite",
+    "pinned_ref": "release-v5.3.4",
+    "commit": "23353b36957d6466010de767c812d2c91ed37638",
+    "released_at": "2026-10-26",
+    "selection_reason": "Latest released conformance-suite tag observed after the OpenID4VCI/OpenID4VP certification launch; it is the production certification baseline for every role in this matrix."
+  },
+  "execution_contract": {
+    "runner": "scripts/run-test-plan.py",
+    "runner_source": "https://gitlab.com/openid/conformance-suite/-/blob/master/scripts/run-test-plan.py",
+    "production_endpoints": {
+      "api": "https://www.certification.openid.net/",
+      "mtls": "https://mtls-www.certification.openid.net/"
+    },
+    "module_inventory_authority": "The modules array returned by POST /api/plan for the exact plan, variant selection, configuration, and suite revision.",
+    "run_every_returned_module": true,
+    "allow_selected_modules": false,
+    "allow_rerun_filter_for_certification_evidence": false,
+    "allow_expected_failures": false,
+    "allow_expected_skips": false,
+    "required_module_results": {
+      "openid4vci": [
+        "PASSED"
+      ],
+      "openid4vp_default": [
+        "PASSED"
+      ],
+      "openid4vp_source_bound_review": [
+        "REVIEW"
+      ]
+    },
+    "openid4vp_result_policy_authority": "conformance/oidf/profile-matrix.json in the exact locked openid4vp component revision",
+    "required_completion_assertions": [
+      "No :module-list selector is present in the plan expression.",
+      "The runner's selected_modules value is empty.",
+      "The number of completed module results equals the number of modules returned when the plan was created.",
+      "The runner does not emit NOT ALL TESTS FROM PLAN WERE RUN.",
+      "OpenID4VCI exports contain only PASSED terminal module results.",
+      "OpenID4VP exports contain PASSED terminal results except REVIEW for exact modules classified by the source-bound result policy in the locked OpenID4VP certification matrix.",
+      "No export contains failed, warning, interrupted, incomplete, or unclassified review results.",
+      "The exported module inventory and result archive are retained with cryptographic hashes in the release BOM."
+    ],
+    "inventory_capture_timing": "Capture after authenticated plan creation because module applicability and per-module variants are resolved by the running suite from the selected plan variants. Do not substitute a regex-derived source-file inventory."
+  },
+  "plans": [
+    {
+      "plan_id": "oid4vci-1_0-issuer-haip-test-plan",
+      "protocol": "openid4vci",
+      "role": "issuer",
+      "certification_profile_prefix": "OID4VCI-1.0-FINAL+HAIP-1.0-FINAL Issuer",
+      "selectable_parameters": {
+        "credential_format": [
+          "sd_jwt_vc",
+          "mdoc"
+        ],
+        "vci_authorization_code_flow_variant": [
+          "wallet_initiated",
+          "issuer_initiated"
+        ]
+      },
+      "fixed_parameters": {
+        "sender_constrain": [
+          "dpop"
+        ],
+        "fapi_profile": [
+          "vci_haip"
+        ],
+        "fapi_request_method": [
+          "unsigned"
+        ],
+        "client_auth_type": [
+          "client_attestation"
+        ],
+        "vci_grant_type": [
+          "authorization_code"
+        ],
+        "authorization_request_type": [
+          "simple"
+        ],
+        "vci_credential_encryption": [
+          "plain",
+          "encrypted"
+        ],
+        "openid": [
+          "plain_oauth"
+        ],
+        "fapi_response_mode": [
+          "plain_response"
+        ]
+      },
+      "certification_runs": [
+        {
+          "profile_id": "issuer-sd-jwt-vc-wallet-initiated",
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "expression": "oid4vci-1_0-issuer-haip-test-plan[vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "profile_id": "issuer-sd-jwt-vc-issuer-initiated",
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "expression": "oid4vci-1_0-issuer-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "profile_id": "issuer-mdoc-wallet-initiated",
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "expression": "oid4vci-1_0-issuer-haip-test-plan[vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]"
+        },
+        {
+          "profile_id": "issuer-mdoc-issuer-initiated",
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "expression": "oid4vci-1_0-issuer-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][credential_format=mdoc]"
+        }
+      ],
+      "configuration_fields": {
+        "common": [
+          "vci.credential_issuer_url",
+          "vci.credential_configuration_id",
+          "vci.credential_proof_type_hint",
+          "vci.authorization_server",
+          "credential.trust_anchor_pem",
+          "credential.status_list_trust_anchor_pem",
+          "client.client_id",
+          "client2.client_id",
+          "client2.jwks",
+          "client_attestation.attester_jwks",
+          "client_attestation.issuer",
+          "client_attestation.key_attestation_jwks"
+        ],
+        "issuer_initiated": [
+          "vci.credential_offer_endpoint"
+        ],
+        "mdoc": [
+          "credential.vical",
+          "credential.vical_url"
+        ]
+      },
+      "source_files": [
+        "src/main/java/net/openid/conformance/vci10issuer/VCIIssuerTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vci10issuer/AbstractVCIIssuerTestModule.java",
+        "src/main/java/net/openid/conformance/fapi2spfinal/AbstractFAPI2SPFinalServerTestModule.java"
+      ]
+    },
+    {
+      "plan_id": "oid4vci-1_0-wallet-haip-test-plan",
+      "protocol": "openid4vci",
+      "role": "wallet",
+      "certification_profile_prefix": "OID4VCI-1.0-FINAL+HAIP-1.0-FINAL Wallet",
+      "selectable_parameters": {
+        "credential_format": [
+          "sd_jwt_vc",
+          "mdoc"
+        ],
+        "vci_authorization_code_flow_variant": [
+          "wallet_initiated",
+          "issuer_initiated"
+        ],
+        "vci_credential_offer_variant": {
+          "when": {
+            "vci_authorization_code_flow_variant": "issuer_initiated"
+          },
+          "values": [
+            "by_value",
+            "by_reference"
+          ]
+        }
+      },
+      "fixed_parameters": {
+        "sender_constrain": [
+          "dpop"
+        ],
+        "fapi_profile": [
+          "vci_haip"
+        ],
+        "fapi_request_method": [
+          "unsigned"
+        ],
+        "client_auth_type": [
+          "client_attestation"
+        ],
+        "vci_grant_type": [
+          "authorization_code"
+        ],
+        "authorization_request_type": [
+          "simple"
+        ],
+        "fapi_client_type": [
+          "plain_oauth"
+        ],
+        "fapi_response_mode": [
+          "plain_response"
+        ],
+        "vci_credential_issuance_mode": [
+          "immediate",
+          "deferred"
+        ],
+        "vci_credential_encryption": [
+          "plain",
+          "encrypted"
+        ]
+      },
+      "certification_runs": [
+        {
+          "profile_id": "wallet-sd-jwt-vc-wallet-initiated",
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=wallet_initiated][credential_format=sd_jwt_vc]"
+        },
+        {
+          "profile_id": "wallet-mdoc-wallet-initiated",
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "wallet_initiated",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=wallet_initiated][credential_format=mdoc]"
+        },
+        {
+          "profile_id": "wallet-sd-jwt-vc-issuer-initiated-by-value",
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_value",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=sd_jwt_vc]"
+        },
+        {
+          "profile_id": "wallet-sd-jwt-vc-issuer-initiated-by-reference",
+          "credential_format": "sd_jwt_vc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_reference",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=sd_jwt_vc]"
+        },
+        {
+          "profile_id": "wallet-mdoc-issuer-initiated-by-value",
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_value",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_value][credential_format=mdoc]"
+        },
+        {
+          "profile_id": "wallet-mdoc-issuer-initiated-by-reference",
+          "credential_format": "mdoc",
+          "vci_authorization_code_flow_variant": "issuer_initiated",
+          "vci_credential_offer_variant": "by_reference",
+          "expression": "oid4vci-1_0-wallet-haip-test-plan[vci_authorization_code_flow_variant=issuer_initiated][vci_credential_offer_variant=by_reference][credential_format=mdoc]"
+        }
+      ],
+      "configuration_fields": {
+        "common": [
+          "server.jwks",
+          "client.client_id",
+          "client.redirect_uri",
+          "credential.signing_jwk",
+          "waitTimeoutSeconds",
+          "client_attestation.issuer",
+          "client_attestation.trust_anchor",
+          "client_attestation.key_attestation_trust_anchor_pem",
+          "vci.credential_configuration_id"
+        ],
+        "issuer_initiated": [
+          "vci.credential_offer_endpoint"
+        ]
+      },
+      "source_files": [
+        "src/main/java/net/openid/conformance/vci10wallet/VCIWalletTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vci10wallet/AbstractVCIWalletTest.java"
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-verifier-haip-test-plan",
+      "protocol": "openid4vp",
+      "role": "verifier",
+      "certification_profile_prefix": "OID4VP-1.0-FINAL+HAIP-1.0-FINAL Verifier",
+      "selectable_parameters": {
+        "credential_format": [
+          "sd_jwt_vc",
+          "iso_mdl"
+        ],
+        "response_mode": [
+          "direct_post.jwt"
+        ]
+      },
+      "fixed_parameters": {
+        "vp_profile": [
+          "haip"
+        ],
+        "client_id_prefix": [
+          "x509_hash"
+        ],
+        "request_method": [
+          "request_uri_signed"
+        ]
+      },
+      "certification_runs": [
+        {
+          "profile_id": "verifier-sd-jwt-vc-direct-post-jwt",
+          "credential_format": "sd_jwt_vc",
+          "response_mode": "direct_post.jwt",
+          "expression": "oid4vp-1final-verifier-haip-test-plan[credential_format=sd_jwt_vc][response_mode=direct_post.jwt]"
+        },
+        {
+          "profile_id": "verifier-iso-mdl-direct-post-jwt",
+          "credential_format": "iso_mdl",
+          "response_mode": "direct_post.jwt",
+          "expression": "oid4vp-1final-verifier-haip-test-plan[credential_format=iso_mdl][response_mode=direct_post.jwt]"
+        }
+      ],
+      "configuration_fields": {
+        "common": [
+          "credential.signing_jwk",
+          "client.request_object_trust_anchor_pem"
+        ]
+      },
+      "source_files": [
+        "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vp1finalverifier/AbstractVP1FinalVerifierTest.java"
+      ]
+    },
+    {
+      "plan_id": "oid4vp-1final-wallet-haip-test-plan",
+      "protocol": "openid4vp",
+      "role": "wallet",
+      "certification_profile_prefix": "OID4VP-1.0-FINAL+HAIP-1.0-FINAL Wallet",
+      "selectable_parameters": {
+        "credential_format": [
+          "sd_jwt_vc",
+          "iso_mdl"
+        ],
+        "response_mode": [
+          "direct_post.jwt",
+          "dc_api.jwt"
+        ]
+      },
+      "credential_type_by_credential_format": {
+        "sd_jwt_vc": "eudi_pid",
+        "iso_mdl": "mdl"
+      },
+      "fixed_parameters_by_response_mode": {
+        "direct_post.jwt": {
+          "vp_profile": "haip",
+          "client_id_prefix": "x509_hash",
+          "request_method": "request_uri_signed"
+        },
+        "dc_api.jwt": {
+          "vp_profile": "haip",
+          "module_variants": [
+            {
+              "client_id_prefix": "web-origin",
+              "request_method": "request_uri_unsigned"
+            },
+            {
+              "client_id_prefix": "x509_hash",
+              "request_method": "request_uri_signed"
+            },
+            {
+              "client_id_prefix": "x509_hash",
+              "request_method": "request_uri_multisigned"
+            }
+          ]
+        }
+      },
+      "certification_runs": [
+        {
+          "profile_id": "wallet-sd-jwt-vc-direct-post-jwt",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "direct_post.jwt",
+          "expression": "oid4vp-1final-wallet-haip-test-plan[credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=direct_post.jwt]"
+        },
+        {
+          "profile_id": "wallet-iso-mdl-direct-post-jwt",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "direct_post.jwt",
+          "expression": "oid4vp-1final-wallet-haip-test-plan[credential_format=iso_mdl][credential_type=mdl][response_mode=direct_post.jwt]"
+        },
+        {
+          "profile_id": "wallet-sd-jwt-vc-dc-api-jwt",
+          "credential_format": "sd_jwt_vc",
+          "credential_type": "eudi_pid",
+          "response_mode": "dc_api.jwt",
+          "expression": "oid4vp-1final-wallet-haip-test-plan[credential_format=sd_jwt_vc][credential_type=eudi_pid][response_mode=dc_api.jwt]"
+        },
+        {
+          "profile_id": "wallet-iso-mdl-dc-api-jwt",
+          "credential_format": "iso_mdl",
+          "credential_type": "mdl",
+          "response_mode": "dc_api.jwt",
+          "expression": "oid4vp-1final-wallet-haip-test-plan[credential_format=iso_mdl][credential_type=mdl][response_mode=dc_api.jwt]"
+        }
+      ],
+      "configuration_fields": {
+        "common": [
+          "client.jwks",
+          "client.dcql",
+          "client.verifier_info",
+          "client.authorization_encrypted_response_alg",
+          "client.authorization_encrypted_response_enc",
+          "credential.trust_anchor_pem",
+          "credential.status_list_trust_anchor_pem"
+        ],
+        "direct_post.jwt": [
+          "server.authorization_endpoint"
+        ],
+        "iso_mdl": [
+          "credential.vical",
+          "credential.vical_url"
+        ],
+        "dc_api.jwt_multisigned_module": [
+          "client2.jwks"
+        ]
+      },
+      "source_files": [
+        "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vp1finalwallet/AbstractVP1FinalWalletTest.java"
+      ]
+    }
+  ],
+  "suite_source_assertions": [
+    {
+      "path": "src/main/java/net/openid/conformance/vci10issuer/VCIIssuerTestPlanHaip.java",
+      "required_tokens": [
+        "oid4vci-1_0-issuer-haip-test-plan",
+        "new Variant(FAPI2FinalOPProfile.class, \"vci_haip\")",
+        "new Variant(ClientAuthType.class, \"client_attestation\")",
+        "new Variant(VCIGrantType.class, \"authorization_code\")",
+        "VCI1FinalCredentialFormat.class",
+        "VCIAuthorizationCodeFlowVariant.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vci10wallet/VCIWalletTestPlanHaip.java",
+      "required_tokens": [
+        "oid4vci-1_0-wallet-haip-test-plan",
+        "new Variant(FAPI2FinalOPProfile.class, \"vci_haip\")",
+        "new Variant(ClientAuthType.class, \"client_attestation\")",
+        "new Variant(VCICredentialIssuanceMode.class, \"deferred\")",
+        "VCICredentialOfferParameterVariant.class",
+        "VCIWalletAuthorizationCodeFlowVariant.class"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierTestPlanHaip.java",
+      "required_tokens": [
+        "oid4vp-1final-verifier-haip-test-plan",
+        "new Variant(VPProfile.class, \"haip\")",
+        "new Variant(VP1FinalVerifierClientIdPrefix.class, \"x509_hash\")",
+        "new Variant(VP1FinalVerifierRequestMethod.class, \"request_uri_signed\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletTestPlanHaip.java",
+      "required_tokens": [
+        "oid4vp-1final-wallet-haip-test-plan",
+        "\"direct_post.jwt\"",
+        "\"dc_api.jwt\"",
+        "\"web-origin\"",
+        "\"request_uri_multisigned\""
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/variant/VCI1FinalCredentialFormat.java",
+      "required_tokens": [
+        "SD_JWT_VC(\"sd_jwt_vc\", \"dc+sd-jwt\")",
+        "MDOC(\"mdoc\", \"mso_mdoc\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/variant/VCIAuthorizationCodeFlowVariant.java",
+      "required_tokens": [
+        "WALLET_INITIATED",
+        "ISSUER_INITIATED"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/variant/VCICredentialOfferParameterVariant.java",
+      "required_tokens": [
+        "BY_VALUE",
+        "BY_REFERENCE"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletCredentialFormat.java",
+      "required_tokens": [
+        "SD_JWT_VC(\"sd_jwt_vc\")",
+        "ISO_MDL(\"iso_mdl\")"
+      ]
+    },
+    {
+      "path": "scripts/run-test-plan.py",
+      "required_tokens": [
+        "selected_modules = test_plan_obj[\"test\"][\"modules\"]",
+        "test_plan_info['modules']",
+        "if selected_modules == None or len(selected_modules) == 0:",
+        "** NOT ALL TESTS FROM PLAN WERE RUN **",
+        "if info['result'] == 'PASSED':"
+      ]
+    }
+  ]
+}

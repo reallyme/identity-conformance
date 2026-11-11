@@ -1,0 +1,94 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: release readiness
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: identity-conformance
+          persist-credentials: false
+      - name: Resolve pinned trace source revisions
+        id: component-revisions
+        working-directory: identity-conformance
+        run: |
+          for component in openid4vci openid4vp ssi; do
+            revision="$(
+              jq -er --arg component "${component}" '
+                [.repositories[] | select(.component_id == $component)]
+                | if length == 1 then .[0].commit else error("component inventory is not unique") end
+              ' components.lock.json
+            )"
+            if [[ ! "${revision}" =~ ^[0-9a-f]{40}$ ]]; then
+              printf 'The %s component revision is not a full Git commit.\n' "${component}" >&2
+              exit 65
+            fi
+            printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
+          done
+      # The ETSI trace resolves source references in all three repositories.
+      # Materialize the locked sources instead of relying on runner state.
+      - name: Checkout pinned OpenID4VCI trace sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vci
+          ref: ${{ steps.component-revisions.outputs.openid4vci }}
+          path: openid4vci
+          persist-credentials: false
+      - name: Checkout pinned OpenID4VP trace sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vp
+          ref: ${{ steps.component-revisions.outputs.openid4vp }}
+          path: openid4vp
+          persist-credentials: false
+      - name: Checkout pinned SSI trace inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/ssi
+          ref: ${{ steps.component-revisions.outputs.ssi }}
+          path: ssi
+          persist-credentials: false
+      - name: Install Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install Python 3.12 compatibility runtime
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12.16"
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+      - name: Run shared release readiness
+        working-directory: identity-conformance
+        run: npm exec --yes --allow-remote=root --package=github:reallyme/release-readiness#18a6d91d99837e80f92e41fe04effb0b043d754e -- reallyme-release-readiness
+      - name: Run repository tests on latest Python
+        working-directory: identity-conformance
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Run repository tests on Python 3.12
+        working-directory: identity-conformance
+        run: python3.12 -m unittest discover -s tests -p 'test_*.py'
+      - name: Lint GitHub workflows
+        working-directory: identity-conformance
+        run: scripts/run_actionlint.sh
+      - name: Check shell syntax
+        working-directory: identity-conformance
+        run: |
+          for script in scripts/*.sh; do
+            bash -n "${script}"
+          done

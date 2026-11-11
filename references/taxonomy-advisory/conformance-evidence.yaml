@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+schema: reallyme.identity.conformance_evidence_map.v1
+repository: reallyme/identity-conformance
+# OIDF operations and specialized outputs remain planned until their exact
+# report, production generator, and negative-test evidence is reviewed.
+requirements: {}
