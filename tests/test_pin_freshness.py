@@ -7,9 +7,10 @@ from __future__ import annotations
 import importlib.util
 import sys
 import unittest
+import urllib.error
 from pathlib import Path
 from types import ModuleType
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +32,92 @@ FRESHNESS = load_script()
 
 
 class PinFreshnessTests(unittest.TestCase):
+    def test_transient_publication_failure_is_retried(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"publication"
+        transient_error = urllib.error.URLError("temporary failure")
+
+        with (
+            patch.object(
+                FRESHNESS.urllib.request,
+                "urlopen",
+                side_effect=(transient_error, response),
+            ) as urlopen,
+            patch.object(FRESHNESS.time, "sleep") as sleep,
+        ):
+            content = FRESHNESS.fetch_bytes("https://example.test/publication")
+
+        self.assertEqual(content, b"publication")
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(FRESHNESS.RETRY_BASE_DELAY_SECONDS)
+
+    def test_transient_publication_failure_exhausts_bounded_attempts(self) -> None:
+        transient_error = urllib.error.URLError("temporary failure")
+
+        with (
+            patch.object(
+                FRESHNESS.urllib.request,
+                "urlopen",
+                side_effect=transient_error,
+            ) as urlopen,
+            patch.object(FRESHNESS.time, "sleep") as sleep,
+            self.assertRaises(FRESHNESS.FreshnessError),
+        ):
+            FRESHNESS.fetch_bytes("https://example.test/publication")
+
+        self.assertEqual(urlopen.call_count, FRESHNESS.MAX_FETCH_ATTEMPTS)
+        self.assertEqual(sleep.call_count, FRESHNESS.MAX_FETCH_ATTEMPTS - 1)
+
+    def test_permanent_http_failure_is_not_retried(self) -> None:
+        permanent_error = urllib.error.HTTPError(
+            "https://example.test/publication",
+            404,
+            "not found",
+            {},
+            None,
+        )
+        self.addCleanup(permanent_error.close)
+
+        with (
+            patch.object(
+                FRESHNESS.urllib.request,
+                "urlopen",
+                side_effect=permanent_error,
+            ) as urlopen,
+            patch.object(FRESHNESS.time, "sleep") as sleep,
+            self.assertRaises(FRESHNESS.FreshnessError),
+        ):
+            FRESHNESS.fetch_bytes("https://example.test/publication")
+
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
+
+    def test_transient_http_failure_is_retried(self) -> None:
+        transient_error = urllib.error.HTTPError(
+            "https://example.test/publication",
+            503,
+            "service unavailable",
+            {},
+            None,
+        )
+        self.addCleanup(transient_error.close)
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"publication"
+
+        with (
+            patch.object(
+                FRESHNESS.urllib.request,
+                "urlopen",
+                side_effect=(transient_error, response),
+            ) as urlopen,
+            patch.object(FRESHNESS.time, "sleep") as sleep,
+        ):
+            content = FRESHNESS.fetch_bytes("https://example.test/publication")
+
+        self.assertEqual(content, b"publication")
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(FRESHNESS.RETRY_BASE_DELAY_SECONDS)
+
     def test_equal_values_are_current(self) -> None:
         result = FRESHNESS.status_result("example", "v1.2.3", "v1.2.3")
         self.assertEqual(result.status, "current")

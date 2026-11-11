@@ -17,8 +17,8 @@
       "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 18013-7:2025", "copyright_restricted": true, "local_copy_allowed": false}
     },
     {
-      "id": "iso-iec-ts-23220-2-2024", "title": "ISO/IEC TS 23220-2:2024 data objects and encoding rules for generic eID systems", "publisher": "ISO/IEC", "edition": "1", "publication_date": "2024-07", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/86782.html", "certification_claim": false,
-      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 23220-2:2024", "copyright_restricted": true, "local_copy_allowed": false}
+      "id": "iso-iec-ts-23220-2-2026", "title": "ISO/IEC TS 23220-2:2026 data objects and encoding rules for generic eID systems", "publisher": "ISO/IEC", "edition": "2", "publication_date": "2026-04", "maturity": "published_standard", "canonical_url": "https://www.iso.org/standard/91155.html", "certification_claim": false,
+      "binding": {"kind": "official_edition", "standard_number": "ISO/IEC TS 23220-2:2026", "copyright_restricted": true, "local_copy_allowed": false}
     },
     {
       "id": "rfc-5280", "title": "RFC 5280 Internet X.509 Public Key Infrastructure Certificate and CRL Profile", "publisher": "IETF", "edition": "RFC 5280", "publication_date": "2008-05", "maturity": "published_standard", "canonical_url": "https://www.rfc-editor.org/rfc/rfc5280.txt", "certification_claim": false,

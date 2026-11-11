@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -41,6 +43,9 @@ PIN_POLICY = REPOSITORY_ROOT / "references/pin-policy.json"
 MAX_LOCAL_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 HTTP_TIMEOUT_SECONDS = 20
+MAX_FETCH_ATTEMPTS = 4
+RETRY_BASE_DELAY_SECONDS = 1.0
+RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
 EXIT_STALE = 2
 EXIT_UNAVAILABLE = 3
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
@@ -232,13 +237,10 @@ def fetch_json(url: str) -> object:
         if token:
             headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers, method="GET")
-    try:
-        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
-            body = response.read(MAX_RESPONSE_BYTES + 1)
-    except (OSError, urllib.error.URLError, TimeoutError) as error:
-        raise FreshnessError(
-            f"authoritative metadata request failed for {url}"
-        ) from error
+    body = fetch_response_bytes(
+        request,
+        f"authoritative metadata request failed for {url}",
+    )
     if len(body) > MAX_RESPONSE_BYTES:
         raise FreshnessError("authoritative metadata response exceeds the size limit")
     try:
@@ -259,16 +261,50 @@ def fetch_bytes(url: str) -> bytes:
         },
         method="GET",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
-            body = response.read(MAX_RESPONSE_BYTES + 1)
-    except (OSError, urllib.error.URLError, TimeoutError) as error:
-        raise FreshnessError(
-            f"authoritative publication request failed for {url}"
-        ) from error
+    body = fetch_response_bytes(
+        request,
+        f"authoritative publication request failed for {url}",
+    )
     if len(body) > MAX_RESPONSE_BYTES:
         raise FreshnessError("authoritative publication exceeds the size limit")
     return body
+
+
+def fetch_response_bytes(
+    request: urllib.request.Request,
+    failure_message: str,
+) -> bytes:
+    """Fetch a bounded response while tolerating transient publisher failures."""
+
+    for attempt in range(MAX_FETCH_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(
+                request, timeout=HTTP_TIMEOUT_SECONDS
+            ) as response:
+                return response.read(MAX_RESPONSE_BYTES + 1)
+        except urllib.error.HTTPError as error:
+            status_code = error.code
+            error.close()
+            if status_code not in RETRYABLE_HTTP_STATUS_CODES:
+                raise FreshnessError(failure_message) from error
+            last_error: Exception = error
+        except (
+            http.client.HTTPException,
+            OSError,
+            urllib.error.URLError,
+            TimeoutError,
+        ) as error:
+            last_error = error
+
+        if attempt + 1 == MAX_FETCH_ATTEMPTS:
+            raise FreshnessError(failure_message) from last_error
+
+        # Authoritative standards publishers occasionally reset or throttle
+        # otherwise valid downloads. A short deterministic backoff prevents a
+        # transient transport failure from invalidating a release candidate.
+        time.sleep(RETRY_BASE_DELAY_SECONDS * (2**attempt))
+
+    raise FreshnessError(failure_message)
 
 
 def github_api(repository: str, suffix: str) -> str:

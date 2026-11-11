@@ -91,10 +91,13 @@ jobs:
           python3 scripts/check_pin_freshness.py
       - name: Build deterministic candidate manifest
         working-directory: identity-conformance
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          REPOSITORY_COMMIT: ${{ github.sha }}
         run: |
           python3 scripts/build_release_manifest.py \
-            --version "${{ inputs.version }}" \
-            --repository-commit "${{ github.sha }}" \
+            --version "${RELEASE_VERSION}" \
+            --repository-commit "${REPOSITORY_COMMIT}" \
             --output dist/conformance-framework-release.json
       - name: Retain candidate manifest
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

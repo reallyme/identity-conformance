@@ -33,7 +33,7 @@ EXPECTED_PUBLICATION_IDS = {
     "iso-iec-18013-5-2021",
     "iso-iec-ts-18013-6-2025",
     "iso-iec-ts-18013-7-2025",
-    "iso-iec-ts-23220-2-2024",
+    "iso-iec-ts-23220-2-2026",
     "rfc-5280",
     "rfc-8949",
     "rfc-9052",

@@ -468,6 +468,10 @@ for (const candidateNeedle of [
   "repository: reallyme/ssi",
   'ref: ${{ steps.component-revisions.outputs.ssi }}',
   "path: ssi",
+  "RELEASE_VERSION: ${{ inputs.version }}",
+  'REPOSITORY_COMMIT: ${{ github.sha }}',
+  '--version "${RELEASE_VERSION}"',
+  '--repository-commit "${REPOSITORY_COMMIT}"',
 ]) {
   assertContains(releaseCandidateWorkflow, candidateNeedle);
 }
