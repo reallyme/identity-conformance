@@ -27,6 +27,7 @@ const {
 });
 
 const workflow = ".github/workflows/release-readiness.yml";
+const releaseCandidateWorkflow = ".github/workflows/release-candidate.yml";
 const secretScanWorkflow = ".github/workflows/secret-scan.yml";
 const openid4vciCertificationWorkflow =
   ".github/workflows/oidf-openid4vci-certification.yml";
@@ -453,6 +454,23 @@ assertContains(workflow, "Checkout pinned SSI trace inputs");
 assertContains(workflow, "repository: reallyme/ssi");
 assertContains(workflow, 'ref: ${{ steps.component-revisions.outputs.ssi }}');
 assertContains(workflow, "path: ssi");
+for (const candidateNeedle of [
+  "Resolve pinned trace source revisions",
+  "Checkout pinned OpenID4VCI trace sources",
+  "repository: reallyme/openid4vci",
+  'ref: ${{ steps.component-revisions.outputs.openid4vci }}',
+  "path: openid4vci",
+  "Checkout pinned OpenID4VP trace sources",
+  "repository: reallyme/openid4vp",
+  'ref: ${{ steps.component-revisions.outputs.openid4vp }}',
+  "path: openid4vp",
+  "Checkout pinned SSI trace inputs",
+  "repository: reallyme/ssi",
+  'ref: ${{ steps.component-revisions.outputs.ssi }}',
+  "path: ssi",
+]) {
+  assertContains(releaseCandidateWorkflow, candidateNeedle);
+}
 assertContains(
   workflow,
   "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",

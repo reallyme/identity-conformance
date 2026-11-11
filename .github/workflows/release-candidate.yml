@@ -25,6 +25,46 @@ jobs:
         with:
           path: identity-conformance
           persist-credentials: false
+      - name: Resolve pinned trace source revisions
+        id: component-revisions
+        working-directory: identity-conformance
+        run: |
+          for component in openid4vci openid4vp ssi; do
+            revision="$(
+              jq -er --arg component "${component}" '
+                [.repositories[] | select(.component_id == $component)]
+                | if length == 1 then .[0].commit else error("component inventory is not unique") end
+              ' components.lock.json
+            )"
+            if [[ ! "${revision}" =~ ^[0-9a-f]{40}$ ]]; then
+              printf 'The %s component revision is not a full Git commit.\n' "${component}" >&2
+              exit 65
+            fi
+            printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
+          done
+      # The release gate validates source-bound ETSI trace entries before it
+      # creates a manifest, so each owning repository must be present.
+      - name: Checkout pinned OpenID4VCI trace sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vci
+          ref: ${{ steps.component-revisions.outputs.openid4vci }}
+          path: openid4vci
+          persist-credentials: false
+      - name: Checkout pinned OpenID4VP trace sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vp
+          ref: ${{ steps.component-revisions.outputs.openid4vp }}
+          path: openid4vp
+          persist-credentials: false
+      - name: Checkout pinned SSI trace inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/ssi
+          ref: ${{ steps.component-revisions.outputs.ssi }}
+          path: ssi
+          persist-credentials: false
       - name: Install Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
