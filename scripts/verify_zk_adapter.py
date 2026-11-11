@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import re
 import subprocess
 import sys
@@ -115,7 +114,7 @@ def validate_plan(plan: dict[str, object]) -> None:
             "plan_id",
             "execution_status",
             "certification_claim",
-            "source_baseline",
+            "required_components",
             "assertions",
             "evidence_policy",
         },
@@ -129,16 +128,9 @@ def validate_plan(plan: dict[str, object]) -> None:
         or plan["evidence_policy"] != EXPECTED_POLICY
     ):
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
-    source = exact_object(
-        plan["source_baseline"],
-        {"repository", "release_ref", "commit"},
-        ZkAdapterErrorReason.INVALID_PLAN,
-    )
-    if (
-        source["repository"] != "https://github.com/reallyme/zk"
-        or source["release_ref"] != "v0.3.0"
-        or source["commit"] != "4684a9e4895df50a53c51173427ab5caf55b7088"
-    ):
+    if plan["required_components"] != [
+        {"component_id": "zk", "repository": "https://github.com/reallyme/zk"}
+    ]:
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
     assertions = plan["assertions"]
     if not isinstance(assertions, list) or len(assertions) != len(EXPECTED_ASSERTIONS):
@@ -176,7 +168,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
             "schema_version",
             "adapter_id",
             "plan_path",
-            "component",
+            "component_requirement",
             "source_artifacts",
             "cargo_packages",
             "required_attestation_categories",
@@ -188,7 +180,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
         adapter["schema_version"] != 1
         or adapter["adapter_id"] != "zk_presentation_proofs"
         or adapter["plan_path"] != "plans/zk/presentation-proofs.json"
-        or adapter["component"] != plan["source_baseline"]
+        or adapter["component_requirement"] != plan["required_components"][0]
         or adapter["cargo_packages"] != EXPECTED_PACKAGES
         or set(adapter["required_attestation_categories"])
         != EXPECTED_ATTESTATION_CATEGORIES
@@ -207,7 +199,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
     for raw_artifact in source_artifacts:
         artifact = exact_object(
             raw_artifact,
-            {"artifact_id", "path", "sha256"},
+            {"artifact_id", "path"},
             ZkAdapterErrorReason.INVALID_ADAPTER,
         )
         artifact_id = artifact["artifact_id"]
@@ -215,8 +207,6 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
             not isinstance(artifact_id, str)
             or artifact_id in observed
             or artifact["path"] != expected_paths.get(artifact_id)
-            or not isinstance(artifact["sha256"], str)
-            or SHA256.fullmatch(artifact["sha256"]) is None
         ):
             raise ZkAdapterError(ZkAdapterErrorReason.INVALID_ADAPTER)
         observed.add(artifact_id)
@@ -240,7 +230,7 @@ def git_output(checkout: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
-def hash_source_file(source: Path, relative_path: str) -> str:
+def verify_source_file(source: Path, relative_path: str) -> None:
     candidate = source / relative_path
     try:
         metadata = candidate.lstat()
@@ -250,23 +240,18 @@ def hash_source_file(source: Path, relative_path: str) -> str:
             raise ZkAdapterError(ZkAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
         if not 1 <= metadata.st_size <= MAX_SOURCE_ARTIFACT_BYTES:
             raise ZkAdapterError(ZkAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
-        digest = hashlib.sha256()
-        with candidate.open("rb") as handle:
-            while chunk := handle.read(128 * 1024):
-                digest.update(chunk)
     except (OSError, ValueError) as error:
         raise ZkAdapterError(ZkAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH) from error
     if not git_output(source, "ls-files", "--error-unmatch", "--", relative_path):
         raise ZkAdapterError(ZkAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
-    return digest.hexdigest()
+    return None
 
 
-def verify_checkout(source: Path, adapter: dict[str, object]) -> None:
-    component = adapter["component"]
-    if not isinstance(component, dict):
-        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_ADAPTER)
-    expected_commit = component["commit"]
-    expected_ref = component["release_ref"]
+def verify_checkout(
+    source: Path, adapter: dict[str, object], expected_commit: str, expected_ref: str
+) -> None:
+    if GIT_COMMIT.fullmatch(expected_commit) is None:
+        raise ZkAdapterError(ZkAdapterErrorReason.REVISION_MISMATCH)
     if git_output(source, "rev-parse", "HEAD") != expected_commit:
         raise ZkAdapterError(ZkAdapterErrorReason.REVISION_MISMATCH)
     if git_output(source, "rev-list", "-n", "1", expected_ref) != expected_commit:
@@ -280,13 +265,9 @@ def verify_checkout(source: Path, adapter: dict[str, object]) -> None:
         if not isinstance(raw_artifact, dict):
             raise ZkAdapterError(ZkAdapterErrorReason.INVALID_ADAPTER)
         path = raw_artifact.get("path")
-        expected_digest = raw_artifact.get("sha256")
-        if (
-            not isinstance(path, str)
-            or not isinstance(expected_digest, str)
-            or hash_source_file(source, path) != expected_digest
-        ):
+        if not isinstance(path, str):
             raise ZkAdapterError(ZkAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
+        verify_source_file(source, path)
 
 
 def load_contract() -> tuple[dict[str, object], dict[str, object]]:
@@ -300,11 +281,15 @@ def load_contract() -> tuple[dict[str, object], dict[str, object]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path)
+    parser.add_argument("--expected-commit")
+    parser.add_argument("--expected-ref")
     args = parser.parse_args()
     try:
         _plan, adapter = load_contract()
         if args.source is not None:
-            verify_checkout(args.source, adapter)
+            if args.expected_commit is None or args.expected_ref is None:
+                raise ZkAdapterError(ZkAdapterErrorReason.REVISION_MISMATCH)
+            verify_checkout(args.source, adapter, args.expected_commit, args.expected_ref)
     except ZkAdapterError as error:
         fail(error.reason)
     print("ZK presentation-proof adapter valid")

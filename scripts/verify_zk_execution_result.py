@@ -32,6 +32,9 @@ def verify_result(value: dict[str, object]) -> None:
         "plan_id",
         "result",
         "created_at",
+        "framework_revision",
+        "workflow_revision",
+        "candidate_sha256",
         "component",
         "release_artifact_sha256",
         "component_attestation_sha256",
@@ -47,7 +50,12 @@ def verify_result(value: dict[str, object]) -> None:
         or value["result"] != "passed"
         or not isinstance(value["created_at"], str)
         or TIMESTAMP.fullmatch(value["created_at"]) is None
-        or value["component"] != adapter["component"]
+        or not isinstance(value["framework_revision"], str)
+        or adapter_verifier.GIT_COMMIT.fullmatch(value["framework_revision"]) is None
+        or not isinstance(value["workflow_revision"], str)
+        or adapter_verifier.GIT_COMMIT.fullmatch(value["workflow_revision"]) is None
+        or not isinstance(value["candidate_sha256"], str)
+        or adapter_verifier.SHA256.fullmatch(value["candidate_sha256"]) is None
         or value["evidence_policy"] != adapter_verifier.EXPECTED_POLICY
         or not isinstance(value["release_artifact_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["release_artifact_sha256"])
@@ -58,6 +66,33 @@ def verify_result(value: dict[str, object]) -> None:
         )
         is None
     ):
+        raise runner.ZkRunnerError(runner.ZkRunnerErrorReason.INVALID_DEPLOYMENT)
+    component = value["component"]
+    requirement = adapter.get("component_requirement")
+    if (
+        not isinstance(component, dict)
+        or set(component) != {"component_id", "repository", "release_ref", "commit"}
+        or not isinstance(requirement, dict)
+        or component.get("component_id") != requirement.get("component_id")
+        or component.get("repository") != requirement.get("repository")
+        or not isinstance(component.get("release_ref"), str)
+        or re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", component["release_ref"])
+        is None
+        or not isinstance(component.get("commit"), str)
+        or adapter_verifier.GIT_COMMIT.fullmatch(component["commit"]) is None
+    ):
+        raise runner.ZkRunnerError(runner.ZkRunnerErrorReason.INVALID_DEPLOYMENT)
+    candidate = {
+        "plan_id": value["plan_id"],
+        "component": component,
+        "release_artifact": {
+            "artifact_id": "zk-release-bundle",
+            "kind": "archive",
+            "sha256": value["release_artifact_sha256"],
+        },
+        "component_attestation_sha256": value["component_attestation_sha256"],
+    }
+    if value["candidate_sha256"] != runner.candidate_digest(candidate):
         raise runner.ZkRunnerError(runner.ZkRunnerErrorReason.INVALID_DEPLOYMENT)
     expected_check_kinds = {
         "source.toolchain-lock": "source",

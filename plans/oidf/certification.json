@@ -3,6 +3,14 @@
   "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
   "license": "MIT OR Apache-2.0",
   "observed_at": "2026-11-09",
+  "required_components": [
+    {"component_id": "openid4vci", "repository": "https://github.com/reallyme/openid4vci"},
+    {"component_id": "openid4vp", "repository": "https://github.com/reallyme/openid4vp"},
+    {"component_id": "wallet", "repository": "https://github.com/reallyme/wallet"},
+    {"component_id": "ssi", "repository": "https://github.com/reallyme/ssi"},
+    {"component_id": "identity", "repository": "https://github.com/reallyme/identity"},
+    {"component_id": "cose", "repository": "https://github.com/reallyme/cose"}
+  ],
   "certification_program": {
     "launched_at": "2026-08-07",
     "openid4vci_version": "1.0 Final",

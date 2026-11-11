@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -85,11 +86,24 @@ def validate_deployment(
     if (
         value["schema"] != "reallyme.identity.eudi_wallet_deployment_manifest.v1"
         or value["plan_id"] != "eudi-wallet-engineering-v1"
-        or value["component"] != adapter["component"]
         or value["evidence_policy"] != wallet_adapter.EXPECTED_POLICY
         or not isinstance(value["component_attestation_sha256"], str)
         or wallet_adapter.SHA256.fullmatch(value["component_attestation_sha256"])
         is None
+    ):
+        raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+    component = exact_object(
+        value["component"],
+        {"component_id", "repository", "commit"},
+        EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT,
+    )
+    requirement = adapter.get("component_requirement")
+    if (
+        not isinstance(requirement, dict)
+        or component.get("component_id") != requirement.get("component_id")
+        or component.get("repository") != requirement.get("repository")
+        or not isinstance(component.get("commit"), str)
+        or re.fullmatch(r"[0-9a-f]{40}", component["commit"]) is None
     ):
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
     artifact = exact_object(
@@ -122,6 +136,20 @@ def validate_deployment(
     return artifact
 
 
+def candidate_digest(deployment: dict[str, object]) -> str:
+    candidate = {
+        "plan_id": deployment["plan_id"],
+        "component": deployment["component"],
+        "release_artifact": deployment["release_artifact"],
+        "component_attestation_sha256": deployment["component_attestation_sha256"],
+        "source_locks": deployment["source_locks"],
+    }
+    encoded = json.dumps(
+        candidate, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def hash_regular_file(path: Path) -> str:
     try:
         metadata = path.lstat()
@@ -136,6 +164,13 @@ def hash_regular_file(path: Path) -> str:
         return digest.hexdigest()
     except OSError as error:
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ARTIFACT) from error
+
+
+def verify_release_artifact(path: Path, expected_digest: str) -> str:
+    observed_digest = hash_regular_file(path)
+    if observed_digest != expected_digest:
+        raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ARTIFACT)
+    return observed_digest
 
 
 def verify_attestation(
@@ -253,6 +288,8 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--release-artifact", required=True, type=Path)
     parser.add_argument("--component-attestation", required=True, type=Path)
+    parser.add_argument("--framework-revision", required=True)
+    parser.add_argument("--workflow-revision", required=True)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
@@ -271,13 +308,18 @@ def main() -> int:
             != source_locks["eudi_publications_sha256"]
         ):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
-        wallet_adapter.verify_checkout(args.source, adapter)
-        artifact_digest = hash_regular_file(args.release_artifact)
-        if artifact_digest != artifact["sha256"]:
-            raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ARTIFACT)
+        if (
+            re.fullmatch(r"[0-9a-f]{40}", args.framework_revision) is None
+            or re.fullmatch(r"[0-9a-f]{40}", args.workflow_revision) is None
+        ):
+            raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+        artifact_digest = verify_release_artifact(
+            args.release_artifact, artifact["sha256"]
+        )
         component = deployment["component"]
         if not isinstance(component, dict) or not isinstance(component.get("commit"), str):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+        wallet_adapter.verify_checkout(args.source, adapter, component["commit"])
         categories = verify_attestation(
             args.component_attestation,
             deployment["component_attestation_sha256"],
@@ -328,6 +370,9 @@ def main() -> int:
             "plan_id": "eudi-wallet-engineering-v1",
             "result": "passed" if passed else "failed",
             "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "framework_revision": args.framework_revision,
+            "workflow_revision": args.workflow_revision,
+            "candidate_sha256": candidate_digest(deployment),
             "component": component,
             "release_artifact_sha256": artifact_digest,
             "component_attestation_sha256": deployment["component_attestation_sha256"],

@@ -175,43 +175,20 @@ assertContains("docs/OIDF_SUBMISSION_CHECKLIST.md", "Publish for certification")
 assertContains("docs/OIDF_SUBMISSION_CHECKLIST.md", "legally binding attestation");
 assertContains("docs/OIDF_CERTIFICATION.md", "Every module returned for a selected plan must run");
 assertContains("adapters/registry.json", '"contract_path": "adapters/wallet"');
-assertContains("components.lock.json", '"purpose": "oidf-cross-repository-release-bom"');
-assertContains("components.lock.json", '"claim_status": "reference_candidate_not_conformance_evidence"');
-assertContains("components.lock.json", '"reallyme-jose": {');
-assertContains("components.lock.json", '"reallyme-crypto": {');
 assertContains(
-  "components.lock.json",
-  '"checksum": "c6dcac5ae352e16530a1009e4e35b418e0f0a8e2c219c4c7106f475cf3136f16"',
+  "references/reallyme/trace-sources.lock.json",
+  '"purpose": "etsi-eaa-pid-trace-source-lock"',
 );
 assertContains(
-  "components.lock.json",
-  '"checksum": "d82736c2b7ad3a175ed1af1363d8407e44a9646d72eb6beab5527375586b9396"',
-);
-assertContains("components.lock.json", '"reallyme-openid4vci": {');
-assertContains(
-  "components.lock.json",
-  '"checksum": "0040fbe176fe939d5c9580658649f71f84cfff216ab2a0a8c0053c44ccdfa31a"',
-);
-assertContains("components.lock.json", '"reallyme-openid4vp-types": {');
-assertContains(
-  "components.lock.json",
-  '"checksum": "af1ab7b2cfb65b56a834092ea716b559721e3405a970cc02ff36fd8f4ed8cf83"',
-);
-assertContains("components.lock.json", '"reallyme-ssi-core": {');
-assertContains(
-  "components.lock.json",
-  '"checksum": "9a597ff14992a5d5b6a98fdd695c88e8383118d7bd9da72139c87379cb8e10b4"',
-);
-assertContains(
-  "components.lock.json",
-  '"commit": "43dddafe1c9be46260c01334bcf3d9e34f5c066a"',
+  "schemas/product-component-bom.schema.json",
+  '"purpose": { "const": "reallyme-product-conformance-bom" }',
 );
 assertContains("scripts/strict_json.py", "json_duplicate_member");
 assertContains("scripts/strict_json.py", "json_non_finite_number");
 assertContains("scripts/strict_json.py", "json_depth_limit_exceeded");
-assertContains("scripts/verify_component_lock.py", "strict_json.loads");
-assertContains("scripts/run_oidf_openid4vci_certification.sh", "--evidence-release --verify-checkouts");
-assertContains("scripts/run_oidf_openid4vp_certification.sh", "--evidence-release --verify-checkouts");
+assertContains("scripts/verify_product_component_bom.py", "strict_json.loads");
+assertContains("scripts/run_oidf_openid4vci_certification.sh", "--require-release-refs --verify-checkouts");
+assertContains("scripts/run_oidf_openid4vp_certification.sh", "--require-release-refs --verify-checkouts");
 assertContains("scripts/audit_etsi_eaa_pid_trace.py", "external_evidence_still_required");
 assertContains("scripts/verify_oidf_deployment_manifest.py", "strict_json.loads");
 assertContains("scripts/hash_oidf_input.py", "evidence.hash_file");
@@ -437,7 +414,7 @@ assertContains(workflow, `release-readiness#${sharedRevision}`);
 assertContains(workflow, "Resolve pinned trace source revisions");
 assertContains(
   workflow,
-  ".repositories[] | select(.component_id == $component)",
+  ".sources[] | select(.component_id == $component)",
 );
 assertContains(workflow, "Checkout pinned OpenID4VCI trace sources");
 assertContains(workflow, "repository: reallyme/openid4vci");
@@ -513,7 +490,6 @@ assertWorkflowRunStep(
 );
 
 run("python3", ["scripts/verify_oidf_manifests.py"]);
-run("python3", ["scripts/verify_component_lock.py"]);
 run("python3", ["scripts/verify_normative_sources.py"]);
 run("python3", ["scripts/verify_eudi_publications.py"]);
 run("python3", ["scripts/audit_etsi_eaa_pid_trace.py", "--check"]);

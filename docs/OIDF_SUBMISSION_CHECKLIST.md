@@ -14,7 +14,7 @@ Passing repository gates or pre-submission runs is not itself certification.
   immutable product version exactly as they will appear in the submission.
 - [ ] Every deployed verifier, wallet, and issuer artifact is content-addressed
   in the deployment manifest and was built from the commits in
-  `components.lock.json`.
+  the caller-supplied product component BOM.
 - [ ] The retained evidence index validates without modifying any artifact.
 - [ ] The public disclosure review confirms that exports contain no keys,
   tokens, personal data, transaction content, or internal-only endpoints.

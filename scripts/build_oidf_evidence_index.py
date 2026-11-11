@@ -19,6 +19,13 @@ from typing import NoReturn
 from urllib.parse import urlsplit
 
 
+SCRIPT_DIRECTORY = Path(__file__).resolve().parent
+if str(SCRIPT_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIRECTORY))
+
+import verify_product_component_bom as product_bom_validator  # noqa: E402
+
+
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 128 * 1024 * 1024
 MAX_TOTAL_ARTIFACT_BYTES = 512 * 1024 * 1024
@@ -26,7 +33,7 @@ MAX_ARTIFACTS = 4096
 READ_CHUNK_BYTES = 64 * 1024
 GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 INDEX_FILENAME = "evidence-index.json"
-COMPONENT_LOCK_FILENAME = "components.lock.json"
+PRODUCT_BOM_FILENAME = "product-component-bom.json"
 DEPLOYMENT_MANIFEST_FILENAME = "deployment-manifest.json"
 
 
@@ -160,18 +167,22 @@ def retained_deployment_digest(
     )
 
 
-def retained_component_lock_digest(
+def retained_product_bom_digest(
     result_root: Path,
-    component_lock: Path,
+    product_bom: Path,
     artifacts: list[dict[str, object]],
 ) -> dict[str, object]:
-    return retained_artifact_digest(
+    retained = retained_artifact_digest(
         result_root,
-        component_lock,
-        COMPONENT_LOCK_FILENAME,
+        product_bom,
+        PRODUCT_BOM_FILENAME,
         artifacts,
-        "component_lock_not_retained",
+        "product_component_bom_not_retained",
     )
+    retained["canonical_sha256"] = product_bom_validator.canonical_digest(
+        product_bom_validator.load_bom(product_bom)
+    )
+    return retained
 
 
 def deployment_endpoint(value: str) -> str:
@@ -223,8 +234,10 @@ def write_new_index(index_path: Path, value: dict[str, object]) -> None:
 
 def write_index(
     result_root: Path,
+    framework_revision: str,
+    workflow_revision: str,
     suite_revision: str,
-    component_lock: Path,
+    product_bom: Path,
     deployment_manifest: Path,
     certification_plan: Path,
     profile_matrix: Path,
@@ -238,6 +251,10 @@ def write_index(
     wallet_harness_endpoint: str,
     wallet_harness_health_endpoint: str,
 ) -> None:
+    if GIT_COMMIT.fullmatch(framework_revision) is None:
+        fail("framework_revision_invalid")
+    if GIT_COMMIT.fullmatch(workflow_revision) is None:
+        fail("workflow_revision_invalid")
     if GIT_COMMIT.fullmatch(suite_revision) is None:
         fail("suite_revision_invalid")
     index_path = result_root / INDEX_FILENAME
@@ -245,15 +262,17 @@ def write_index(
     deployment_digest = retained_deployment_digest(
         result_root, deployment_manifest, artifacts
     )
-    component_lock_digest = retained_component_lock_digest(
-        result_root, component_lock, artifacts
+    product_bom_digest = retained_product_bom_digest(
+        result_root, product_bom, artifacts
     )
     value = {
-        "schema_version": 1,
+        "schema_version": 2,
         "protocol": "openid4vp",
+        "framework_revision": framework_revision,
+        "workflow_revision": workflow_revision,
         "suite_revision": suite_revision,
         "inputs": {
-            "component_lock": component_lock_digest,
+            "product_component_bom": product_bom_digest,
             "deployment_manifest": deployment_digest,
             "certification_plan": input_digest(certification_plan),
             "openid4vp_profile_matrix": input_digest(profile_matrix),
@@ -281,8 +300,10 @@ def write_index(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--result-root", required=True, type=Path)
+    parser.add_argument("--framework-revision", required=True)
+    parser.add_argument("--workflow-revision", required=True)
     parser.add_argument("--suite-revision", required=True)
-    parser.add_argument("--component-lock", required=True, type=Path)
+    parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument("--deployment-manifest", required=True, type=Path)
     parser.add_argument("--certification-plan", required=True, type=Path)
     parser.add_argument("--profile-matrix", required=True, type=Path)
@@ -300,8 +321,10 @@ def main() -> int:
         fail("evidence_directory_invalid")
     write_index(
         args.result_root,
+        args.framework_revision,
+        args.workflow_revision,
         args.suite_revision,
-        args.component_lock,
+        args.product_component_bom,
         args.deployment_manifest,
         args.certification_plan,
         args.profile_matrix,

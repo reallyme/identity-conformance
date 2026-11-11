@@ -310,53 +310,6 @@ class PinFreshnessTests(unittest.TestCase):
         )
         self.assertEqual(results[0].status, "stale")
 
-    def test_crate_check_rejects_a_yanked_pin(self) -> None:
-        lock = {
-            "required_cargo_packages": {
-                "reallyme-example": {
-                    "version": "1.0.0",
-                    "checksum": "a" * 64,
-                }
-            }
-        }
-
-        def fetcher(_url: str) -> object:
-            return {
-                "crate": {"max_stable_version": "1.0.0"},
-                "versions": [
-                    {"num": "1.0.0", "checksum": "a" * 64, "yanked": True}
-                ],
-            }
-
-        with patch.object(FRESHNESS, "read_object", return_value=lock):
-            with self.assertRaises(FRESHNESS.FreshnessError):
-                FRESHNESS.check_crates(fetcher)
-
-    def test_crate_check_detects_checksum_substitution(self) -> None:
-        lock = {
-            "required_cargo_packages": {
-                "reallyme-example": {
-                    "version": "1.0.0",
-                    "checksum": "a" * 64,
-                }
-            }
-        }
-
-        def fetcher(_url: str) -> object:
-            return {
-                "crate": {"max_stable_version": "1.0.0"},
-                "versions": [
-                    {"num": "1.0.0", "checksum": "b" * 64, "yanked": False}
-                ],
-            }
-
-        with patch.object(FRESHNESS, "read_object", return_value=lock):
-            results = FRESHNESS.check_crates(fetcher)
-        checksum = next(
-            result for result in results if result.check_id.endswith(".checksum")
-        )
-        self.assertEqual(checksum.status, "stale")
-
     def test_repository_identifier_rejects_extra_path_segments(self) -> None:
         with self.assertRaises(FRESHNESS.FreshnessError):
             FRESHNESS.github_api("owner/repository/extra", "releases/latest")

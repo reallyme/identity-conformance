@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reallyme.com/schemas/identity-conformance/product-component-bom.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "title": "ReallyMe product component bill of materials",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "purpose", "product_id", "product_version", "components"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "purpose": { "const": "reallyme-product-conformance-bom" },
+    "product_id": { "const": "identity" },
+    "product_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]*$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/component" }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "repository", "commit", "release_artifact_sha256", "component_attestation_sha256", "roles"],
+      "properties": {
+        "component_id": {
+          "enum": ["openid4vci", "openid4vp", "wallet", "ssi", "identity", "cose"]
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^https://github\\.com/reallyme/(openid4vci|openid4vp|wallet|ssi|identity|cose)$"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "release_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "component_attestation_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "release_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"]
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+from unittest.mock import patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -42,8 +43,8 @@ PARAMETERS = load_script(
 NORMATIVE_SOURCES = load_script(
     "verify_normative_sources", "scripts/verify_normative_sources.py"
 )
-COMPONENT_LOCK = load_script(
-    "verify_component_lock", "scripts/verify_component_lock.py"
+PRODUCT_BOM = load_script(
+    "verify_product_component_bom", "scripts/verify_product_component_bom.py"
 )
 EVIDENCE_INDEX = load_script(
     "build_oidf_evidence_index", "scripts/build_oidf_evidence_index.py"
@@ -72,12 +73,32 @@ INPUT_FINGERPRINT = load_script(
 )
 
 
+def valid_product_bom() -> dict[str, object]:
+    components: list[dict[str, object]] = []
+    for index, (component_id, policy) in enumerate(PRODUCT_BOM.COMPONENTS.items(), 1):
+        components.append(
+            {
+                "component_id": component_id,
+                "repository": policy.repository,
+                "commit": f"{index:x}" * 40,
+                "release_ref": f"{policy.release_prefix}1.0.0",
+                "release_artifact_sha256": f"{index:x}" * 64,
+                "component_attestation_sha256": f"{index + 6:x}" * 64,
+                "roles": sorted(policy.roles),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "purpose": "reallyme-product-conformance-bom",
+        "product_id": "identity",
+        "product_version": "1.0.0-rc.1",
+        "components": components,
+    }
+
+
 def valid_deployment_manifest() -> dict[str, object]:
-    component_lock = json.loads(
-        (REPOSITORY_ROOT / "components.lock.json").read_text(encoding="utf-8")
-    )
     components = {
-        item["component_id"]: item for item in component_lock["repositories"]
+        item["component_id"]: item for item in valid_product_bom()["components"]
     }
 
     def deployment(
@@ -161,7 +182,7 @@ class ManifestContractTests(unittest.TestCase):
             MANIFESTS.PLANS_ROOT / "engineering.json"
         )
         self.adapters = MANIFESTS.load_object(MANIFESTS.ADAPTER_REGISTRY_PATH)
-        self.component_lock = MANIFESTS.load_object(MANIFESTS.COMPONENT_LOCK_PATH)
+        self.product_bom = valid_product_bom()
 
     def assert_rejected(self, operation: object) -> None:
         if not callable(operation):
@@ -296,148 +317,75 @@ class ManifestContractTests(unittest.TestCase):
             lambda: MANIFESTS.verify_adapter_registry(changed, owners)
         )
 
-    def test_adapter_components_must_match_release_bom(self) -> None:
-        changed = copy.deepcopy(self.adapters)
-        changed["adapters"][1]["component_repositories"].remove(
-            "https://github.com/reallyme/ssi"
+    def test_product_bom_accepts_complete_caller_candidate(self) -> None:
+        components = PRODUCT_BOM.validate_bom(
+            self.product_bom, require_release_refs=True
         )
-        owners = MANIFESTS.plan_owners(self.certification, self.engineering)
-        components = MANIFESTS.component_repositories_by_role(self.component_lock)
+        self.assertEqual(set(components), set(PRODUCT_BOM.COMPONENTS))
+
+    def test_product_bom_rejects_duplicate_component(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"][1] = copy.deepcopy(changed["components"][0])
+        self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_rejects_missing_component(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"].pop()
+        self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_rejects_ambiguous_repository_identity(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"][0]["repository"] = "https://github.com/reallyme/wallet"
+        self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_rejects_invalid_commit(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"][0]["commit"] = "not-a-commit"
+        self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_rejects_invalid_attestation_digest(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"][0]["component_attestation_sha256"] = "0" * 63
+        self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_requires_release_refs_for_certification(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        del changed["components"][0]["release_ref"]
         self.assert_rejected(
-            lambda: MANIFESTS.verify_adapter_registry(changed, owners, components)
+            lambda: PRODUCT_BOM.validate_bom(changed, require_release_refs=True)
         )
 
-    def test_component_lock_rejects_invalid_commit(self) -> None:
-        changed = copy.deepcopy(self.component_lock)
-        changed["repositories"][0]["commit"] = "not-a-commit"
-        self.assert_rejected(
-            lambda: MANIFESTS.component_repositories_by_role(changed)
-        )
+    def test_product_bom_digest_is_independent_of_json_whitespace(self) -> None:
+        first = PRODUCT_BOM.canonical_digest(self.product_bom)
+        reordered = json.loads(json.dumps(self.product_bom, sort_keys=True))
+        self.assertEqual(first, PRODUCT_BOM.canonical_digest(reordered))
 
-    def test_component_lock_requires_exact_public_crate_releases(self) -> None:
-        lock = COMPONENT_LOCK.load_lock()
-        packages, overrides = COMPONENT_LOCK.package_policy(lock)
-        self.assertEqual(packages, lock["required_cargo_packages"])
-        self.assertEqual(overrides, {})
-        self.assertEqual(
-            set(COMPONENT_LOCK.verify_lock(lock)),
-            set(COMPONENT_LOCK.EXPECTED_COMPONENTS),
-        )
-
-    def test_evidence_component_lock_requires_every_release_reference(self) -> None:
-        lock = COMPONENT_LOCK.load_lock()
-        with redirect_stderr(io.StringIO()):
-            with self.assertRaises(SystemExit) as raised:
-                COMPONENT_LOCK.verify_lock(lock, require_release_refs=True)
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_INVALID_INPUT)
-
-    def test_reference_candidate_rejects_a_false_evidence_claim(self) -> None:
-        lock = COMPONENT_LOCK.load_lock()
-        lock["claim_status"] = "certified"
-        with redirect_stderr(io.StringIO()):
-            with self.assertRaises(SystemExit) as raised:
-                COMPONENT_LOCK.verify_lock(lock)
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_INVALID_INPUT)
-
-    def test_component_dependency_check_rejects_other_jose_version(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            checkout = Path(temporary_directory)
-            (checkout / "Cargo.lock").write_text(
-                (
-                    'version = 4\n\n[[package]]\nname = "reallyme-jose"\n'
-                    'version = "0.3.0"\n'
-                ),
-                encoding="utf-8",
-            )
-            with redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    COMPONENT_LOCK.verify_cargo_lock(checkout / "Cargo.lock", "test")
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_CONFIGURATION)
-
-    def test_component_dependency_check_rejects_other_cose_version(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            checkout = Path(temporary_directory)
-            (checkout / "Cargo.lock").write_text(
-                (
-                    'version = 4\n\n[[package]]\nname = "reallyme-cose"\n'
-                    'version = "0.2.3"\n'
-                ),
-                encoding="utf-8",
-            )
-            with redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    COMPONENT_LOCK.verify_cargo_lock(checkout / "Cargo.lock", "test")
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_CONFIGURATION)
-
-    def test_component_dependency_check_rejects_git_source_for_published_crate(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            checkout = Path(temporary_directory)
-            (checkout / "Cargo.lock").write_text(
-                (
-                    'version = 4\n\n[[package]]\nname = "reallyme-openid4vp-types"\n'
-                    'version = "0.1.0"\n'
-                    'source = "git+https://github.com/reallyme/openid4vp"\n'
-                ),
-                encoding="utf-8",
-            )
-            with redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    COMPONENT_LOCK.verify_cargo_lock(
-                        checkout / "Cargo.lock", "test", "identity"
-                    )
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_CONFIGURATION)
-
-    def test_component_dependency_check_rejects_wrong_registry_checksum(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            checkout = Path(temporary_directory)
-            (checkout / "Cargo.lock").write_text(
-                (
-                    'version = 4\n\n[[package]]\nname = "reallyme-openid4vp-types"\n'
-                    'version = "0.1.0"\n'
-                    'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
-                    f'checksum = "{"0" * 64}"\n'
-                ),
-                encoding="utf-8",
-            )
-            with redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    COMPONENT_LOCK.verify_cargo_lock(
-                        checkout / "Cargo.lock", "test", "identity"
-                    )
-        self.assertEqual(raised.exception.code, COMPONENT_LOCK.EXIT_CONFIGURATION)
-
-    def test_component_dependency_check_accepts_exact_registry_release(self) -> None:
-        packages, _overrides = COMPONENT_LOCK.package_policy()
-        package = packages["reallyme-openid4vp-types"]
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            checkout = Path(temporary_directory)
-            (checkout / "Cargo.lock").write_text(
-                (
-                    'version = 4\n\n[[package]]\nname = "reallyme-openid4vp-types"\n'
-                    f'version = "{package["version"]}"\n'
-                    'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
-                    f'checksum = "{package["checksum"]}"\n'
-                ),
-                encoding="utf-8",
-            )
-            self.assertTrue(
-                COMPONENT_LOCK.verify_cargo_lock(
-                    checkout / "Cargo.lock", "test", "identity"
-                )
+    def test_product_checkout_rejects_release_ref_commit_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "component"
+            (checkout / ".git").mkdir(parents=True)
+            component = PRODUCT_BOM.Component(
+                "openid4vci",
+                "https://github.com/reallyme/openid4vci",
+                "component",
+                "1" * 40,
+                "reallyme-openid4vci-v1.0.0",
+                "2" * 64,
+                "3" * 64,
+                frozenset({"openid4vci_issuer", "openid4vci_wallet"}),
             )
 
-    def test_component_dependency_check_allows_unrelated_nested_lock(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            cargo_lock = Path(temporary_directory) / "Cargo.lock"
-            cargo_lock.write_text(
-                'version = 4\n\n[[package]]\nname = "serde"\nversion = "1.0.0"\n',
-                encoding="utf-8",
-            )
-            self.assertFalse(COMPONENT_LOCK.verify_cargo_lock(cargo_lock, "test"))
+            def git_output(_checkout: Path, arguments: list[str]) -> str:
+                return "1" * 40 if arguments[0] == "rev-parse" else "4" * 40
+
+            with patch.object(PRODUCT_BOM, "git_output", side_effect=git_output):
+                with redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as raised:
+                        PRODUCT_BOM.verify_checkouts(
+                            root, {component.component_id: component}
+                        )
+            self.assertEqual(raised.exception.code, PRODUCT_BOM.EXIT_CONFIGURATION)
 
     def test_openid4vp_execution_wrapper_requires_all_six_profiles(self) -> None:
         runner = (
@@ -457,7 +405,7 @@ class ManifestContractTests(unittest.TestCase):
         for profile_id in expected_profiles:
             self.assertIn(profile_id, certification_plan)
         self.assertIn(
-            "verify_component_lock.py --evidence-release --verify-checkouts",
+            "verify_product_component_bom.py",
             runner,
         )
         self.assertIn("OIDF_VERIFIER_FLOW_DRIVER_MODE=execute", runner)
@@ -473,7 +421,7 @@ class ManifestContractTests(unittest.TestCase):
         self.assertIn('OIDF_PROFILE_MATRIX="${openid_profile_matrix}"', runner)
         self.assertIn("verify_oidf_deployment_manifest.py", runner)
         self.assertIn("OIDF_DEPLOYMENT_MANIFEST", runner)
-        self.assertIn("--component-lock", runner)
+        self.assertIn("--product-component-bom", runner)
         self.assertIn("OIDF_VERIFIER_HEALTH_ENDPOINT", runner)
         self.assertIn("OIDF_VERIFIER_EVIDENCE_ENDPOINT", runner)
         self.assertIn("OIDF_VERIFIER_LAUNCH_TOKEN", runner)
@@ -485,11 +433,11 @@ class ManifestContractTests(unittest.TestCase):
         self.assertIn("official OIDF production server", runner)
         self.assertNotIn("--rerun", runner)
         retained_lock_copy = (
-            'cp "${repository_root}/components.lock.json" '
-            '"${result_root}/components.lock.json"'
+            'cp "${product_component_bom}" '
+            '"${result_root}/product-component-bom.json"'
         )
         retained_lock_binding = (
-            '--component-lock "${result_root}/components.lock.json"'
+            '--product-component-bom "${result_root}/product-component-bom.json"'
         )
         self.assertLess(
             runner.index(retained_lock_copy), runner.index(retained_lock_binding)
@@ -525,14 +473,17 @@ class ManifestContractTests(unittest.TestCase):
         self.assertIn("preflight/${profile_id}.json", runner)
         self.assertIn("assert_oidf_openid4vp_local_rehearsal.py", runner)
         self.assertIn(
-            "verify_component_lock.py --verify-checkouts",
+            "verify_product_component_bom.py",
             runner,
         )
         self.assertIn("OIDF_LOOPBACK_HTTP_ORIGIN is required", runner)
         self.assertIn("verify_oidf_loopback_crl.py", runner)
         self.assertIn('--credential-format sd_jwt_vc', runner)
         self.assertIn('--credential-format iso_mdl', runner)
-        self.assertLess(runner.index('--credential-format iso_mdl'), runner.index('for profile_id in "${verifier_profiles[@]}"'))
+        self.assertLess(
+            runner.index('--credential-format iso_mdl'),
+            runner.index('for profile_id in "${verifier_profiles[@]}"'),
+        )
         self.assertNotIn("build_oidf_evidence_index.py", runner)
         self.assertNotIn("OIDF_DEPLOYMENT_MANIFEST", runner)
         self.assertNotIn("--rerun", runner)
@@ -646,7 +597,7 @@ class ManifestContractTests(unittest.TestCase):
         for profile_id in expected_profiles:
             self.assertIn(profile_id, certification_plan)
         self.assertIn(
-            "verify_component_lock.py --evidence-release --verify-checkouts",
+            "verify_product_component_bom.py",
             runner,
         )
         self.assertEqual(runner.count("OIDF_CONFORMANCE_MODE=hosted"), 2)
@@ -655,18 +606,18 @@ class ManifestContractTests(unittest.TestCase):
         self.assertIn("assert_oidf_openid4vci_pre_submission.py", runner)
         self.assertIn("verify_oidf_deployment_manifest.py", runner)
         self.assertIn("OIDF_DEPLOYMENT_MANIFEST", runner)
-        self.assertIn("--component-lock", runner)
+        self.assertIn("--product-component-bom", runner)
         self.assertIn("OPENID4VCI_WALLET_HARNESS_TOKEN", runner)
         self.assertIn("production_endpoints.api", runner)
         self.assertIn("production_endpoints.mtls", runner)
         self.assertIn("official OIDF production server", runner)
         self.assertNotIn("--rerun", runner)
         retained_lock_copy = (
-            'cp "${repository_root}/components.lock.json" '
-            '"${result_root}/components.lock.json"'
+            'cp "${product_component_bom}" '
+            '"${result_root}/product-component-bom.json"'
         )
         retained_lock_binding = (
-            '--component-lock "${result_root}/components.lock.json"'
+            '--product-component-bom "${result_root}/product-component-bom.json"'
         )
         self.assertLess(
             runner.index(retained_lock_copy), runner.index(retained_lock_binding)
@@ -806,11 +757,11 @@ class ManifestContractTests(unittest.TestCase):
             suite_commit = json.loads(suite_contract.read_text(encoding="utf-8"))[
                 "commit"
             ]
-            component_lock = root / "components.lock.json"
-            component_lock.write_text(
+            product_bom = root / "product-component-bom.json"
+            product_bom.write_text(
                 json.dumps(
                     {
-                        "repositories": [
+                        "components": [
                             {
                                 "component_id": "openid4vci",
                                 "repository": "https://github.com/reallyme/openid4vci",
@@ -930,7 +881,7 @@ class ManifestContractTests(unittest.TestCase):
                 certification_plan=certification_plan,
                 profile_matrix=profile_matrix,
                 suite_contract=suite_contract,
-                component_lock=component_lock,
+                product_component_bom=product_bom,
                 deployment_manifest=deployment_manifest,
                 openid4vci_source_dir=openid_source,
                 wallet_source_dir=wallet_source,
@@ -965,8 +916,10 @@ class ManifestContractTests(unittest.TestCase):
             results.mkdir()
             artifact = results / "profile.json"
             artifact.write_text('{"status":"passed"}\n', encoding="utf-8")
-            component_lock = results / "components.lock.json"
-            component_lock.write_text('{"name":"components.lock.json"}\n', encoding="utf-8")
+            product_bom = results / "product-component-bom.json"
+            product_bom.write_text(
+                json.dumps(valid_product_bom()) + "\n", encoding="utf-8"
+            )
             inputs = []
             for name in (
                 "certification-plan.json",
@@ -984,7 +937,9 @@ class ManifestContractTests(unittest.TestCase):
             EVIDENCE_INDEX.write_index(
                 results,
                 "a" * 40,
-                component_lock,
+                "b" * 40,
+                "c" * 40,
+                product_bom,
                 deployment_manifest,
                 inputs[0],
                 inputs[1],
@@ -1003,10 +958,16 @@ class ManifestContractTests(unittest.TestCase):
                 (results / EVIDENCE_INDEX.INDEX_FILENAME).read_text(encoding="utf-8")
             )
             self.assertEqual(index["protocol"], "openid4vp")
-            self.assertEqual(index["suite_revision"], "a" * 40)
             self.assertEqual(
                 {artifact["path"] for artifact in index["artifacts"]},
-                {"components.lock.json", "deployment-manifest.json", "profile.json"},
+                {"product-component-bom.json", "deployment-manifest.json", "profile.json"},
+            )
+            self.assertEqual(index["framework_revision"], "a" * 40)
+            self.assertEqual(index["workflow_revision"], "b" * 40)
+            self.assertEqual(index["suite_revision"], "c" * 40)
+            self.assertEqual(
+                len(index["inputs"]["product_component_bom"]["canonical_sha256"]),
+                64,
             )
             self.assertEqual(
                 len(index["inputs"]["wallet_sd_jwt_config"]["sha256"]), 64
@@ -1108,18 +1069,20 @@ class ManifestContractTests(unittest.TestCase):
                     )
         self.assertEqual(raised.exception.code, 65)
 
-    def test_evidence_index_requires_retained_component_lock(self) -> None:
+    def test_evidence_index_requires_retained_product_bom(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             results = root / "results"
             results.mkdir()
             (results / "profile.json").write_text("{}\n", encoding="utf-8")
-            outside = root / "components.lock.json"
-            outside.write_text("{}\n", encoding="utf-8")
+            outside = root / "product-component-bom.json"
+            outside.write_text(
+                json.dumps(valid_product_bom()) + "\n", encoding="utf-8"
+            )
             artifacts = EVIDENCE_INDEX.collect_artifacts(results)
             with redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as raised:
-                    EVIDENCE_INDEX.retained_component_lock_digest(
+                    EVIDENCE_INDEX.retained_product_bom_digest(
                         results, outside, artifacts
                     )
         self.assertEqual(raised.exception.code, 65)
@@ -1132,8 +1095,10 @@ class ManifestContractTests(unittest.TestCase):
             (results / "profile.json").write_text(
                 '{"result":"passed"}\n', encoding="utf-8"
             )
-            component_lock = results / "components.lock.json"
-            component_lock.write_bytes(b"components.lock.json")
+            product_bom = results / "product-component-bom.json"
+            product_bom.write_text(
+                json.dumps(valid_product_bom()) + "\n", encoding="utf-8"
+            )
             inputs = []
             for name in (
                 "certification-plan.json",
@@ -1151,8 +1116,10 @@ class ManifestContractTests(unittest.TestCase):
 
             VCI_EVIDENCE_INDEX.write_index(
                 results,
+                "a" * 40,
                 "b" * 40,
-                component_lock,
+                "c" * 40,
+                product_bom,
                 deployment_manifest,
                 inputs[0],
                 inputs[1],
@@ -1190,7 +1157,7 @@ class ManifestContractTests(unittest.TestCase):
     def test_deployment_manifest_binds_all_four_roles(self) -> None:
         manifest = valid_deployment_manifest()
         endpoints = DEPLOYMENT_MANIFEST.validate_manifest(manifest)
-        DEPLOYMENT_MANIFEST.verify_component_bindings(manifest, self.component_lock)
+        DEPLOYMENT_MANIFEST.verify_component_bindings(manifest, self.product_bom)
         DEPLOYMENT_MANIFEST.verify_bindings(
             endpoints,
             [
@@ -1208,7 +1175,7 @@ class ManifestContractTests(unittest.TestCase):
         with redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as raised:
                 DEPLOYMENT_MANIFEST.verify_component_bindings(
-                    manifest, self.component_lock
+                    manifest, self.product_bom
                 )
         self.assertEqual(raised.exception.code, DEPLOYMENT_MANIFEST.EXIT_INVALID_INPUT)
 
@@ -1216,7 +1183,7 @@ class ManifestContractTests(unittest.TestCase):
         manifest = valid_deployment_manifest()
         openid4vci = next(
             item
-            for item in self.component_lock["repositories"]
+            for item in self.product_bom["components"]
             if item["component_id"] == "openid4vci"
         )
         verifier = manifest["roles"]["openid4vp_verifier"]
@@ -1225,7 +1192,7 @@ class ManifestContractTests(unittest.TestCase):
         with redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as raised:
                 DEPLOYMENT_MANIFEST.verify_component_bindings(
-                    manifest, self.component_lock
+                    manifest, self.product_bom
                 )
         self.assertEqual(raised.exception.code, DEPLOYMENT_MANIFEST.EXIT_INVALID_INPUT)
 
@@ -1298,12 +1265,12 @@ class ManifestContractTests(unittest.TestCase):
     def test_deployment_manifest_accepts_bound_zk_capability(self) -> None:
         changed = valid_deployment_manifest()
         _plan, adapter = DEPLOYMENT_MANIFEST.zk_adapter_validator.load_contract()
-        component = adapter["component"]
+        component = adapter["component_requirement"]
         changed["capabilities"]["zk_presentations"] = {
             "enabled": True,
             "plan_id": "zk-presentation-proofs-v1",
             "source_repository": component["repository"],
-            "source_commit": component["commit"],
+            "source_commit": "f" * 40,
             "release_artifact": {
                 "artifact_id": "zk-release-bundle",
                 "kind": "archive",
@@ -1313,7 +1280,7 @@ class ManifestContractTests(unittest.TestCase):
         }
         DEPLOYMENT_MANIFEST.validate_manifest(changed)
 
-    def test_deployment_manifest_rejects_unbound_zk_commit(self) -> None:
+    def test_deployment_manifest_accepts_caller_selected_zk_commit(self) -> None:
         changed = valid_deployment_manifest()
         changed["capabilities"]["zk_presentations"] = {
             "enabled": True,
@@ -1327,10 +1294,7 @@ class ManifestContractTests(unittest.TestCase):
             },
             "component_attestation_sha256": "9" * 64,
         }
-        with redirect_stderr(io.StringIO()):
-            with self.assertRaises(SystemExit) as raised:
-                DEPLOYMENT_MANIFEST.validate_manifest(changed)
-        self.assertEqual(raised.exception.code, DEPLOYMENT_MANIFEST.EXIT_INVALID_INPUT)
+        DEPLOYMENT_MANIFEST.validate_manifest(changed)
 
     def test_deployment_manifest_rejects_duplicate_json_key(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -1358,7 +1322,12 @@ class ManifestContractTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, DEPLOYMENT_MANIFEST.EXIT_INVALID_INPUT)
 
     def test_source_assertion_cannot_escape_upstream_checkout(self) -> None:
-        suite_directory = MANIFESTS.REPOSITORY_ROOT / "upstream" / "oidf" / "openid-conformance-suite"
+        suite_directory = (
+            MANIFESTS.REPOSITORY_ROOT
+            / "upstream"
+            / "oidf"
+            / "openid-conformance-suite"
+        )
         with redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as raised:
                 PARAMETERS.resolve_source(suite_directory, "../conformance-suite.lock.json")

@@ -3,15 +3,14 @@
   "schema_version": 1,
   "adapter_id": "zk_presentation_proofs",
   "plan_path": "plans/zk/presentation-proofs.json",
-  "component": {
-    "repository": "https://github.com/reallyme/zk",
-    "release_ref": "v0.3.0",
-    "commit": "4684a9e4895df50a53c51173427ab5caf55b7088"
+  "component_requirement": {
+    "component_id": "zk",
+    "repository": "https://github.com/reallyme/zk"
   },
   "source_artifacts": [
-    {"artifact_id": "toolchain-lock", "path": "circuits/toolchain-lock.json", "sha256": "3e5510b91c03e4c5d20c8c368520b212e46964b44e4e2acb5d77699c01d6737a"},
-    {"artifact_id": "provider-manifest", "path": "provider_manifest.json", "sha256": "dc09b965546bf5bb7766a91f6b95b1649901a9bf042ece077cc7395a4dcc1555"},
-    {"artifact_id": "cargo-lock", "path": "Cargo.lock", "sha256": "ff857d84030d87d36630996b6c516434b18d83c3c07e5d733c77a916c20769a3"}
+    {"artifact_id": "toolchain-lock", "path": "circuits/toolchain-lock.json"},
+    {"artifact_id": "provider-manifest", "path": "provider_manifest.json"},
+    {"artifact_id": "cargo-lock", "path": "Cargo.lock"}
   ],
   "cargo_packages": [
     "reallyme-zk-api",

@@ -67,6 +67,9 @@ def verify_result(value: dict[str, object]) -> None:
         "plan_id",
         "result",
         "created_at",
+        "framework_revision",
+        "workflow_revision",
+        "candidate_sha256",
         "component",
         "release_artifact_sha256",
         "component_attestation_sha256",
@@ -85,7 +88,12 @@ def verify_result(value: dict[str, object]) -> None:
         or value["result"] != "passed"
         or not isinstance(value["created_at"], str)
         or TIMESTAMP.fullmatch(value["created_at"]) is None
-        or value["component"] != adapter["component"]
+        or not isinstance(value["framework_revision"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", value["framework_revision"]) is None
+        or not isinstance(value["workflow_revision"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", value["workflow_revision"]) is None
+        or not isinstance(value["candidate_sha256"], str)
+        or adapter_verifier.SHA256.fullmatch(value["candidate_sha256"]) is None
         or value["evidence_policy"] != adapter_verifier.EXPECTED_POLICY
         or not isinstance(value["release_artifact_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["release_artifact_sha256"]) is None
@@ -105,6 +113,35 @@ def verify_result(value: dict[str, object]) -> None:
             for digest in value["source_locks"].values()
         )
     ):
+        raise runner.EudiWalletRunnerError(
+            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        )
+    component = value["component"]
+    requirement = adapter.get("component_requirement")
+    if (
+        not isinstance(component, dict)
+        or set(component) != {"component_id", "repository", "commit"}
+        or not isinstance(requirement, dict)
+        or component.get("component_id") != requirement.get("component_id")
+        or component.get("repository") != requirement.get("repository")
+        or not isinstance(component.get("commit"), str)
+        or re.fullmatch(r"[0-9a-f]{40}", component["commit"]) is None
+    ):
+        raise runner.EudiWalletRunnerError(
+            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        )
+    candidate = {
+        "plan_id": value["plan_id"],
+        "component": component,
+        "release_artifact": {
+            "artifact_id": "wallet-release-bundle",
+            "kind": "archive",
+            "sha256": value["release_artifact_sha256"],
+        },
+        "component_attestation_sha256": value["component_attestation_sha256"],
+        "source_locks": value["source_locks"],
+    }
+    if value["candidate_sha256"] != runner.candidate_digest(candidate):
         raise runner.EudiWalletRunnerError(
             runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
         )

@@ -112,6 +112,8 @@ jobs:
             --source components/zk \
             --release-artifact "${ZK_RELEASE_ARTIFACT}" \
             --component-attestation "${ZK_COMPONENT_ATTESTATION}" \
+            --framework-revision "${{ inputs.framework_commit }}" \
+            --workflow-revision "${{ github.sha }}" \
             --output "${result}"
           python3 identity-conformance/scripts/verify_zk_execution_result.py \
             --result "${result}"

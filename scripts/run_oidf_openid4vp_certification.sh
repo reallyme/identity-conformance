@@ -109,6 +109,9 @@ require_variable OIDF_VP_WALLET_SD_JWT_CONFIG \
 require_variable OIDF_VP_WALLET_MDOC_CONFIG \
   "OIDF_VP_WALLET_MDOC_CONFIG is required"
 require_variable OIDF_DEPLOYMENT_MANIFEST "OIDF_DEPLOYMENT_MANIFEST is required"
+require_variable OIDF_PRODUCT_COMPONENT_BOM "OIDF_PRODUCT_COMPONENT_BOM is required"
+require_variable CONFORMANCE_FRAMEWORK_COMMIT "CONFORMANCE_FRAMEWORK_COMMIT is required"
+require_variable CONFORMANCE_WORKFLOW_COMMIT "CONFORMANCE_WORKFLOW_COMMIT is required"
 require_variable EXAMPLE_VERIFIER_BASE_URL "EXAMPLE_VERIFIER_BASE_URL is required"
 require_variable OIDF_VERIFIER_LAUNCH_ENDPOINT "OIDF_VERIFIER_LAUNCH_ENDPOINT is required"
 require_variable OIDF_VERIFIER_EVIDENCE_ENDPOINT "OIDF_VERIFIER_EVIDENCE_ENDPOINT is required"
@@ -123,11 +126,14 @@ verifier_config="$(resolve_file "${OIDF_VP_VERIFIER_CONFIG}")"
 wallet_sd_jwt_config="$(resolve_file "${OIDF_VP_WALLET_SD_JWT_CONFIG}")"
 wallet_mdoc_config="$(resolve_file "${OIDF_VP_WALLET_MDOC_CONFIG}")"
 deployment_manifest="$(resolve_file "${OIDF_DEPLOYMENT_MANIFEST}")"
+product_component_bom="$(resolve_file "${OIDF_PRODUCT_COMPONENT_BOM}")"
 readonly verifier_config wallet_sd_jwt_config wallet_mdoc_config deployment_manifest
+readonly product_component_bom
 require_file "${verifier_config}" "verifier configuration is unavailable"
 require_file "${wallet_sd_jwt_config}" "SD-JWT wallet configuration is unavailable"
 require_file "${wallet_mdoc_config}" "mdoc wallet configuration is unavailable"
 require_file "${deployment_manifest}" "deployment manifest is unavailable"
+require_file "${product_component_bom}" "product component BOM is unavailable"
 [[ -d "${suite_dir}" ]] || fail "pinned conformance suite checkout is unavailable"
 [[ ! -e "${result_root}" ]] || fail "result directory already exists"
 
@@ -153,12 +159,14 @@ require_public_https_endpoint "${OIDF_WALLET_HARNESS_HEALTH_ENDPOINT}" \
   "wallet harness health endpoint must be a public HTTPS endpoint"
 
 cd "${repository_root}"
-python3 scripts/verify_component_lock.py --evidence-release --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --require-release-refs --verify-checkouts
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 python3 scripts/verify_oidf_deployment_manifest.py \
   --manifest "${deployment_manifest}" \
-  --component-lock "${repository_root}/components.lock.json" \
+  --product-component-bom "${product_component_bom}" \
   --binding openid4vp_verifier.verifier_base_url "${EXAMPLE_VERIFIER_BASE_URL}" \
   --binding openid4vp_verifier.verifier_launch_endpoint "${OIDF_VERIFIER_LAUNCH_ENDPOINT}" \
   --binding openid4vp_verifier.verifier_evidence_endpoint "${OIDF_VERIFIER_EVIDENCE_ENDPOINT}" \
@@ -184,12 +192,12 @@ readonly wallet_mdoc_config_fingerprint plan_fingerprint profile_matrix_fingerpr
 
 mkdir -p "${result_root}/control/verifier" "${result_root}/control/wallet"
 cp "${deployment_manifest}" "${result_root}/deployment-manifest.json"
-cp "${repository_root}/components.lock.json" "${result_root}/components.lock.json"
+cp "${product_component_bom}" "${result_root}/product-component-bom.json"
 cp "${certification_plan}" "${result_root}/certification-plan.json"
 cp "${openid_profile_matrix}" "${result_root}/openid4vp-profile-matrix.json"
 python3 scripts/verify_oidf_deployment_manifest.py \
   --manifest "${result_root}/deployment-manifest.json" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --binding openid4vp_verifier.verifier_base_url "${EXAMPLE_VERIFIER_BASE_URL}" \
   --binding openid4vp_verifier.verifier_launch_endpoint "${OIDF_VERIFIER_LAUNCH_ENDPOINT}" \
   --binding openid4vp_verifier.verifier_evidence_endpoint "${OIDF_VERIFIER_EVIDENCE_ENDPOINT}" \
@@ -260,7 +268,9 @@ done
 
 # Revalidate mutable local inputs after the long external run. Evidence must
 # describe the exact checkout and configuration bytes that initiated it.
-python3 scripts/verify_component_lock.py --evidence-release --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --require-release-refs --verify-checkouts
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${verifier_config}")" == "${verifier_config_fingerprint}" ]] || \
   fail "verifier configuration changed during execution"
@@ -283,14 +293,16 @@ python3 scripts/assert_oidf_openid4vp_pre_submission.py \
   --result-root "${result_root}" \
   --certification-plan "${result_root}/certification-plan.json" \
   --profile-matrix "${result_root}/openid4vp-profile-matrix.json" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --deployment-manifest "${result_root}/deployment-manifest.json" \
   --openid4vp-source-dir "${openid4vp_root}" \
   --result-assertion "${openid_result_assertion}"
 python3 scripts/build_oidf_evidence_index.py \
   --result-root "${result_root}" \
+  --framework-revision "${CONFORMANCE_FRAMEWORK_COMMIT}" \
+  --workflow-revision "${CONFORMANCE_WORKFLOW_COMMIT}" \
   --suite-revision "${suite_revision}" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --deployment-manifest "${result_root}/deployment-manifest.json" \
   --certification-plan "${result_root}/certification-plan.json" \
   --profile-matrix "${result_root}/openid4vp-profile-matrix.json" \

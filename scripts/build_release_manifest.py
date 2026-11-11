@@ -27,7 +27,7 @@ VERSION = re.compile(
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 FIXED_INPUTS = (
-    "components.lock.json",
+    "references/reallyme/trace-sources.lock.json",
     "references/normative-sources.lock.json",
     "references/eudi-publications.lock.json",
     "references/pin-policy.json",

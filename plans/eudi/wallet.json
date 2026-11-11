@@ -4,11 +4,12 @@
   "plan_id": "eudi-wallet-engineering-v1",
   "execution_status": "executable",
   "certification_claim": false,
-  "source_baseline": {
-    "repository": "https://github.com/reallyme/wallet",
-    "source_ref": "main",
-    "commit": "0acca29b91ca2d4b9e0404bebb44f41c99211e5f"
-  },
+  "required_components": [
+    {
+      "component_id": "wallet",
+      "repository": "https://github.com/reallyme/wallet"
+    }
+  ],
   "upstream_source_ids": [
     "eudi-arf",
     "eudi-fcaf",
@@ -34,7 +35,7 @@
     "cir-2026-1731"
   ],
   "assertions": [
-    {"assertion_id": "source_baseline_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock"]},
+    {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock"]},
     {"assertion_id": "upstream_reference_binding", "required_checks": ["source.reference-implementation-lock", "source.upstream-tests", "framework.eudi-source-lock", "framework.eudi-legal-source-lock", "framework.eudi-publications-lock"]},
     {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "cargo.reallyme-wallet-conformance"]},
     {"assertion_id": "issuance_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.integration"]},

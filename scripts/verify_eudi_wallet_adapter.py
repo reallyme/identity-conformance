@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import re
 import subprocess
 import sys
@@ -39,10 +38,9 @@ MAX_JSON_BYTES = 256 * 1024
 MAX_SOURCE_ARTIFACT_BYTES = 16 * 1024 * 1024
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9_.-]{0,127}$")
-EXPECTED_COMPONENT = {
+EXPECTED_COMPONENT_REQUIREMENT = {
+    "component_id": "wallet",
     "repository": "https://github.com/reallyme/wallet",
-    "source_ref": "main",
-    "commit": "0acca29b91ca2d4b9e0404bebb44f41c99211e5f",
 }
 EXPECTED_UPSTREAM_SOURCE_IDS = {
     "eudi-arf",
@@ -53,7 +51,7 @@ EXPECTED_UPSTREAM_SOURCE_IDS = {
     "eudi-itb",
 }
 EXPECTED_ASSERTIONS = {
-    "source_baseline_integrity",
+    "candidate_source_integrity",
     "upstream_reference_binding",
     "eudi_minimum_requirements",
     "issuance_flow",
@@ -137,7 +135,7 @@ def validate_plan(plan: dict[str, object]) -> None:
             "plan_id",
             "execution_status",
             "certification_claim",
-            "source_baseline",
+            "required_components",
             "upstream_source_ids",
             "legal_source_ids",
             "assertions",
@@ -150,7 +148,7 @@ def validate_plan(plan: dict[str, object]) -> None:
         or plan["plan_id"] != "eudi-wallet-engineering-v1"
         or plan["execution_status"] != "executable"
         or plan["certification_claim"] is not False
-        or plan["source_baseline"] != EXPECTED_COMPONENT
+        or plan["required_components"] != [EXPECTED_COMPONENT_REQUIREMENT]
         or plan["evidence_policy"] != EXPECTED_POLICY
         or not isinstance(plan["upstream_source_ids"], list)
         or set(plan["upstream_source_ids"]) != EXPECTED_UPSTREAM_SOURCE_IDS
@@ -216,7 +214,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
             "schema_version",
             "adapter_id",
             "plan_path",
-            "component",
+            "component_requirement",
             "source_artifacts",
             "cargo_packages",
             "required_attestation_categories",
@@ -228,7 +226,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
         adapter["schema_version"] != 1
         or adapter["adapter_id"] != "eudi_wallet_engineering"
         or adapter["plan_path"] != "plans/eudi/wallet.json"
-        or adapter["component"] != plan["source_baseline"]
+        or adapter["component_requirement"] != EXPECTED_COMPONENT_REQUIREMENT
         or adapter["cargo_packages"] != EXPECTED_PACKAGES
         or not isinstance(adapter["required_attestation_categories"], list)
         or set(adapter["required_attestation_categories"]) != EXPECTED_ATTESTATION_CATEGORIES
@@ -243,7 +241,7 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
     for raw_artifact in artifacts:
         artifact = exact_object(
             raw_artifact,
-            {"artifact_id", "path", "sha256"},
+            {"artifact_id", "path"},
             EudiWalletAdapterErrorReason.INVALID_ADAPTER,
         )
         artifact_id = artifact["artifact_id"]
@@ -251,8 +249,6 @@ def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> Non
             not isinstance(artifact_id, str)
             or artifact_id in observed
             or artifact["path"] != EXPECTED_SOURCE_ARTIFACTS.get(artifact_id)
-            or not isinstance(artifact["sha256"], str)
-            or SHA256.fullmatch(artifact["sha256"]) is None
         ):
             raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.INVALID_ADAPTER)
         observed.add(artifact_id)
@@ -274,29 +270,34 @@ def git_output(checkout: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
-def hash_source_file(source: Path, relative_path: str) -> str:
+def verify_source_file(source: Path, relative_path: str) -> None:
     candidate = source / relative_path
     try:
         metadata = candidate.lstat()
         candidate.resolve(strict=True).relative_to(source.resolve(strict=True))
-        if candidate.is_symlink() or not candidate.is_file() or not 1 <= metadata.st_size <= MAX_SOURCE_ARTIFACT_BYTES:
-            raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
-        digest = hashlib.sha256()
-        with candidate.open("rb") as handle:
-            while chunk := handle.read(128 * 1024):
-                digest.update(chunk)
+        if (
+            candidate.is_symlink()
+            or not candidate.is_file()
+            or not 1 <= metadata.st_size <= MAX_SOURCE_ARTIFACT_BYTES
+        ):
+            raise EudiWalletAdapterError(
+                EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH
+            )
     except (OSError, ValueError) as error:
-        raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH) from error
+        raise EudiWalletAdapterError(
+            EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH
+        ) from error
     if not git_output(source, "ls-files", "--error-unmatch", "--", relative_path):
         raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
-    return digest.hexdigest()
+    return None
 
 
-def verify_checkout(source: Path, adapter: dict[str, object]) -> None:
-    component = adapter["component"]
-    if not isinstance(component, dict) or not isinstance(component.get("commit"), str):
-        raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.INVALID_ADAPTER)
-    if git_output(source, "rev-parse", "HEAD") != component["commit"]:
+def verify_checkout(
+    source: Path, adapter: dict[str, object], expected_commit: str
+) -> None:
+    if re.fullmatch(r"[0-9a-f]{40}", expected_commit) is None:
+        raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.REVISION_MISMATCH)
+    if git_output(source, "rev-parse", "HEAD") != expected_commit:
         raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.REVISION_MISMATCH)
     if git_output(source, "status", "--porcelain"):
         raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.DIRTY_CHECKOUT)
@@ -307,13 +308,11 @@ def verify_checkout(source: Path, adapter: dict[str, object]) -> None:
         if not isinstance(raw_artifact, dict):
             raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.INVALID_ADAPTER)
         path = raw_artifact.get("path")
-        expected_digest = raw_artifact.get("sha256")
         if (
             not isinstance(path, str)
-            or not isinstance(expected_digest, str)
-            or hash_source_file(source, path) != expected_digest
         ):
             raise EudiWalletAdapterError(EudiWalletAdapterErrorReason.SOURCE_ARTIFACT_MISMATCH)
+        verify_source_file(source, path)
 
 
 def load_contract() -> tuple[dict[str, object], dict[str, object]]:
@@ -328,11 +327,16 @@ def load_contract() -> tuple[dict[str, object], dict[str, object]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path)
+    parser.add_argument("--expected-commit")
     args = parser.parse_args()
     try:
         _plan, adapter = load_contract()
         if args.source is not None:
-            verify_checkout(args.source, adapter)
+            if args.expected_commit is None:
+                raise EudiWalletAdapterError(
+                    EudiWalletAdapterErrorReason.REVISION_MISMATCH
+                )
+            verify_checkout(args.source, adapter, args.expected_commit)
     except EudiWalletAdapterError as error:
         fail(error.reason)
     print("EUDI Wallet engineering adapter valid")

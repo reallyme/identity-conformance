@@ -64,20 +64,23 @@ policy. It may be released before Wallet or Identity. Its deterministic
 manifest carries `release_kind: framework` and makes no product-conformance or
 certification claim.
 
-### Reference candidate BOM
+### Product candidate BOM
 
-The checked `components.lock.json` supports cross-repository development and
-rehearsal. It is explicitly marked
-`reference_candidate_not_conformance_evidence`. Monitoring a newer component
-release only reports drift in this reference BOM; it is not continuous
-conformance testing.
+The product caller supplies the candidate BOM for each run. The framework has
+no default ReallyMe product candidate and never substitutes a known-compatible
+revision. Each plan declares its required components; missing, repeated, or
+ambiguous entries fail validation. The composed Identity OIDF lanes require the
+complete six-component BOM, while the Wallet and ZK lanes require only their
+respective candidate component.
 
 ### Integration evidence bundle
 
 An integration evidence bundle requires immutable release references for every
 participating component, including Wallet and Identity, plus exact deployment
 artifacts. Component test attestations are included by digest. The composed run
-is the authority for the integration result.
+is the authority for the integration result. Its evidence records the framework
+revision, caller workflow revision, canonical candidate BOM digest, source
+commits, artifact hashes, and attestation hashes as separate identities.
 
 ### Certification evidence bundle
 

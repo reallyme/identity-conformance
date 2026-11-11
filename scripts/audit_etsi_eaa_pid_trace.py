@@ -26,7 +26,9 @@ import strict_json  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-COMPONENT_LOCK_PATH = REPOSITORY_ROOT / "components.lock.json"
+TRACE_SOURCE_LOCK_PATH = (
+    REPOSITORY_ROOT / "references" / "reallyme" / "trace-sources.lock.json"
+)
 DEFAULT_OUTPUT_PATH = (
     REPOSITORY_ROOT / "references" / "etsi-eaa-pid" / "requirement-trace.json"
 )
@@ -139,18 +141,23 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-def load_components(path: Path = COMPONENT_LOCK_PATH) -> dict[str, Component]:
+def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]:
     try:
         value = strict_json.loads(read_regular_file(path).decode("utf-8"))
     except (UnicodeError, strict_json.StrictJsonError) as error:
-        raise AuditError("component lock is invalid") from error
-    if not isinstance(value, dict) or not isinstance(value.get("repositories"), list):
-        raise AuditError("component lock has an invalid repository inventory")
+        raise AuditError("trace source lock is invalid") from error
+    if (
+        not isinstance(value, dict)
+        or value.get("schema_version") != 1
+        or value.get("purpose") != "etsi-eaa-pid-trace-source-lock"
+        or not isinstance(value.get("sources"), list)
+    ):
+        raise AuditError("trace source lock has an invalid source inventory")
 
     components: dict[str, Component] = {}
-    for raw in value["repositories"]:
+    for raw in value["sources"]:
         if not isinstance(raw, dict):
-            raise AuditError("component lock entry is invalid")
+            raise AuditError("trace source lock entry is invalid")
         component_id = raw.get("component_id")
         relative_checkout = raw.get("local_checkout")
         commit = raw.get("commit")
@@ -161,7 +168,7 @@ def load_components(path: Path = COMPONENT_LOCK_PATH) -> dict[str, Component]:
             or COMMIT.fullmatch(commit) is None
             or component_id in components
         ):
-            raise AuditError("component lock entry is invalid")
+            raise AuditError("trace source lock entry is invalid")
         checkout = (REPOSITORY_ROOT / relative_checkout).resolve()
         components[component_id] = Component(component_id, checkout, commit)
     return components
@@ -363,7 +370,7 @@ def build_artifact(
 ) -> dict[str, object]:
     required_components = {"ssi", "openid4vp", "openid4vci"}
     if not required_components.issubset(components):
-        raise AuditError("component lock omits a trace owner")
+        raise AuditError("trace source lock omits a trace owner")
     ssi = components["ssi"]
     if verify_component_revision and git_head(ssi.checkout) != ssi.commit:
         raise AuditError("SSI checkout does not match the pinned component revision")

@@ -18,7 +18,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, NoReturn
@@ -32,7 +31,6 @@ import strict_json  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-COMPONENT_LOCK = REPOSITORY_ROOT / "components.lock.json"
 OIDF_RELEASE_LOCK = REPOSITORY_ROOT / "upstream/oidf/conformance-suite.lock.json"
 OIDF_MASTER_LOCK = REPOSITORY_ROOT / "upstream/oidf/engineering-master.lock.json"
 EUDI_PLAN = REPOSITORY_ROOT / "plans/eudi/relying-party-control-plane.json"
@@ -384,101 +382,6 @@ def check_github_release(
     return results
 
 
-def check_component_releases(fetcher: FetchJson) -> list[CheckResult]:
-    lock = read_object(COMPONENT_LOCK)
-    repositories = required_list(lock.get("repositories"), "component repositories")
-    results: list[CheckResult] = []
-    for raw_repository in repositories:
-        if not isinstance(raw_repository, dict) or "release_ref" not in raw_repository:
-            continue
-        component_id = required_string(
-            raw_repository.get("component_id"), "component identifier"
-        )
-        repository_url = required_string(
-            raw_repository.get("repository"), "component repository"
-        )
-        prefix = "https://github.com/"
-        if not repository_url.startswith(prefix):
-            raise FreshnessError("released component is not hosted on GitHub")
-        repository = repository_url.removeprefix(prefix)
-        expected_tag = required_string(
-            raw_repository.get("release_ref"), "component release ref"
-        )
-        expected_commit = required_string(
-            raw_repository.get("commit"), "component commit"
-        )
-        results.extend(
-            check_github_release(
-                f"component.{component_id}",
-                repository,
-                expected_tag,
-                expected_commit,
-                fetcher,
-            )
-        )
-    return results
-
-
-def check_crates(fetcher: FetchJson) -> list[CheckResult]:
-    lock = read_object(COMPONENT_LOCK)
-    packages = lock.get("required_cargo_packages")
-    if not isinstance(packages, dict):
-        raise FreshnessError("Cargo package lock is invalid")
-    def check_package(item: tuple[str, object]) -> list[CheckResult]:
-        package_name, raw_metadata = item
-        if not isinstance(package_name, str) or not isinstance(raw_metadata, dict):
-            raise FreshnessError("Cargo package lock entry is invalid")
-        expected_version = required_string(
-            raw_metadata.get("version"), "Cargo package version"
-        )
-        expected_checksum = required_string(
-            raw_metadata.get("checksum"), "Cargo package checksum"
-        )
-        encoded_name = urllib.parse.quote(package_name, safe="")
-        value = fetcher(f"https://crates.io/api/v1/crates/{encoded_name}")
-        if (
-            not isinstance(value, dict)
-            or not isinstance(value.get("crate"), dict)
-            or not isinstance(value.get("versions"), list)
-        ):
-            raise FreshnessError("crates.io package metadata is invalid")
-        crate = value["crate"]
-        observed_version = required_string(
-            crate.get("max_stable_version"), "latest stable Cargo package version"
-        )
-        package_results = [
-            status_result(
-                f"crate.{package_name}.version",
-                expected_version,
-                observed_version,
-            )
-        ]
-        selected = [
-            version
-            for version in value["versions"]
-            if isinstance(version, dict) and version.get("num") == expected_version
-        ]
-        if len(selected) != 1 or selected[0].get("yanked") is not False:
-            raise FreshnessError("pinned Cargo package version is absent or yanked")
-        observed_checksum = required_string(
-            selected[0].get("checksum"), "Cargo package checksum"
-        )
-        package_results.append(
-            status_result(
-                f"crate.{package_name}.checksum",
-                expected_checksum,
-                observed_checksum,
-            )
-        )
-        return package_results
-
-    results: list[CheckResult] = []
-    with ThreadPoolExecutor(max_workers=8, thread_name_prefix="crate-pin") as executor:
-        for package_results in executor.map(check_package, sorted(packages.items())):
-            results.extend(package_results)
-    return results
-
-
 def check_oidf(fetcher: FetchJson) -> list[CheckResult]:
     release_lock = read_object(OIDF_RELEASE_LOCK)
     master_lock = read_object(OIDF_MASTER_LOCK)
@@ -714,7 +617,8 @@ def check_eudi_publications(
                 "EUDI external publication standard number",
             )
             manual_sources.append(
-                f"{publication_id}: verify that {standard_number} remains the selected published edition"
+                f"{publication_id}: verify that {standard_number} remains "
+                "the selected published edition"
             )
             continue
         if kind != "content_sha256":
@@ -977,8 +881,6 @@ def run_checks(
         byte_fetcher
     )
     results.extend(publication_results)
-    results.extend(check_component_releases(fetcher))
-    results.extend(check_crates(fetcher))
     results.extend(check_eudi_reference(fetcher))
     policy_results, manual_sources = check_policy(fetcher)
     results.extend(policy_results)

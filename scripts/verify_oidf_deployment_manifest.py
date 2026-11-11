@@ -22,8 +22,8 @@ SCRIPT_DIRECTORY = Path(__file__).resolve().parent
 if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
-import verify_component_lock as component_lock_validator  # noqa: E402
 import strict_json  # noqa: E402
+import verify_product_component_bom as product_bom_validator  # noqa: E402
 import verify_zk_adapter as zk_adapter_validator  # noqa: E402
 
 
@@ -237,12 +237,13 @@ def validate_manifest(value: dict[str, object]) -> dict[str, dict[str, str]]:
             "capabilities.zk_presentations",
         )
         _zk_plan, zk_adapter = zk_adapter_validator.load_contract()
-        component = zk_adapter["component"]
+        component = zk_adapter["component_requirement"]
         if (
             zk_presentations.get("plan_id") != "zk-presentation-proofs-v1"
             or not isinstance(component, dict)
             or zk_presentations.get("source_repository") != component.get("repository")
-            or zk_presentations.get("source_commit") != component.get("commit")
+            or not isinstance(zk_presentations.get("source_commit"), str)
+            or GIT_COMMIT.fullmatch(zk_presentations["source_commit"]) is None
         ):
             fail("enabled ZK capability does not match the selected ZK framework lane")
         release_artifact = require_object(
@@ -313,29 +314,13 @@ def validate_manifest(value: dict[str, object]) -> dict[str, dict[str, str]]:
 
 
 def verify_component_bindings(
-    manifest: dict[str, object], component_lock: dict[str, object]
+    manifest: dict[str, object], product_bom: dict[str, object]
 ) -> None:
-    """Require every deployed role to name its exact locked source revision."""
-    component_lock_validator.verify_lock(component_lock)
-    repositories = component_lock.get("repositories")
-    if not isinstance(repositories, list):
-        fail("component lock repository inventory is invalid")
-
+    """Bind deployed roles to the exact candidate revisions supplied by the caller."""
+    components = product_bom_validator.validate_bom(product_bom)
     approved: dict[str, tuple[str, frozenset[str]]] = {}
-    for item in repositories:
-        if not isinstance(item, dict):
-            fail("component lock repository inventory is invalid")
-        repository = item.get("repository")
-        commit = item.get("commit")
-        roles = item.get("roles")
-        if (
-            not isinstance(repository, str)
-            or not isinstance(commit, str)
-            or not isinstance(roles, list)
-            or any(not isinstance(role, str) for role in roles)
-        ):
-            fail("component lock repository inventory is invalid")
-        approved[repository] = (commit, frozenset(roles))
+    for component in components.values():
+        approved[component.repository] = (component.commit, component.roles)
 
     roles = require_object(manifest.get("roles"), "roles")
     for role, raw_deployment in roles.items():
@@ -346,7 +331,7 @@ def verify_component_bindings(
             fail(f"{role} source binding is invalid")
         locked = approved.get(repository)
         if locked is None or locked[0] != commit or role not in locked[1]:
-            fail(f"{role} source binding does not match the component lock")
+            fail(f"{role} source binding does not match the caller product BOM")
 
 
 def verify_bindings(
@@ -369,7 +354,7 @@ def verify_bindings(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--component-lock", required=True, type=Path)
+    parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument(
         "--binding",
         action="append",
@@ -381,8 +366,8 @@ def main() -> int:
     args = parser.parse_args()
     manifest = load_manifest(args.manifest)
     endpoints = validate_manifest(manifest)
-    component_lock = component_lock_validator.load_lock(args.component_lock)
-    verify_component_bindings(manifest, component_lock)
+    product_bom = product_bom_validator.load_bom(args.product_component_bom)
+    verify_component_bindings(manifest, product_bom)
     verify_bindings(endpoints, args.binding)
     print("deployment manifest covers four immutable OIDF role deployments")
     return 0

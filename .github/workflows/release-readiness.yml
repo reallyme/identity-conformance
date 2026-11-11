@@ -29,9 +29,9 @@ jobs:
           for component in openid4vci openid4vp ssi; do
             revision="$(
               jq -er --arg component "${component}" '
-                [.repositories[] | select(.component_id == $component)]
+                [.sources[] | select(.component_id == $component)]
                 | if length == 1 then .[0].commit else error("component inventory is not unique") end
-              ' components.lock.json
+              ' references/reallyme/trace-sources.lock.json
             )"
             if [[ ! "${revision}" =~ ^[0-9a-f]{40}$ ]]; then
               printf 'The %s component revision is not a full Git commit.\n' "${component}" >&2

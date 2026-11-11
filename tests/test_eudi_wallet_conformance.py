@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
@@ -41,10 +43,15 @@ RESULT = load_script(
 
 def valid_deployment() -> dict[str, object]:
     _plan, adapter = ADAPTER.load_contract()
+    requirement = adapter["component_requirement"]
     return {
         "schema": "reallyme.identity.eudi_wallet_deployment_manifest.v1",
         "plan_id": "eudi-wallet-engineering-v1",
-        "component": adapter["component"],
+        "component": {
+            "component_id": requirement["component_id"],
+            "repository": requirement["repository"],
+            "commit": "1" * 40,
+        },
         "release_artifact": {
             "artifact_id": "wallet-release-bundle",
             "kind": "archive",
@@ -63,12 +70,16 @@ def valid_deployment() -> dict[str, object]:
 def valid_result() -> dict[str, object]:
     plan, adapter = ADAPTER.load_contract()
     kinds = RESULT.expected_check_kinds(adapter)
-    return {
+    deployment = valid_deployment()
+    result = {
         "schema": "reallyme.identity.eudi_wallet_execution_result.v1",
         "plan_id": "eudi-wallet-engineering-v1",
         "result": "passed",
         "created_at": "2026-11-11T12:00:00Z",
-        "component": adapter["component"],
+        "framework_revision": "2" * 40,
+        "workflow_revision": "3" * 40,
+        "candidate_sha256": "0" * 64,
+        "component": deployment["component"],
         "release_artifact_sha256": "a" * 64,
         "component_attestation_sha256": "b" * 64,
         "source_locks": {
@@ -90,25 +101,58 @@ def valid_result() -> dict[str, object]:
         ],
         "evidence_policy": ADAPTER.EXPECTED_POLICY,
     }
+    candidate = {
+        "plan_id": result["plan_id"],
+        "component": result["component"],
+        "release_artifact": deployment["release_artifact"],
+        "component_attestation_sha256": result["component_attestation_sha256"],
+        "source_locks": result["source_locks"],
+    }
+    result["candidate_sha256"] = RUNNER.candidate_digest(candidate)
+    return result
 
 
 class EudiWalletConformanceTests(unittest.TestCase):
     def test_checked_plan_and_adapter_are_valid(self) -> None:
         plan, adapter = ADAPTER.load_contract()
-        self.assertEqual(plan["source_baseline"], adapter["component"])
+        self.assertEqual(
+            plan["required_components"], [adapter["component_requirement"]]
+        )
 
     def test_valid_deployment_is_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
         artifact = RUNNER.validate_deployment(valid_deployment(), adapter)
         self.assertEqual(artifact["artifact_id"], "wallet-release-bundle")
 
-    def test_substituted_wallet_commit_is_rejected(self) -> None:
+    def test_two_caller_selected_wallet_commits_are_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
-        changed = valid_deployment()
-        changed["component"] = copy.deepcopy(changed["component"])
-        changed["component"]["commit"] = "f" * 40
-        with self.assertRaises(RUNNER.EudiWalletRunnerError):
-            RUNNER.validate_deployment(changed, adapter)
+        first = valid_deployment()
+        second = copy.deepcopy(first)
+        second["component"]["commit"] = "f" * 40
+        RUNNER.validate_deployment(first, adapter)
+        RUNNER.validate_deployment(second, adapter)
+
+    def test_plan_cannot_add_an_undeclared_component(self) -> None:
+        plan, _adapter = ADAPTER.load_contract()
+        changed = copy.deepcopy(plan)
+        changed["required_components"].append(
+            {"component_id": "identity", "repository": "https://github.com/reallyme/identity"}
+        )
+        with self.assertRaises(ADAPTER.EudiWalletAdapterError) as raised:
+            ADAPTER.validate_plan(changed)
+        self.assertIs(
+            raised.exception.reason, ADAPTER.EudiWalletAdapterErrorReason.INVALID_PLAN
+        )
+
+    def test_adapter_cannot_require_a_different_component(self) -> None:
+        plan, adapter = ADAPTER.load_contract()
+        changed = copy.deepcopy(adapter)
+        changed["component_requirement"]["component_id"] = "identity"
+        with self.assertRaises(ADAPTER.EudiWalletAdapterError) as raised:
+            ADAPTER.validate_adapter(changed, plan)
+        self.assertIs(
+            raised.exception.reason, ADAPTER.EudiWalletAdapterErrorReason.INVALID_ADAPTER
+        )
 
     def test_sensitive_evidence_policy_is_rejected(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
@@ -118,8 +162,41 @@ class EudiWalletConformanceTests(unittest.TestCase):
         with self.assertRaises(RUNNER.EudiWalletRunnerError):
             RUNNER.validate_deployment(changed, adapter)
 
+    def test_incomplete_candidate_manifest_is_rejected(self) -> None:
+        _plan, adapter = ADAPTER.load_contract()
+        changed = valid_deployment()
+        del changed["component"]["commit"]
+        with self.assertRaises(RUNNER.EudiWalletRunnerError):
+            RUNNER.validate_deployment(changed, adapter)
+
+    def test_substituted_release_artifact_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "wallet.tar"
+            artifact.write_bytes(b"substituted")
+            expected = hashlib.sha256(b"intended").hexdigest()
+            with self.assertRaises(RUNNER.EudiWalletRunnerError):
+                RUNNER.verify_release_artifact(artifact, expected)
+
+    def test_mismatched_attestation_digest_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attestation = Path(directory) / "attestation.json"
+            attestation.write_bytes(b"{}")
+            with self.assertRaises(RUNNER.EudiWalletRunnerError):
+                RUNNER.verify_attestation(
+                    attestation,
+                    "0" * 64,
+                    "1" * 64,
+                    "2" * 40,
+                )
+
     def test_valid_execution_result_is_accepted(self) -> None:
         RESULT.verify_result(valid_result())
+
+    def test_result_rejects_mixed_candidate_inputs(self) -> None:
+        changed = valid_result()
+        changed["release_artifact_sha256"] = "f" * 64
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
 
     def test_failed_check_is_rejected(self) -> None:
         changed = valid_result()

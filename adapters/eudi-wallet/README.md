@@ -5,6 +5,11 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 This adapter executes the committed `reallyme-wallet-conformance` package against an exact wallet source revision and exact conformance-input digests. It also binds the tested wallet release bundle to the component's release attestation.
 
+The caller selects the Wallet candidate in the deployment manifest. The runner
+requires the checked-out source, release artifact, and component attestation to
+identify that same commit. The framework never substitutes a reference Wallet
+revision when the caller omits or changes the candidate.
+
 The lane is engineering evidence. It does not claim EU certification, EUDI Wallet certification, or successful interoperability with an external testbed. Such claims require separately reviewed external evidence.
 
 The framework's broader EU inventory is defined in

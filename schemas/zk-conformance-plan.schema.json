@@ -5,13 +5,13 @@
   "title": "ReallyMe ZK presentation-proof conformance plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_id", "execution_status", "certification_claim", "source_baseline", "assertions", "evidence_policy"],
+  "required": ["schema_version", "plan_id", "execution_status", "certification_claim", "required_components", "assertions", "evidence_policy"],
   "properties": {
     "schema_version": {"const": 1},
     "plan_id": {"const": "zk-presentation-proofs-v1"},
     "execution_status": {"const": "executable"},
     "certification_claim": {"const": false},
-    "source_baseline": {"$ref": "#/$defs/source"},
+    "required_components": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/component_requirement"}},
     "assertions": {
       "type": "array",
       "minItems": 7,
@@ -30,14 +30,13 @@
   },
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
-    "source": {
+    "component_requirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "release_ref", "commit"],
+      "required": ["component_id", "repository"],
       "properties": {
-        "repository": {"const": "https://github.com/reallyme/zk"},
-        "release_ref": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
-        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        "component_id": {"const": "zk"},
+        "repository": {"const": "https://github.com/reallyme/zk"}
       }
     },
     "evidence_policy": {

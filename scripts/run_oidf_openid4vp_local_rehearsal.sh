@@ -143,6 +143,7 @@ require_variable OIDF_VP_WALLET_SD_JWT_CONFIG \
   "OIDF_VP_WALLET_SD_JWT_CONFIG is required"
 require_variable OIDF_VP_WALLET_MDOC_CONFIG \
   "OIDF_VP_WALLET_MDOC_CONFIG is required"
+require_variable OIDF_PRODUCT_COMPONENT_BOM "OIDF_PRODUCT_COMPONENT_BOM is required"
 require_variable EXAMPLE_VERIFIER_BASE_URL "EXAMPLE_VERIFIER_BASE_URL is required"
 require_variable OIDF_VERIFIER_LAUNCH_ENDPOINT \
   "OIDF_VERIFIER_LAUNCH_ENDPOINT is required"
@@ -197,15 +198,19 @@ export CONFORMANCE_API_TOKEN="${local_api_token}"
 verifier_config="$(resolve_file "${OIDF_VP_VERIFIER_CONFIG}")"
 wallet_sd_jwt_config="$(resolve_file "${OIDF_VP_WALLET_SD_JWT_CONFIG}")"
 wallet_mdoc_config="$(resolve_file "${OIDF_VP_WALLET_MDOC_CONFIG}")"
-readonly verifier_config wallet_sd_jwt_config wallet_mdoc_config
+product_component_bom="$(resolve_file "${OIDF_PRODUCT_COMPONENT_BOM}")"
+readonly verifier_config wallet_sd_jwt_config wallet_mdoc_config product_component_bom
 require_file "${verifier_config}" "verifier configuration is unavailable"
 require_file "${wallet_sd_jwt_config}" "SD-JWT wallet configuration is unavailable"
 require_file "${wallet_mdoc_config}" "mdoc wallet configuration is unavailable"
+require_file "${product_component_bom}" "product component BOM is unavailable"
 [[ -d "${suite_dir}" ]] || fail "pinned conformance suite checkout is unavailable"
 [[ ! -e "${result_root}" ]] || fail "result directory already exists"
 
 cd "${repository_root}"
-python3 scripts/verify_component_lock.py --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --verify-checkouts
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 
@@ -241,7 +246,7 @@ mkdir -p "${result_root}/control/verifier" "${result_root}/control/wallet"
 printf '%s\n' \
   '{"schema_version":1,"protocol":"openid4vp","execution_scope":"local_rehearsal","certification_evidence":false,"submission_authorized":false}' \
   > "${result_root}/evidence-scope.json"
-cp "${repository_root}/components.lock.json" "${result_root}/components.lock.json"
+cp "${product_component_bom}" "${result_root}/product-component-bom.json"
 cp "${certification_plan}" "${result_root}/certification-plan.json"
 cp "${openid_profile_matrix}" "${result_root}/openid4vp-profile-matrix.json"
 
@@ -307,7 +312,9 @@ done
 
 # Recheck every mutable source input after the external run. A local pass must
 # still describe the exact code and configuration bytes that initiated it.
-python3 scripts/verify_component_lock.py --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --verify-checkouts
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${verifier_config}")" == \
   "${verifier_config_fingerprint}" ]] || fail "verifier configuration changed during execution"
@@ -330,7 +337,7 @@ python3 scripts/assert_oidf_openid4vp_local_rehearsal.py \
   --result-root "${result_root}" \
   --certification-plan "${result_root}/certification-plan.json" \
   --profile-matrix "${result_root}/openid4vp-profile-matrix.json" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --openid4vp-source-dir "${openid4vp_root}" \
   --result-assertion "${openid_result_assertion}"
 printf '%s\n' \

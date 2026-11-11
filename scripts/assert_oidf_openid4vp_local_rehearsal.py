@@ -45,8 +45,8 @@ def validate(args: argparse.Namespace) -> None:
     matrix = profile_validation.load_object(
         args.profile_matrix, "profile_matrix_invalid"
     )
-    lock = profile_validation.load_object(
-        args.component_lock, "component_lock_invalid"
+    product_bom = profile_validation.load_object(
+        args.product_component_bom, "product_bom_invalid"
     )
     selected = profile_validation.selected_profiles(plan)
     supported = profile_validation.supported_profiles(matrix)
@@ -71,7 +71,7 @@ def validate(args: argparse.Namespace) -> None:
     if suite_revision != suite_commit:
         profile_validation.fail("suite_revision_evidence_invalid")
 
-    repository, commit = profile_validation.locked_component(lock)
+    repository, commit = profile_validation.locked_component(product_bom)
     if matrix.get("source_repository") != repository:
         profile_validation.fail("profile_matrix_source_mismatch")
     profile_validation.assert_checkout(args.openid4vp_source_dir, commit)
@@ -118,7 +118,7 @@ def main() -> int:
     parser.add_argument("--result-root", required=True, type=Path)
     parser.add_argument("--certification-plan", required=True, type=Path)
     parser.add_argument("--profile-matrix", required=True, type=Path)
-    parser.add_argument("--component-lock", required=True, type=Path)
+    parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument("--openid4vp-source-dir", required=True, type=Path)
     parser.add_argument("--result-assertion", required=True, type=Path)
     args = parser.parse_args()

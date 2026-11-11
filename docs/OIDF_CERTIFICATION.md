@@ -57,8 +57,9 @@ exact source commits, immutable deployment-artifact digests, and public product
 and health endpoints.
 
 Product repositories call the reusable OpenID4VCI and OpenID4VP workflows at an
-exact framework commit. The protected runner validates the component lock and
-deployment manifest before execution, runs the complete role matrix, and
+exact framework commit. The caller also supplies a complete product component
+BOM. The protected runner validates that BOM and the deployment manifest before
+execution, runs the complete role matrix, and
 retains the result under the caller repository's access controls.
 
 Local suite execution is a pre-submission rehearsal only. It must use the

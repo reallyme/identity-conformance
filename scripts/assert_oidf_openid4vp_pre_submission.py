@@ -122,19 +122,19 @@ def expected_module_count(profile: dict[str, object]) -> int:
     return total
 
 
-def locked_component(lock: dict[str, object]) -> tuple[str, str]:
+def locked_component(product_bom: dict[str, object]) -> tuple[str, str]:
     matches: list[tuple[str, str]] = []
-    for raw_item in require_array(lock.get("repositories"), "component_lock_invalid"):
-        item = require_object(raw_item, "component_lock_invalid")
+    for raw_item in require_array(product_bom.get("components"), "product_bom_invalid"):
+        item = require_object(raw_item, "product_bom_invalid")
         if item.get("component_id") != "openid4vp":
             continue
-        repository = require_string(item.get("repository"), "component_lock_invalid")
-        commit = require_string(item.get("commit"), "component_lock_invalid")
+        repository = require_string(item.get("repository"), "product_bom_invalid")
+        commit = require_string(item.get("commit"), "product_bom_invalid")
         if GIT_COMMIT.fullmatch(commit) is None:
-            fail("component_lock_invalid")
+            fail("product_bom_invalid")
         matches.append((repository, commit))
     if len(matches) != 1:
-        fail("component_lock_invalid")
+        fail("product_bom_invalid")
     return matches[0]
 
 
@@ -157,16 +157,32 @@ def git_output(repository: Path, arguments: list[str], reason: str) -> str:
 def assert_checkout(repository: Path, expected_commit: str) -> None:
     if not repository.is_dir() or repository.is_symlink():
         fail("openid4vp_checkout_mismatch")
-    if git_output(repository, ["rev-parse", "--verify", "HEAD^{commit}"], "openid4vp_checkout_mismatch") != expected_commit:
+    if (
+        git_output(
+            repository,
+            ["rev-parse", "--verify", "HEAD^{commit}"],
+            "openid4vp_checkout_mismatch",
+        )
+        != expected_commit
+    ):
         fail("openid4vp_checkout_mismatch")
-    if git_output(repository, ["status", "--porcelain", "--untracked-files=normal"], "openid4vp_checkout_mismatch"):
+    if git_output(
+        repository,
+        ["status", "--porcelain", "--untracked-files=normal"],
+        "openid4vp_checkout_mismatch",
+    ):
         fail("openid4vp_checkout_mismatch")
 
 
 def plan_instance_id(result_root: Path, role: str, profile_id: str) -> str:
     if role == "verifier":
         index = load_object(
-            result_root / "control" / role / "implementation-evidence" / profile_id / "index.json",
+            result_root
+            / "control"
+            / role
+            / "implementation-evidence"
+            / profile_id
+            / "index.json",
             "implementation_evidence_invalid",
         )
         driver = load_object(
@@ -242,7 +258,7 @@ def validate(args: argparse.Namespace) -> None:
         fail("result_root_invalid")
     plan = load_object(args.certification_plan, "certification_plan_invalid")
     matrix = load_object(args.profile_matrix, "profile_matrix_invalid")
-    lock = load_object(args.component_lock, "component_lock_invalid")
+    product_bom = load_object(args.product_component_bom, "product_bom_invalid")
     deployment = load_object(args.deployment_manifest, "deployment_manifest_invalid")
     require_string(deployment.get("product_name"), "deployment_manifest_invalid")
     require_string(deployment.get("product_version"), "deployment_manifest_invalid")
@@ -265,7 +281,7 @@ def validate(args: argparse.Namespace) -> None:
         fail("suite_revision_evidence_invalid")
     if suite_revision != suite_commit:
         fail("suite_revision_evidence_invalid")
-    repository, commit = locked_component(lock)
+    repository, commit = locked_component(product_bom)
     if matrix.get("source_repository") != repository:
         fail("profile_matrix_source_mismatch")
     assert_checkout(args.openid4vp_source_dir, commit)
@@ -284,13 +300,21 @@ def validate(args: argparse.Namespace) -> None:
             args.profile_matrix,
         )
     expected_by_role = {
-        role: {profile_id for profile_id, (item_role, _, _) in selected.items() if item_role == role}
+        role: {
+            profile_id
+            for profile_id, (item_role, _, _) in selected.items()
+            if item_role == role
+        }
         for role in ("verifier", "wallet")
     }
     for role, expected in expected_by_role.items():
         export_root = result_root / "exports" / role
         try:
-            observed = {item.name for item in export_root.iterdir() if item.is_dir() and not item.is_symlink()}
+            observed = {
+                item.name
+                for item in export_root.iterdir()
+                if item.is_dir() and not item.is_symlink()
+            }
         except OSError:
             fail("profile_export_inventory_invalid")
         if observed != expected:
@@ -302,7 +326,7 @@ def main() -> int:
     parser.add_argument("--result-root", required=True, type=Path)
     parser.add_argument("--certification-plan", required=True, type=Path)
     parser.add_argument("--profile-matrix", required=True, type=Path)
-    parser.add_argument("--component-lock", required=True, type=Path)
+    parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument("--deployment-manifest", required=True, type=Path)
     parser.add_argument("--openid4vp-source-dir", required=True, type=Path)
     parser.add_argument("--result-assertion", required=True, type=Path)

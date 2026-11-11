@@ -36,10 +36,16 @@ RESULT = load_script(
 
 def valid_deployment() -> dict[str, object]:
     _plan, adapter = ADAPTER.load_contract()
+    requirement = adapter["component_requirement"]
     return {
         "schema": "reallyme.identity.zk_deployment_manifest.v1",
         "plan_id": "zk-presentation-proofs-v1",
-        "component": adapter["component"],
+        "component": {
+            "component_id": requirement["component_id"],
+            "repository": requirement["repository"],
+            "release_ref": "v1.0.0",
+            "commit": "1" * 40,
+        },
         "release_artifact": {
             "artifact_id": "zk-release-bundle",
             "kind": "archive",
@@ -63,12 +69,16 @@ def valid_result() -> dict[str, object]:
         },
         **{f"cargo.{package}": "cargo" for package in ADAPTER.EXPECTED_PACKAGES},
     }
-    return {
+    deployment = valid_deployment()
+    result = {
         "schema": "reallyme.identity.zk_execution_result.v1",
         "plan_id": "zk-presentation-proofs-v1",
         "result": "passed",
         "created_at": "2026-11-11T12:00:00Z",
-        "component": adapter["component"],
+        "framework_revision": "2" * 40,
+        "workflow_revision": "3" * 40,
+        "candidate_sha256": "0" * 64,
+        "component": deployment["component"],
         "release_artifact_sha256": "a" * 64,
         "component_attestation_sha256": "b" * 64,
         "checks": [
@@ -85,25 +95,35 @@ def valid_result() -> dict[str, object]:
         ],
         "evidence_policy": ADAPTER.EXPECTED_POLICY,
     }
+    candidate = {
+        "plan_id": result["plan_id"],
+        "component": result["component"],
+        "release_artifact": deployment["release_artifact"],
+        "component_attestation_sha256": result["component_attestation_sha256"],
+    }
+    result["candidate_sha256"] = RUNNER.candidate_digest(candidate)
+    return result
 
 
 class ZkConformanceTests(unittest.TestCase):
     def test_checked_plan_and_adapter_are_valid(self) -> None:
         plan, adapter = ADAPTER.load_contract()
-        self.assertEqual(plan["source_baseline"], adapter["component"])
+        self.assertEqual(
+            plan["required_components"], [adapter["component_requirement"]]
+        )
 
     def test_valid_deployment_is_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
         artifact = RUNNER.validate_deployment(valid_deployment(), adapter)
         self.assertEqual(artifact["artifact_id"], "zk-release-bundle")
 
-    def test_substituted_zk_commit_is_rejected(self) -> None:
+    def test_two_caller_selected_zk_commits_are_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
-        changed = valid_deployment()
-        changed["component"] = copy.deepcopy(changed["component"])
-        changed["component"]["commit"] = "f" * 40
-        with self.assertRaises(RUNNER.ZkRunnerError):
-            RUNNER.validate_deployment(changed, adapter)
+        first = valid_deployment()
+        second = copy.deepcopy(first)
+        second["component"]["commit"] = "f" * 40
+        RUNNER.validate_deployment(first, adapter)
+        RUNNER.validate_deployment(second, adapter)
 
     def test_sensitive_evidence_policy_is_rejected(self) -> None:
         _plan, adapter = ADAPTER.load_contract()

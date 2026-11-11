@@ -222,21 +222,21 @@ def supported_profiles(matrix: dict[str, object]) -> dict[str, dict[str, object]
 
 
 def component(
-    lock: dict[str, object], component_id: str
+    product_bom: dict[str, object], component_id: str
 ) -> tuple[str, str]:
     matches: list[tuple[str, str]] = []
-    for raw_item in require_array(lock.get("repositories"), "component_lock_invalid"):
-        item = require_object(raw_item, "component_lock_invalid")
+    for raw_item in require_array(product_bom.get("components"), "product_bom_invalid"):
+        item = require_object(raw_item, "product_bom_invalid")
         if item.get("component_id") == component_id:
             repository = require_string(
-                item.get("repository"), "component_lock_invalid"
+                item.get("repository"), "product_bom_invalid"
             )
-            commit = require_string(item.get("commit"), "component_lock_invalid")
+            commit = require_string(item.get("commit"), "product_bom_invalid")
             if GIT_COMMIT.fullmatch(commit) is None:
-                fail("component_lock_invalid")
+                fail("product_bom_invalid")
             matches.append((repository, commit))
     if len(matches) != 1:
-        fail("component_lock_invalid")
+        fail("product_bom_invalid")
     return matches[0]
 
 
@@ -433,7 +433,7 @@ def validate(args: argparse.Namespace) -> None:
     plan = load_object(args.certification_plan, "certification_plan_invalid")
     matrix = load_object(args.profile_matrix, "profile_matrix_invalid")
     suite_contract = load_object(args.suite_contract, "suite_contract_invalid")
-    component_lock = load_object(args.component_lock, "component_lock_invalid")
+    product_bom = load_object(args.product_component_bom, "product_bom_invalid")
     deployment = load_object(
         args.deployment_manifest, "deployment_manifest_invalid"
     )
@@ -447,7 +447,7 @@ def validate(args: argparse.Namespace) -> None:
         fail("suite_contract_invalid")
     selected = selected_profiles(plan)
     supported = supported_profiles(matrix)
-    source_repository, source_commit = component(component_lock, "openid4vci")
+    source_repository, source_commit = component(product_bom, "openid4vci")
     if matrix.get("source_repository") != source_repository:
         fail("profile_matrix_source_mismatch")
     issuer_deployment = deployment_role(deployment, "openid4vci_issuer")
@@ -512,7 +512,7 @@ def main() -> int:
     parser.add_argument("--certification-plan", required=True, type=Path)
     parser.add_argument("--profile-matrix", required=True, type=Path)
     parser.add_argument("--suite-contract", required=True, type=Path)
-    parser.add_argument("--component-lock", required=True, type=Path)
+    parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument("--deployment-manifest", required=True, type=Path)
     parser.add_argument("--openid4vci-source-dir", required=True, type=Path)
     parser.add_argument("--wallet-source-dir", required=True, type=Path)

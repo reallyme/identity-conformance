@@ -4,11 +4,12 @@
   "plan_id": "zk-presentation-proofs-v1",
   "execution_status": "executable",
   "certification_claim": false,
-  "source_baseline": {
-    "repository": "https://github.com/reallyme/zk",
-    "release_ref": "v0.3.0",
-    "commit": "4684a9e4895df50a53c51173427ab5caf55b7088"
-  },
+  "required_components": [
+    {
+      "component_id": "zk",
+      "repository": "https://github.com/reallyme/zk"
+    }
+  ],
   "assertions": [
     {"assertion_id": "toolchain_identity", "required_checks": ["source.toolchain-lock", "attestation.build"]},
     {"assertion_id": "artifact_identity", "required_checks": ["source.provider-manifest", "artifact.release-bundle"]},

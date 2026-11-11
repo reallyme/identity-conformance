@@ -110,6 +110,9 @@ require_variable CONFORMANCE_TOKEN "CONFORMANCE_TOKEN is required"
 require_variable OIDF_VCI_ISSUER_CONFIG "OIDF_VCI_ISSUER_CONFIG is required"
 require_variable OIDF_VCI_WALLET_CONFIG "OIDF_VCI_WALLET_CONFIG is required"
 require_variable OIDF_DEPLOYMENT_MANIFEST "OIDF_DEPLOYMENT_MANIFEST is required"
+require_variable OIDF_PRODUCT_COMPONENT_BOM "OIDF_PRODUCT_COMPONENT_BOM is required"
+require_variable CONFORMANCE_FRAMEWORK_COMMIT "CONFORMANCE_FRAMEWORK_COMMIT is required"
+require_variable CONFORMANCE_WORKFLOW_COMMIT "CONFORMANCE_WORKFLOW_COMMIT is required"
 require_variable OPENID4VCI_ISSUER_BIN "OPENID4VCI_ISSUER_BIN is required"
 require_variable OPENID4VCI_ISSUER_BASE_URL "OPENID4VCI_ISSUER_BASE_URL is required"
 require_variable OPENID4VCI_WALLET_HARNESS_ENDPOINT \
@@ -126,15 +129,17 @@ require_variable OPENID4VCI_WALLET_SOURCE_REPOSITORY_DIR \
 issuer_config="$(resolve_file "${OIDF_VCI_ISSUER_CONFIG}")"
 wallet_config="$(resolve_file "${OIDF_VCI_WALLET_CONFIG}")"
 deployment_manifest="$(resolve_file "${OIDF_DEPLOYMENT_MANIFEST}")"
+product_component_bom="$(resolve_file "${OIDF_PRODUCT_COMPONENT_BOM}")"
 issuer_binary="$(resolve_file "${OPENID4VCI_ISSUER_BIN}")"
 wallet_binary="$(resolve_file "${OPENID4VCI_WALLET_HARNESS_BINARY}")"
 wallet_source_repository_dir="$(cd -- "${OPENID4VCI_WALLET_SOURCE_REPOSITORY_DIR}" && pwd)" || \
   fail "wallet source repository is unavailable"
-readonly issuer_config wallet_config deployment_manifest issuer_binary wallet_binary
+readonly issuer_config wallet_config deployment_manifest product_component_bom issuer_binary wallet_binary
 readonly wallet_source_repository_dir
 require_file "${issuer_config}" "issuer configuration is unavailable"
 require_file "${wallet_config}" "wallet configuration is unavailable"
 require_file "${deployment_manifest}" "deployment manifest is unavailable"
+require_file "${product_component_bom}" "product component BOM is unavailable"
 [[ -x "${issuer_binary}" && ! -L "${issuer_binary}" ]] || \
   fail "issuer binary is unavailable, symbolic, or not executable"
 [[ -f "${wallet_binary}" && ! -L "${wallet_binary}" ]] || \
@@ -165,12 +170,14 @@ require_public_https_endpoint "${OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT}" \
   "wallet harness health check must be a public HTTPS endpoint"
 
 cd "${repository_root}"
-python3 scripts/verify_component_lock.py --evidence-release --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --require-release-refs --verify-checkouts
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 python3 scripts/verify_oidf_deployment_manifest.py \
   --manifest "${deployment_manifest}" \
-  --component-lock "${repository_root}/components.lock.json" \
+  --product-component-bom "${product_component_bom}" \
   --binding openid4vci_issuer.issuer_base_url "${OPENID4VCI_ISSUER_BASE_URL}" \
   --binding openid4vci_wallet.wallet_harness_endpoint "${OPENID4VCI_WALLET_HARNESS_ENDPOINT}" \
   --binding openid4vci_wallet.wallet_harness_health_endpoint "${OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT}"
@@ -246,13 +253,13 @@ suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)"
 readonly suite_revision
 mkdir -p "${result_root}/issuer" "${result_root}/wallet"
 cp "${deployment_manifest}" "${result_root}/deployment-manifest.json"
-cp "${repository_root}/components.lock.json" "${result_root}/components.lock.json"
+cp "${product_component_bom}" "${result_root}/product-component-bom.json"
 cp "${certification_plan}" "${result_root}/certification-plan.json"
 cp "${openid_profile_matrix}" "${result_root}/openid4vci-profile-matrix.json"
 cp "${suite_contract}" "${result_root}/openid4vci-suite-contract.json"
 python3 scripts/verify_oidf_deployment_manifest.py \
   --manifest "${result_root}/deployment-manifest.json" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --binding openid4vci_issuer.issuer_base_url "${OPENID4VCI_ISSUER_BASE_URL}" \
   --binding openid4vci_wallet.wallet_harness_endpoint "${OPENID4VCI_WALLET_HARNESS_ENDPOINT}" \
   --binding openid4vci_wallet.wallet_harness_health_endpoint "${OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT}"
@@ -307,7 +314,9 @@ done
 # Revalidate mutable local inputs after the long external run. Evidence must
 # describe the exact checkout, executable, and configuration bytes that were
 # present when execution began.
-python3 scripts/verify_component_lock.py --evidence-release --verify-checkouts
+python3 scripts/verify_product_component_bom.py \
+  --bom "${product_component_bom}" --plan plans/oidf/certification.json \
+  --require-release-refs --verify-checkouts
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${issuer_config}")" == "${issuer_config_fingerprint}" ]] || \
   fail "issuer configuration changed during execution"
@@ -328,7 +337,7 @@ python3 scripts/assert_oidf_openid4vci_pre_submission.py \
   --certification-plan "${result_root}/certification-plan.json" \
   --profile-matrix "${result_root}/openid4vci-profile-matrix.json" \
   --suite-contract "${result_root}/openid4vci-suite-contract.json" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --deployment-manifest "${result_root}/deployment-manifest.json" \
   --openid4vci-source-dir "${openid4vci_root}" \
   --wallet-source-dir "${wallet_source_repository_dir}" \
@@ -341,8 +350,10 @@ python3 scripts/assert_oidf_openid4vci_pre_submission.py \
   --module-inventory "${module_inventory}"
 python3 scripts/build_oidf_openid4vci_evidence_index.py \
   --result-root "${result_root}" \
+  --framework-revision "${CONFORMANCE_FRAMEWORK_COMMIT}" \
+  --workflow-revision "${CONFORMANCE_WORKFLOW_COMMIT}" \
   --suite-revision "${suite_revision}" \
-  --component-lock "${result_root}/components.lock.json" \
+  --product-component-bom "${result_root}/product-component-bom.json" \
   --deployment-manifest "${result_root}/deployment-manifest.json" \
   --certification-plan "${result_root}/certification-plan.json" \
   --profile-matrix "${result_root}/openid4vci-profile-matrix.json" \

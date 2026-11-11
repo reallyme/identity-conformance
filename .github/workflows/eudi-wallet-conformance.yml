@@ -111,6 +111,8 @@ jobs:
             --source components/wallet \
             --release-artifact "${RELEASE_ARTIFACT}" \
             --component-attestation "${COMPONENT_ATTESTATION}" \
+            --framework-revision "${{ inputs.framework_commit }}" \
+            --workflow-revision "${{ github.sha }}" \
             --output "${result}"
           python3 identity-conformance/scripts/verify_eudi_wallet_execution_result.py \
             --result "${result}"

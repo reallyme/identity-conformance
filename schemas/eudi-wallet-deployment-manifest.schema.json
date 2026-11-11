@@ -9,7 +9,16 @@
   "properties": {
     "schema": {"const": "reallyme.identity.eudi_wallet_deployment_manifest.v1"},
     "plan_id": {"const": "eudi-wallet-engineering-v1"},
-    "component": {"$ref": "eudi-wallet-conformance-plan.schema.json#/$defs/source"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "repository", "commit"],
+      "properties": {
+        "component_id": {"const": "wallet"},
+        "repository": {"const": "https://github.com/reallyme/wallet"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
     "release_artifact": {
       "type": "object",
       "additionalProperties": false,

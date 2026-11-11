@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
+  "license": "MIT OR Apache-2.0",
+  "purpose": "etsi-eaa-pid-trace-source-lock",
+  "sources": [
+    {
+      "component_id": "openid4vci",
+      "repository": "https://github.com/reallyme/openid4vci",
+      "local_checkout": "../openid4vci",
+      "commit": "5c42fa25d2ab8f4487019a7689c6416b7be25cbe"
+    },
+    {
+      "component_id": "openid4vp",
+      "repository": "https://github.com/reallyme/openid4vp",
+      "local_checkout": "../openid4vp",
+      "commit": "04b752b611c9431875e6e9979186319e5f366a56"
+    },
+    {
+      "component_id": "ssi",
+      "repository": "https://github.com/reallyme/ssi",
+      "local_checkout": "../ssi",
+      "commit": "43dddafe1c9be46260c01334bcf3d9e34f5c066a"
+    }
+  ]
+}

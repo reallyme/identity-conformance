@@ -155,7 +155,6 @@ Run the local, network-independent checks from the repository root:
 
 ```sh
 python3 scripts/verify_oidf_manifests.py
-python3 scripts/verify_component_lock.py
 python3 scripts/verify_normative_sources.py
 python3 scripts/verify_eudi_publications.py
 python3 scripts/verify_eudi_legal_sources.py
@@ -165,6 +164,15 @@ python3 scripts/verify_eudi_adapter.py
 python3 scripts/verify_eudi_wallet_adapter.py
 python3 scripts/verify_zk_adapter.py
 python3 -m unittest discover -s tests -p 'test_*.py'
+```
+
+Caller-owned OIDF product BOMs are validated separately because the framework
+does not contain a default product candidate:
+
+```sh
+python3 scripts/verify_product_component_bom.py \
+  --bom /protected-inputs/product-component-bom.json \
+  --require-release-refs
 ```
 
 The CI release gate uses Node.js 26 and

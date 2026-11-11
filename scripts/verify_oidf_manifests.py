@@ -26,7 +26,6 @@ SNAPSHOTS_ROOT = REPOSITORY_ROOT / "upstream" / "oidf" / "snapshots"
 SUITE_LOCK_PATH = REPOSITORY_ROOT / "upstream" / "oidf" / "conformance-suite.lock.json"
 SUITE_LOCK_RELATIVE_PATH = "upstream/oidf/conformance-suite.lock.json"
 ADAPTER_REGISTRY_PATH = REPOSITORY_ROOT / "adapters" / "registry.json"
-COMPONENT_LOCK_PATH = REPOSITORY_ROOT / "components.lock.json"
 RESULT_SCHEMA_PATH = REPOSITORY_ROOT / "schemas" / "execution-result.schema.json"
 EVIDENCE_SCHEMA_PATH = REPOSITORY_ROOT / "schemas" / "certification-evidence.schema.json"
 MAX_JSON_BYTES = 16_000_000
@@ -36,6 +35,14 @@ REALLYME_REPOSITORY = re.compile(
     r"^https://github\.com/reallyme/[A-Za-z0-9_.-]+$"
 )
 GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+OIDF_REQUIRED_COMPONENTS = [
+    {"component_id": "openid4vci", "repository": "https://github.com/reallyme/openid4vci"},
+    {"component_id": "openid4vp", "repository": "https://github.com/reallyme/openid4vp"},
+    {"component_id": "wallet", "repository": "https://github.com/reallyme/wallet"},
+    {"component_id": "ssi", "repository": "https://github.com/reallyme/ssi"},
+    {"component_id": "identity", "repository": "https://github.com/reallyme/identity"},
+    {"component_id": "cose", "repository": "https://github.com/reallyme/cose"},
+]
 
 
 def fail(message: str) -> NoReturn:
@@ -120,6 +127,11 @@ def verify_plan_runs(
         fail(f"{context} plan coverage does not match the approved matrix")
 
 
+def verify_required_components(manifest: dict[str, object], context: str) -> None:
+    if manifest.get("required_components") != OIDF_REQUIRED_COMPONENTS:
+        fail(f"{context} required component contract is invalid")
+
+
 def verify_vp_wallet_credential_types(
     manifest: dict[str, object], run_key: str, plan_id: str
 ) -> None:
@@ -151,6 +163,7 @@ def verify_vp_wallet_credential_types(
 def verify_certification_manifest(
     manifest: dict[str, object], suite_lock: dict[str, object]
 ) -> None:
+    verify_required_components(manifest, "certification")
     verify_suite_target(manifest, suite_lock, "certification")
     verify_plan_runs(
         manifest,
@@ -257,6 +270,7 @@ def verify_engineering_manifest(
     manifest: dict[str, object], suite_lock: dict[str, object],
     expected_lock: str = SUITE_LOCK_RELATIVE_PATH,
 ) -> None:
+    verify_required_components(manifest, "engineering")
     verify_suite_target(manifest, suite_lock, "engineering", expected_lock)
     if manifest.get("scope") != "non_certification_final_engineering":
         fail("engineering matrix has an invalid evidence scope")
@@ -339,34 +353,9 @@ def plan_owners(*manifests: dict[str, object]) -> dict[str, tuple[str, str]]:
     return owners
 
 
-def component_repositories_by_role(
-    component_lock: dict[str, object],
-) -> dict[str, set[str]]:
-    if component_lock.get("schema_version") != 1:
-        fail("component lock has an unsupported schema version")
-    repositories_by_role: dict[str, set[str]] = {}
-    for raw_component in require_list(
-        component_lock.get("repositories"), "component_lock.repositories"
-    ):
-        component = require_object(raw_component, "component_lock.component")
-        repository = require_string(
-            component.get("repository"), "component_lock.repository"
-        )
-        commit = require_string(component.get("commit"), "component_lock.commit")
-        if REALLYME_REPOSITORY.fullmatch(repository) is None:
-            fail("component lock references a non-ReallyMe repository")
-        if GIT_COMMIT.fullmatch(commit) is None:
-            fail("component lock commit must be a full lowercase Git commit")
-        for raw_role in require_list(component.get("roles"), "component_lock.roles"):
-            role = require_string(raw_role, "component_lock.role")
-            repositories_by_role.setdefault(role, set()).add(repository)
-    return repositories_by_role
-
-
 def verify_adapter_registry(
     registry: dict[str, object],
     expected_plans: dict[str, tuple[str, str]],
-    expected_components: dict[str, set[str]] | None = None,
 ) -> None:
     if registry.get("schema_version") != 1:
         fail("adapter registry has an unsupported schema version")
@@ -469,11 +458,6 @@ def verify_adapter_registry(
             if repository in seen_repositories:
                 fail(f"{adapter_id} repeats a component repository")
             seen_repositories.add(repository)
-        if expected_components is not None and seen_repositories != expected_components.get(
-            adapter_id, set()
-        ):
-            fail(f"{adapter_id} component repositories disagree with the component lock")
-
         plan_ids = require_list(adapter.get("plan_ids"), f"{adapter_id}.plan_ids")
         if not plan_ids:
             fail(f"{adapter_id} has no plans")
@@ -567,7 +551,6 @@ def main() -> int:
     certification_modules = load_object(SNAPSHOTS_ROOT / "certification-modules.json")
     engineering_modules = load_object(SNAPSHOTS_ROOT / "engineering-modules.json")
     adapters = load_object(ADAPTER_REGISTRY_PATH)
-    component_lock = load_object(COMPONENT_LOCK_PATH)
     result_schema = load_object(RESULT_SCHEMA_PATH)
     evidence_schema = load_object(EVIDENCE_SCHEMA_PATH)
 
@@ -583,11 +566,7 @@ def main() -> int:
         master_lock,
         master_lock_path,
     )
-    verify_adapter_registry(
-        adapters,
-        plan_owners(certification, engineering),
-        component_repositories_by_role(component_lock),
-    )
+    verify_adapter_registry(adapters, plan_owners(certification, engineering))
     verify_schema_contracts(result_schema, evidence_schema, suite_lock)
     module_ids = verify_module_snapshot(
         certification_modules, expected_commit, "certification", 16, 551
