@@ -12,6 +12,11 @@ use only the suite release and commit in
 `upstream/oidf/conformance-suite.lock.json`; engineering comparison with the
 current development branch uses the separate master lock.
 
+`plans/oidf/wallet.json` is the Wallet-specific contract derived from the
+certification matrix. It requires all six OpenID4VCI Wallet configurations and
+all four OpenID4VP Wallet configurations. The pinned suite resolves those 10
+configurations to 278 module executions.
+
 `upstream/oidf/specifications.lock.json` records the canonical URL, length, and
 SHA-256 of the published OpenID4VCI, OpenID4VP, and HAIP final documents. It
 also records the source commit when the upstream project provides a final tag.
@@ -45,6 +50,11 @@ reruns. OpenID4VCI modules must pass. OpenID4VP permits `REVIEW` only for a
 module named by the pinned result policy. Any other review or incomplete result
 fails.
 
+The framework suite pin is authoritative. The OpenID4VCI suite contract,
+OpenID4VP profile matrix, checked-out suite, certification plan, and module
+snapshot must name the same commit. The runners stop before creating a result
+directory if any of them differ.
+
 The engineering matrix also includes the base final-spec plans. Its results are
 engineering evidence, not OIDF certification results.
 
@@ -55,15 +65,23 @@ The deployment manifest must match
 validator. It names the legal entity, product version, roles, source commits,
 deployment-artifact digests, and public product and health endpoints.
 
-Product repositories call the reusable workflows at an exact framework commit
-and supply the complete product BOM. The protected runner checks the BOM and
-deployment manifest, runs the full role matrix, and stores the result under the
-caller's repository access controls.
+Product repositories call the reusable workflows at the exact commit of a
+published framework release and supply the complete product BOM. The BOM names
+the Identity product version and `product_release_ref` as well as every
+component release. The protected runner verifies the framework release, BOM,
+and deployment manifest, runs the full role matrix, and stores the result under
+the caller's repository access controls.
 
 Local suite execution is for rehearsal only. It must use the scoped loopback
 TLS configuration, reject TLS-disabling modes, and record both
 `certification_evidence: false` and `submission_authorized: false`. Hosted OIDF
 credentials must never be used with the local suite.
+
+The Wallet subject is the cross-platform `reallyme/wallet` core. Android and
+iOS applications are not part of that release, so mobile UI tests are not an
+OIDF Wallet requirement for this subject. The official Wallet protocol roles
+still run against the composed Identity harness and the exact Wallet release in
+the BOM.
 
 ## Evidence
 

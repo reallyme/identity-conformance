@@ -182,6 +182,20 @@ readonly openid_matrix_reader="${openid4vp_root}/conformance/scripts/read_oidf_c
 readonly openid_wallet_config_verifier="${openid4vp_root}/conformance/scripts/verify_oidf_wallet_config.py"
 readonly verifier_flow_driver="${openid4vp_root}/conformance/scripts/drive_oidf_verifier_flow.py"
 readonly wallet_flow_driver="${openid4vp_root}/conformance/scripts/drive_oidf_wallet_flow.py"
+require_file "${openid_profile_matrix}" "OpenID4VP profile matrix is unavailable"
+expected_suite_revision="$(jq -er '.commit' \
+  "${repository_root}/upstream/oidf/conformance-suite.lock.json")" || \
+  fail "framework suite revision is unavailable"
+component_suite_revision="$(jq -er '.suite.commit' "${openid_profile_matrix}")" || \
+  fail "OpenID4VP suite revision is unavailable"
+checked_suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)" || \
+  fail "suite checkout revision is unavailable"
+readonly expected_suite_revision component_suite_revision checked_suite_revision
+[[ "${component_suite_revision}" == "${expected_suite_revision}" ]] || \
+  fail "OpenID4VP suite revision disagrees with the framework release"
+[[ "${checked_suite_revision}" == "${expected_suite_revision}" ]] || \
+  fail "suite checkout disagrees with the framework release"
+python3 scripts/verify_oidf_wallet_plan.py --suite-checkout "${suite_dir}"
 verifier_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${verifier_config}")"
 wallet_sd_jwt_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${wallet_sd_jwt_config}")"
 wallet_mdoc_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${wallet_mdoc_config}")"
@@ -286,7 +300,7 @@ scripts/verify_oidf_certification_parameters.py "${suite_dir}"
   "${profile_matrix_fingerprint}" ]] || \
   fail "OpenID4VP profile matrix changed during execution"
 
-suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)"
+suite_revision="${checked_suite_revision}"
 readonly suite_revision
 printf '%s\n' "${suite_revision}" > "${result_root}/oidf-suite-revision.txt"
 python3 scripts/assert_oidf_openid4vp_pre_submission.py \

@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Product · Identity · OIDF
+run-name: Identity OIDF conformance @ ${{ github.sha }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Commit of the published Identity Conformance release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  openid4vci:
+    name: OpenID4VCI
+    uses: ./.github/workflows/oidf-openid4vci-certification.yml
+    with:
+      framework_commit: ${{ inputs.framework_commit }}
+    secrets: inherit
+
+  openid4vp:
+    name: OpenID4VP
+    uses: ./.github/workflows/oidf-openid4vp-certification.yml
+    with:
+      framework_commit: ${{ inputs.framework_commit }}
+    secrets: inherit

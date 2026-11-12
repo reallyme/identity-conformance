@@ -3,14 +3,32 @@
 SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
 SPDX-License-Identifier: MIT OR Apache-2.0
 
-This adapter runs the committed `reallyme-wallet-conformance` package against
-an exact Wallet source revision. It also checks that the release bundle and
-component attestation describe that same revision.
+This adapter runs every Wallet workspace test, with every feature enabled,
+against an exact Wallet source revision. The result records the discovered test
+count and inventory digest. It also proves that each executable case declared
+in `conformance/eudi/test-cases.json` was present in Cargo's test inventory.
+The release bundle and component attestation must describe the same revision.
+The runner opens the bundle and independently checks its exact file set,
+preflight records, Cargo lock, public crate inventory, crate digests, and each
+crate's embedded source revision. It then verifies GitHub provenance for the
+preflight manifest and every crate, and checks the exact Rust CI, protobuf, and
+manually dispatched fuzz workflow run named by the release manifest. That run
+must complete all four time-boxed Wallet fuzz campaigns; the shorter push smoke
+run is not release evidence.
 
-The deployment manifest selects the Wallet candidate. The source checkout,
-release artifact, and attestation must all name that commit. A missing or
-different candidate is an error; the framework does not substitute a reference
+The deployment manifest selects the Wallet release by release tag and commit.
+The source checkout, release artifact, and attestation must all name that
+commit. The selected tag must be the latest published Wallet release. A missing
+or different release is an error; the framework does not substitute a reference
 Wallet version.
+
+Source locks, normative ledgers, and component attestations are reported
+separately from code execution. They are not counted as executed tests. The
+framework also injects five independent Rust probes into the selected source
+checkout. They test provider record identifiers, key-custody encoding, consent
+context binding, flow resumption after uncertain delivery, and lifecycle
+enforcement. The probes use Wallet's public APIs and do not rely on the
+candidate's own test assertions.
 
 The result is engineering evidence. EU certification and external
 interoperability require separate external evidence.
@@ -45,6 +63,7 @@ on that job. Use the same framework commit in the workflow reference and the
 ```yaml
 permissions:
   actions: read
+  attestations: read
   contents: read
 
 jobs:
@@ -71,6 +90,7 @@ jobs:
       candidate_artifact_name: eudi-wallet-candidate-${{ github.sha }}
 ```
 
-Replace `FRAMEWORK_COMMIT` in both places with the same full
-identity-conformance commit. GitHub does not allow an expression in a reusable
-workflow's `uses` value.
+Replace `FRAMEWORK_COMMIT` in both places with the same full commit from a
+published Identity Conformance release. The workflow verifies the release tag
+and manifest before running the plan. GitHub does not allow an expression in a
+reusable workflow's `uses` value.

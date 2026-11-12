@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: ZK Presentation-Proof Conformance
+name: Product · ZK · presentation proofs
 run-name: ZK presentation-proof conformance @ ${{ github.sha }}
 
 on:
@@ -59,20 +59,19 @@ jobs:
           path: identity-conformance
           persist-credentials: false
 
-      - name: Verify selected framework release
-        env:
-          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
-        run: |
-          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
-          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
-          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          printf '## ZK · Identity Conformance v%s\n\nFramework commit: %s\n' \
-            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
-
       - name: Install latest Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.15.2"
+
+      - name: Verify the selected published framework release
+        id: framework-release
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity-conformance/scripts/prepare_published_framework_release.sh \
+            identity-conformance "${FRAMEWORK_COMMIT}"
 
       - name: Materialize and validate deployment manifest
         env:
@@ -114,7 +113,7 @@ jobs:
       - name: Install pinned Rust toolchain
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
 
       - name: Validate protected artifact paths
         env:
@@ -145,11 +144,42 @@ jobs:
           python3 identity-conformance/scripts/verify_zk_execution_result.py \
             --result "${result}"
 
+      - name: Build product conformance statement
+        env:
+          WORKFLOW_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REVISION: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          FRAMEWORK_RELEASE_TAG: ${{ steps.framework-release.outputs.tag }}
+        run: |
+          manifest="${RUNNER_TEMP}/zk-conformance-inputs/deployment.json"
+          result="${RUNNER_TEMP}/zk-conformance-result.json"
+          release_ref="$(jq -er '.component.release_ref' "${manifest}")"
+          product_commit="$(jq -er '.component.commit' "${manifest}")"
+          python3 identity-conformance/scripts/build_product_conformance_statement.py \
+            --framework-selection "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json" \
+            --result "${result}" \
+            --plan-id zk-presentation-proofs-v1 \
+            --product-id zk \
+            --product-release-ref "${release_ref}" \
+            --product-repository https://github.com/reallyme/zk \
+            --product-commit "${product_commit}" \
+            --workflow-repository "${WORKFLOW_REPOSITORY}" \
+            --workflow-revision "${WORKFLOW_REVISION}" \
+            --run-id "${RUN_ID}" \
+            --run-attempt "${RUN_ATTEMPT}" \
+            --output "${RUNNER_TEMP}/product-conformance-statement.json"
+          printf '## Passed\n\nZK release: **%s**\n\nIdentity Conformance: **%s**\n' \
+            "${release_ref}" "${FRAMEWORK_RELEASE_TAG}" \
+            >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload validated ZK result
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zk-conformance-${{ github.sha }}
-          path: ${{ runner.temp }}/zk-conformance-result.json
+          path: |
+            ${{ runner.temp }}/zk-conformance-result.json
+            ${{ runner.temp }}/product-conformance-statement.json
           if-no-files-found: error
           retention-days: 7
 
@@ -167,5 +197,7 @@ jobs:
           rm -rf -- \
             "${input_dir}" \
             "${result}" \
+            "${RUNNER_TEMP:?}/product-conformance-statement.json" \
+            "${RUNNER_TEMP:?}/identity-conformance-framework-release" \
             "${GITHUB_WORKSPACE:?}/identity-conformance" \
             "${GITHUB_WORKSPACE:?}/components"

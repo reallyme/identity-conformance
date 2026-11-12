@@ -35,12 +35,17 @@
     "cir-2026-1731"
   ],
   "assertions": [
-    {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock"]},
+    {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock", "source.eudi-test-cases", "artifact.wallet-release-bundle"]},
     {"assertion_id": "upstream_reference_binding", "required_checks": ["source.reference-implementation-lock", "source.upstream-tests", "framework.eudi-source-lock", "framework.eudi-legal-source-lock", "framework.eudi-publications-lock"]},
-    {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "normative.eu.arf.wua-33", "normative.eu.arf.ew-dm-44-027", "normative.eu.technical-specification.ts3-wia-ttl", "cargo.reallyme-wallet-conformance"]},
-    {"assertion_id": "issuance_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.integration"]},
-    {"assertion_id": "presentation_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.vector"]},
-    {"assertion_id": "malicious_input_rejection", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.security"]},
+    {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "normative.eu.arf.wua-33", "normative.eu.arf.ew-dm-44-027", "normative.eu.technical-specification.ts3-wia-ttl", "cargo.wallet-workspace-all-features"]},
+    {"assertion_id": "issuance_flow", "required_checks": ["cargo.wallet-workspace-all-features", "attestation.integration"]},
+    {"assertion_id": "presentation_flow", "required_checks": ["cargo.wallet-workspace-all-features", "attestation.vector"]},
+    {"assertion_id": "malicious_input_rejection", "required_checks": ["cargo.wallet-workspace-all-features", "attestation.security"]},
+    {"assertion_id": "provider_storage_boundary", "required_checks": ["probe.wallet-provider-key-storage-boundaries"]},
+    {"assertion_id": "key_custody_codec_boundary", "required_checks": ["probe.wallet-key-custody-codec-boundaries"]},
+    {"assertion_id": "consent_policy_context_binding", "required_checks": ["probe.wallet-consent-policy-context-binding"]},
+    {"assertion_id": "flow_resume_boundary", "required_checks": ["probe.wallet-flow-resume-boundaries"]},
+    {"assertion_id": "wallet_lifecycle_boundary", "required_checks": ["probe.wallet-lifecycle-boundaries"]},
     {"assertion_id": "wallet_release_quality", "required_checks": ["attestation.format", "attestation.lint", "attestation.unit", "attestation.build"]}
   ],
   "evidence_policy": {

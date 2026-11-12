@@ -64,11 +64,13 @@ def write_index(
         result_root, product_bom, artifacts
     )
     value: dict[str, object] = {
-        "schema_version": 2,
+        "schema_version": 3,
         "protocol": "openid4vci",
         "framework_revision": framework_revision,
         "workflow_revision": workflow_revision,
         "suite_revision": suite_revision,
+        "product": common.product_identity(product_bom),
+        "components": common.product_components(product_bom),
         "inputs": {
             "product_component_bom": product_bom_digest,
             "deployment_manifest": deployment_digest,

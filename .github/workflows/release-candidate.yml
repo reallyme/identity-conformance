@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: build conformance framework release candidate
+name: Framework · release candidate
 
 on:
   workflow_dispatch:

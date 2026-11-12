@@ -168,7 +168,7 @@ def valid_component_attestation(required_checks: set[str]) -> dict[str, object]:
             {"artifact_id": "eudi_legal_sources_lock", "kind": "metadata", "sha256": "8" * 64},
         ],
         "dependency_lock": {"kind": "cargo", "sha256": "6" * 64},
-        "toolchain": {"identifier": "rust", "version": "1.99.1"},
+        "toolchain": {"identifier": "rust", "version": "1.100.0"},
         "checks": [
             {
                 "check_id": check_id,

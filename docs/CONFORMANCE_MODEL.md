@@ -65,18 +65,28 @@ The EU checks are divided by source:
 - the upstream-assets workflow verifies the exact Wallet UI, ITB, Age
   Verification, and RQES source inventories.
 
-The UI and ITB cases require a deployed Wallet and test infrastructure. The
-RQES tester also requires a reviewed dependency set and supporting services.
-Until those runners execute, these workflows report source validation only.
+The official UI cases target Android and iOS applications. They do not apply to
+the cross-platform Wallet core because that release contains neither app. ITB
+cases require a composed deployment. RQES cases belong to the RQES product
+stack and require a QTSP, relying party, and external SCA. Until an applicable
+runner executes, the corresponding workflows report source validation only.
 
 The Wallet runner reads candidate values from the selected source revision and
 compares them with the EU ledger. The caller cannot supply the expected value.
 A missing value, changed comparison, incomplete enumeration, or unknown rule
 fails the run.
 
+The same runner discovers and executes the complete Wallet workspace test
+inventory with all features enabled. It records the inventory digest and test
+count, and confirms that every executable case declared by Wallet is present.
+Source pins, ledger checks, and component attestations remain separate evidence
+types; they do not count as code execution.
+
 The OIDF source workflow checks every certification plan against the pinned
-conformance-suite release. A pass confirms that the local matrix matches that
-release. Product execution and OIDF certification are separate results.
+conformance-suite release. The Wallet contract requires 10 configurations and
+278 module executions. A source-workflow pass confirms only that the matrix
+matches the pinned suite. A Wallet OIDF result requires the hosted suite to run
+against the composed Identity deployment and exact Wallet release in the BOM.
 
 ## Releases and evidence
 
@@ -85,6 +95,11 @@ release. Product execution and OIDF certification are separate results.
 A framework release contains plans, runners, schemas, upstream pins, and result
 rules. It can be released before Wallet or Identity. Its manifest has
 `release_kind: framework` and makes no product claim.
+
+The release is the conformance baseline. Its version changes when an enforced
+specification, ledger, test-suite revision, runner, adapter, schema, or result
+rule changes. It does not follow every upstream commit. An upstream change is
+reviewed before it becomes part of a new baseline.
 
 ### Product candidate BOM
 
@@ -105,6 +120,30 @@ release reference.
 The composed run determines the integration result. Component test results do
 not replace it.
 
+### Product conformance statement
+
+A passing product run creates a disclosure-safe statement for one product
+release and one published framework release. The workflow first verifies the
+framework tag and release manifest. The statement then binds the product
+release reference and commit, framework version and commit, framework input-set
+digest, caller workflow revision, candidate digest, result digest, and the
+coverage that actually ran. EU statements keep incomplete and fixture-only
+areas visible by identifier, status, and limitation. OIDF statements list the
+exact roles, profiles, module executions, suite revision, retained exports, and
+complete six-component BOM.
+The BOM is included in the statement and checked against its canonical digest,
+so a component release cannot be substituted without invalidating the result.
+
+The statement has `certification_claim: false`. It records a framework result;
+it does not turn an engineering run into an external certification decision.
+Product repositories may publish a reviewed statement with a pass badge. The
+badge must name the product release and framework release and link to that
+statement.
+
+A historical pass remains valid for the versions in its statement. It does not
+claim that the product has passed a newer framework baseline. Product
+repositories must run the newer baseline before updating their badge.
+
 ### Certification evidence
 
 OIDF certification evidence also needs complete hosted-suite results, suite
@@ -121,6 +160,10 @@ engineering matrices. They verify the selected module inventory, run the
 applicable product roles, reject incomplete results, and build digest-bound
 evidence indexes.
 
+The framework pin, component profile matrix or suite contract, suite checkout,
+and retained module inventory must agree. Component tests, the EU Wallet run,
+and local rehearsals cannot replace an official OIDF Wallet module result.
+
 ### EUDI relying party
 
 The relying-party runner checks an exact candidate, Platform, and SSI BOM. It
@@ -135,8 +178,20 @@ conformity-assessment result.
 
 The Wallet runner ties the source commit, release bundle, and component
 attestation to the same candidate. It checks the EU source selection and
-ledgers, evaluates observable boundary values, and runs the Wallet conformance
-package.
+ledgers, evaluates observable boundary values, and runs every test in the
+Wallet workspace with all features enabled, including tests marked ignored.
+The result records the complete discovered-test inventory and binds it to the
+candidate.
+
+The release bundle is not accepted by digest alone. The runner checks its exact
+file set, preflight records, Cargo lock, public crate inventory, crate digests,
+and the source revision embedded in every crate.
+
+The runner also injects five framework-owned Rust probes through Wallet's
+public APIs. They check provider record identifiers, key-custody encoding,
+consent context binding, flow resumption after uncertain delivery, and
+lifecycle enforcement. They run independently of the candidate's own tests and
+must leave the selected checkout clean.
 
 The caller uploads `deployment.json`, `wallet-release`, and
 `wallet-attestation.json` as one same-run Actions artifact. The framework
@@ -144,8 +199,10 @@ downloads that artifact on a clean GitHub-hosted runner and checks out the
 manifest-selected Wallet commit. It does not depend on preinstalled files or
 persistent runner state.
 
-The result covers the ReallyMe engineering plan. External testbed and
-assessment results use separate evidence.
+The result covers the ReallyMe EU core engineering plan. It does not cover the
+official OIDF Wallet suite, Android or iOS application behavior, ITB deployment
+tests, RQES services, or an external conformity assessment. Those use separate
+plans and evidence.
 
 ### EU upstream assets
 

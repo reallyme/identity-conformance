@@ -12,8 +12,9 @@ WORKFLOW = (Path(__file__).resolve().parents[1] / ".github/workflows/eudi-wallet
 class HostedWalletWorkflowTests(unittest.TestCase):
     def test_hosted_execution_needs_no_private_runner_or_deployment_secret(self) -> None:
         self.assertIn("runs-on: ubuntu-26.04", WORKFLOW)
+        self.assertNotIn("runs-on: [self-hosted", WORKFLOW)
+        self.assertIn("--deny-self-hosted-runners", WORKFLOW)
         for forbidden in (
-            "self-hosted",
             "secrets:",
             "/protected-inputs/",
             "CARGO_REGISTRY_TOKEN",

@@ -76,7 +76,12 @@ def verify_result(value: dict[str, object]) -> None:
         or component.get("component_id") != requirement.get("component_id")
         or component.get("repository") != requirement.get("repository")
         or not isinstance(component.get("release_ref"), str)
-        or re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", component["release_ref"])
+        or re.fullmatch(
+            r"reallyme-zk-v(0|[1-9][0-9]*)\."
+            r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+            r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
+            component["release_ref"],
+        )
         is None
         or not isinstance(component.get("commit"), str)
         or adapter_verifier.GIT_COMMIT.fullmatch(component["commit"]) is None

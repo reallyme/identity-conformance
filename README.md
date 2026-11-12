@@ -7,10 +7,11 @@
 <!-- BEGIN GENERATED CONFORMANCE BADGES -->
 [![Release readiness](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml)
 [![Secret scan](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml)
+[![Upstream monitoring](https://github.com/reallyme/identity-conformance/actions/workflows/pin-freshness.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/pin-freshness.yml)
 [![Security Policy](https://img.shields.io/badge/security-policy-0f766e)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.2.0&color=475569)](VERSION)
+[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.0&color=475569)](https://github.com/reallyme/identity-conformance/releases/tag/v0.3.0)
 [![EU ARF](https://img.shields.io/static/v1?label=EU%20ARF&message=v3.0.0%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md)
 [![EU technical specifications](https://img.shields.io/static/v1?label=EU%20technical%20specifications&message=included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md)
 [![EU FCAF](https://img.shields.io/static/v1?label=EU%20FCAF&message=v0.0.10%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md)
@@ -34,12 +35,18 @@ upstream test assets, and ReallyMe component integrations.
 
 | Area | Validation |
 | --- | --- |
-| OpenID4VCI / OpenID4VP | Runs pinned OIDF conformance profiles against a supplied deployment. |
+| OpenID4VCI / OpenID4VP | Runs the pinned OIDF suite against a supplied deployment. The Wallet subset contains 10 configurations and 278 module executions. |
 | EU ARF / technical specifications | Validates Wallet configuration boundaries against reviewed EU requirements. |
 | EU FCAF | Verifies the assessment structure and requirement ledger. |
 | EU test assets | Checks pinned Wallet UI, ITB, Age Verification, and RQES test inventories. |
-| Wallet / relying party | Validates adapters, attestations, deployment inputs, and supported EU requirements. |
+| Wallet / relying party | Executes Wallet code, framework-owned probes, deployment checks, and supported EU requirements. |
 | Zero-knowledge proofs | Validates the public proof adapter and supplied component attestation. |
+
+Wallet has two separate results. The Wallet repository runs the EU core
+engineering plan. The composed Identity deployment runs the official OIDF
+Wallet profiles. Neither result can stand in for the other. See
+[Wallet assurance](docs/WALLET_ASSURANCE.md) for the evidence required for each
+claim and the tests that remain outside the core-library scope.
 
 ## Results and certification
 
@@ -50,8 +57,15 @@ sources. FCAF checks validate the published assessment structure; FCAF v0.0.10
 contains no executable Wallet test cases.
 
 Product repositories run the applicable workflows against their own commits,
-deployments, and attestations. Results and pass/fail badges are published beside
-the evaluated code.
+deployments, and attestations. A pass applies to one product release and one
+published Identity Conformance release. Product repositories publish the result
+beside the evaluated code.
+
+A product badge should name both versions, for example `Wallet v0.4.0 · EU
+Wallet engineering · Identity Conformance v0.3.0 · passing`. It should link to
+a reviewed product conformance statement, not to this repository's CI badge.
+The statement records the product release and commit, framework release and
+commit, standards baseline digest, workflow revision, and result digest.
 
 OIDF certification requires evidence from the approved hosted suite, an
 identified deployment and framework revision, and completion of the required
@@ -78,10 +92,26 @@ results. The two are not interchangeable.
 
 ## Using the framework
 
-Product repositories call a reusable workflow at an exact framework commit.
-The workflow reference and `framework_commit` input must match. The caller also
-supplies the deployment manifest, candidate artifacts, component revisions, and
-attestations required by the selected plan.
+Each product repository has one entry workflow:
+
+| Repository | Workflow |
+| --- | --- |
+| `wallet` | EU Wallet conformance |
+| `identity` | Combined OpenID4VCI and OpenID4VP conformance |
+| `zk` | ZK presentation-proof conformance |
+| private EUDI code | EUDI relying-party conformance |
+
+SSI, OpenID4VCI, and OpenID4VP releases are inputs to the composed Identity
+run; they do not need separate framework workflows.
+
+Product repositories call their reusable workflow at an exact framework commit.
+The commit must be the tag target of a published Identity Conformance release,
+and the workflow reference and `framework_commit` input must match. The caller
+also supplies the product release, deployment manifest, candidate artifacts,
+component revisions, and attestations required by the selected plan.
+
+See [Running conformance](docs/RUNNING_CONFORMANCE.md) for the short caller
+workflows and required inputs.
 
 For example, a Wallet workflow invokes the shared Wallet plan with a same-run
 candidate artifact:
@@ -102,7 +132,7 @@ the inputs required by each workflow.
 <!-- BEGIN GENERATED CONFORMANCE SUMMARY -->
 ## Standards baseline
 
-Framework version: **v0.2.0**
+Framework version: **v0.3.0**
 
 | Source | Pinned version | Coverage |
 | --- | --- | --- |
@@ -153,6 +183,13 @@ does not govern results.
 The framework pins the OpenID Conformance Suite release in
 [`conformance-suite.lock.json`](upstream/oidf/conformance-suite.lock.json).
 
+[`plans/oidf/wallet.json`](plans/oidf/wallet.json) fixes the Wallet scope at 10
+configurations and 278 module executions: six OpenID4VCI Wallet configurations
+and four OpenID4VP Wallet configurations. The verifier compares that contract
+with the complete certification plan and generated module snapshot. Missing
+profiles, changed module counts, partial runs, skips, expected failures, and
+suite-pin mismatches fail validation.
+
 Final OpenID4VCI, OpenID4VP, and HAIP specifications are pinned by URL, content
 length, and SHA-256 in
 [`specifications.lock.json`](upstream/oidf/specifications.lock.json).
@@ -194,6 +231,20 @@ manifest. Promotion verifies the candidate commit and manifest, then publishes
 
 Promotion refuses an existing tag or release. Product repositories upgrade
 framework versions explicitly.
+
+An Identity Conformance release is a complete conformance baseline. It versions
+the runners and schemas together with the exact specifications, requirement
+ledgers, reference inputs, and external test-suite revisions they enforce. A
+runner change can require a new framework release even when the upstream
+specifications do not change. An upstream change is proposed for review and
+does not become part of the baseline until a new framework release is
+published.
+
+Two versions can therefore move independently. The framework may be reviewing
+a newer upstream publication, and a product may still be tested against an
+older framework release. The weekly upstream-monitoring workflow exposes the
+first condition. Product badges and conformance statements expose the second by
+naming the framework release used for each pass.
 
 Release builds use pinned sources and do not depend on upstream availability.
 Freshness checks run separately.

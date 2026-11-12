@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: OIDF OpenID4VCI Certification
+name: Internal · Identity · OpenID4VCI lane
 run-name: OIDF OpenID4VCI certification @ ${{ github.sha }}
 
 on:
@@ -74,20 +74,19 @@ jobs:
           path: identity-conformance
           persist-credentials: false
 
-      - name: Verify selected framework release
-        env:
-          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
-        run: |
-          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
-          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
-          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          printf '## OIDF OpenID4VCI · Identity Conformance v%s\n\nFramework commit: %s\n' \
-            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
-
       - name: Install latest Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.15.2"
+
+      - name: Verify the selected published framework release
+        id: framework-release
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity-conformance/scripts/prepare_published_framework_release.sh \
+            identity-conformance "${FRAMEWORK_COMMIT}"
 
       - name: Materialize and validate the caller product BOM
         env:
@@ -198,13 +197,19 @@ jobs:
       - name: Checkout pinned OIDF conformance suite
         working-directory: identity-conformance
         run: |
-          suite_commit="$(jq -er '.suite.commit' ../openid4vci/conformance/oidf/profile-matrix.json)"
+          suite_commit="$(jq -er '.commit' upstream/oidf/conformance-suite.lock.json)"
           [[ "${suite_commit}" =~ ^[0-9a-f]{40}$ ]]
           git init upstream/oidf/openid-conformance-suite
           git -C upstream/oidf/openid-conformance-suite remote add origin https://gitlab.com/openid/conformance-suite.git
           git -C upstream/oidf/openid-conformance-suite fetch --depth 1 origin "${suite_commit}"
           git -C upstream/oidf/openid-conformance-suite checkout --detach FETCH_HEAD
           test "$(git -C upstream/oidf/openid-conformance-suite rev-parse HEAD)" = "${suite_commit}"
+
+      - name: Verify complete official OIDF Wallet scope
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/verify_oidf_wallet_plan.py \
+            --suite-checkout upstream/oidf/openid-conformance-suite
 
       - name: Build patched Maven toolchain
         working-directory: identity-conformance
@@ -334,6 +339,35 @@ jobs:
           OPENID4VCI_WALLET_HARNESS_TOKEN: ${{ secrets.OPENID4VCI_WALLET_HARNESS_TOKEN }}
         run: scripts/run_oidf_openid4vci_certification.sh
 
+      - name: Build product conformance statement
+        env:
+          WORKFLOW_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REVISION: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          FRAMEWORK_RELEASE_TAG: ${{ steps.framework-release.outputs.tag }}
+        run: |
+          bom="${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json"
+          result="${RUNNER_TEMP}/openid4vci-certification/evidence-index.json"
+          release_ref="$(jq -er '.product_release_ref' "${bom}")"
+          product_commit="$(jq -er '[.components[] | select(.component_id == "identity")][0].commit' "${bom}")"
+          python3 identity-conformance/scripts/build_product_conformance_statement.py \
+            --framework-selection "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json" \
+            --result "${result}" \
+            --plan-id oidf-openid4vci-certification \
+            --product-id identity \
+            --product-release-ref "${release_ref}" \
+            --product-repository https://github.com/reallyme/identity \
+            --product-commit "${product_commit}" \
+            --workflow-repository "${WORKFLOW_REPOSITORY}" \
+            --workflow-revision "${WORKFLOW_REVISION}" \
+            --run-id "${RUN_ID}" \
+            --run-attempt "${RUN_ATTEMPT}" \
+            --output "${RUNNER_TEMP}/openid4vci-certification/product-conformance-statement.json"
+          printf '## Passed\n\nIdentity release: **%s**\n\nIdentity Conformance: **%s**\n' \
+            "${release_ref}" "${FRAMEWORK_RELEASE_TAG}" \
+            >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload validated certification evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -354,6 +388,7 @@ jobs:
             fi
           done
           rm -rf -- "${input_dir}" "${result_dir}"
+          rm -rf -- "${RUNNER_TEMP:?}/identity-conformance-framework-release"
           for checkout in identity-conformance openid4vci openid4vp wallet ssi identity cose; do
             rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"
           done

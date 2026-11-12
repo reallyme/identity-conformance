@@ -16,6 +16,12 @@
       "maxLength": 128,
       "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]*$"
     },
+    "product_release_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^reallyme-identity-v[0-9A-Za-z][0-9A-Za-z.+-]*$"
+    },
     "components": {
       "type": "array",
       "minItems": 6,

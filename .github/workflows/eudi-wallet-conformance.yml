@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: EUDI Wallet Engineering Conformance
+name: Product · Wallet · EU
 run-name: EUDI Wallet engineering conformance @ ${{ github.sha }}
 
 on:
@@ -19,6 +19,7 @@ on:
 
 permissions:
   actions: read
+  attestations: read
   contents: read
 
 concurrency:
@@ -45,20 +46,19 @@ jobs:
           path: identity-conformance
           persist-credentials: false
 
-      - name: Verify the framework checkout
-        env:
-          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
-        run: |
-          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
-          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
-          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          printf '## Identity Conformance v%s\n\nFramework commit: %s\n' \
-            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
-
       - name: Install latest Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.15.2"
+
+      - name: Verify the selected published framework release
+        id: framework-release
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity-conformance/scripts/prepare_published_framework_release.sh \
+            identity-conformance "${FRAMEWORK_COMMIT}"
 
       - name: Download caller candidate from this workflow run
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -86,10 +86,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           commit="$(jq -er '.component.commit' "${RUNNER_TEMP}/eudi-wallet-conformance-inputs/deployment.json")"
+          selected_ref="$(jq -er '.component.release_ref' "${RUNNER_TEMP}/eudi-wallet-conformance-inputs/deployment.json")"
           [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
           release_ref="$(gh api 'repos/reallyme/wallet/releases/latest' --jq '.tag_name')"
           [[ "${release_ref}" =~ ^reallyme-wallet-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
           release_commit="$(gh api "repos/reallyme/wallet/commits/${release_ref}" --jq '.sha')"
+          test "${selected_ref}" = "${release_ref}"
           test "${commit}" = "${release_commit}"
           printf 'commit=%s\n' "${release_commit}" >> "${GITHUB_OUTPUT}"
           printf 'release_ref=%s\n' "${release_ref}" >> "${GITHUB_OUTPUT}"
@@ -110,7 +112,7 @@ jobs:
       - name: Install pinned Rust toolchain
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
-          toolchain: 1.99.1
+          toolchain: 1.100.0
 
       - name: Execute EUDI Wallet engineering lane
         env:
@@ -129,11 +131,135 @@ jobs:
           python3 identity-conformance/scripts/verify_eudi_wallet_execution_result.py \
             --result "${result}"
 
+      - name: Revalidate the Wallet release preflight independently
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-wallet-conformance-inputs"
+          result="${RUNNER_TEMP}/eudi-wallet-conformance-result.json"
+          commit="$(jq -er '.component.commit' "${input_dir}/deployment.json")"
+          run_id="$(jq -er '.release_evidence.preflight_run_id' "${result}")"
+          job_id="$(jq -er '.release_evidence.preflight_job_id' "${result}")"
+          fuzz_run_id="$(jq -er '.release_evidence.fuzz_run_id' "${result}")"
+          protobuf_ci_run_id="$(jq -er '.release_evidence.protobuf_ci_run_id' "${result}")"
+          rust_ci_run_id="$(jq -er '.release_evidence.rust_ci_run_id' "${result}")"
+          [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${run_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${job_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${fuzz_run_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${protobuf_ci_run_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${rust_ci_run_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          run_record="${RUNNER_TEMP}/wallet-preflight-run.json"
+          jobs_record="${RUNNER_TEMP}/wallet-preflight-jobs.json"
+          fuzz_run_record="${RUNNER_TEMP}/wallet-fuzz-run.json"
+          fuzz_jobs_record="${RUNNER_TEMP}/wallet-fuzz-jobs.json"
+          protobuf_ci_run_record="${RUNNER_TEMP}/wallet-protobuf-ci-run.json"
+          protobuf_ci_jobs_record="${RUNNER_TEMP}/wallet-protobuf-ci-jobs.json"
+          rust_ci_run_record="${RUNNER_TEMP}/wallet-rust-ci-run.json"
+          rust_ci_jobs_record="${RUNNER_TEMP}/wallet-rust-ci-jobs.json"
+          gh api "repos/reallyme/wallet/actions/runs/${run_id}" > "${run_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${run_id}/attempts/1/jobs?per_page=100" \
+            > "${jobs_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${fuzz_run_id}" \
+            > "${fuzz_run_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${fuzz_run_id}/attempts/1/jobs?per_page=100" \
+            > "${fuzz_jobs_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${protobuf_ci_run_id}" \
+            > "${protobuf_ci_run_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${protobuf_ci_run_id}/attempts/1/jobs?per_page=100" \
+            > "${protobuf_ci_jobs_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${rust_ci_run_id}" \
+            > "${rust_ci_run_record}"
+          gh api "repos/reallyme/wallet/actions/runs/${rust_ci_run_id}/attempts/1/jobs?per_page=100" \
+            > "${rust_ci_jobs_record}"
+          python3 identity-conformance/scripts/verify_wallet_release_preflight.py \
+            --result "${result}" \
+            --run "${run_record}" \
+            --jobs "${jobs_record}" \
+            --fuzz-run "${fuzz_run_record}" \
+            --fuzz-jobs "${fuzz_jobs_record}" \
+            --protobuf-ci-run "${protobuf_ci_run_record}" \
+            --protobuf-ci-jobs "${protobuf_ci_jobs_record}" \
+            --rust-ci-run "${rust_ci_run_record}" \
+            --rust-ci-jobs "${rust_ci_jobs_record}" \
+            --expected-commit "${commit}"
+
+      - name: Verify GitHub provenance for every Wallet release subject
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-wallet-conformance-inputs"
+          result="${RUNNER_TEMP}/eudi-wallet-conformance-result.json"
+          commit="$(jq -er '.component.commit' "${input_dir}/deployment.json")"
+          subject_dir="${RUNNER_TEMP}/wallet-attestation-subjects"
+          python3 identity-conformance/scripts/materialize_wallet_attestation_subjects.py \
+            --bundle "${input_dir}/wallet-release" \
+            --result "${result}" \
+            --output "${subject_dir}"
+          subject_count="$(find "${subject_dir}" -maxdepth 1 -type f | wc -l | tr -d ' ')"
+          crate_count="$(jq -er '.release_evidence.crate_count' "${result}")"
+          test "${subject_count}" -eq "$((crate_count + 1))"
+          while IFS= read -r -d '' subject; do
+            gh attestation verify "${subject}" \
+              --repo reallyme/wallet \
+              --signer-workflow reallyme/wallet/.github/workflows/crates-package-preflight.yml \
+              --source-digest "${commit}" \
+              --deny-self-hosted-runners >/dev/null
+          done < <(find "${subject_dir}" -maxdepth 1 -type f -print0)
+
+      - name: Build product conformance statement
+        env:
+          WORKFLOW_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REVISION: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          FRAMEWORK_RELEASE_TAG: ${{ steps.framework-release.outputs.tag }}
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-wallet-conformance-inputs"
+          result="${RUNNER_TEMP}/eudi-wallet-conformance-result.json"
+          release_ref="$(jq -er '.component.release_ref' "${input_dir}/deployment.json")"
+          product_commit="$(jq -er '.component.commit' "${input_dir}/deployment.json")"
+          discovered_tests="$(jq -er '.test_execution.discovered_test_count' "${result}")"
+          passed_tests="$(jq -er '.test_execution.passed_test_count' "${result}")"
+          framework_probes="$(jq -er '[.framework_probes[] | select(.result == "passed")] | length' "${result}")"
+          minimum_total="$(jq -er '.coverage.minimum_requirements.total' "${result}")"
+          minimum_implemented="$(jq -er '.coverage.minimum_requirements.status_counts.implemented' "${result}")"
+          declared_cases="$(jq -er '.coverage.declared_cases.total' "${result}")"
+          executable_cases="$(jq -er '.coverage.declared_cases.executable' "${result}")"
+          normative_boundaries="$(jq -er '.coverage.normative_boundaries.implemented' "${result}")"
+          normative_checks="$(jq -er '.coverage.normative_boundaries.checks' "${result}")"
+          test "${passed_tests}" -gt 0
+          test "${passed_tests}" -eq "${discovered_tests}"
+          test "${framework_probes}" -eq 5
+          python3 identity-conformance/scripts/build_product_conformance_statement.py \
+            --framework-selection "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json" \
+            --result "${result}" \
+            --plan-id eudi-wallet-engineering-v1 \
+            --product-id wallet \
+            --product-release-ref "${release_ref}" \
+            --product-repository https://github.com/reallyme/wallet \
+            --product-commit "${product_commit}" \
+            --workflow-repository "${WORKFLOW_REPOSITORY}" \
+            --workflow-revision "${WORKFLOW_REVISION}" \
+            --run-id "${RUN_ID}" \
+            --run-attempt "${RUN_ATTEMPT}" \
+            --output "${RUNNER_TEMP}/product-conformance-statement.json"
+          printf '## Passed\n\nWallet release: **%s**\n\nIdentity Conformance: **%s**\n\nWorkspace tests: **%s/%s**\n\nFramework probes: **%s/%s**\n\nEU boundary checks: **%s** checks across **%s** implemented boundaries\n\nDeclared EU cases: **%s/%s executable**\n\nEU minimums currently marked implemented: **%s/%s**\n' \
+            "${release_ref}" "${FRAMEWORK_RELEASE_TAG}" \
+            "${passed_tests}" "${discovered_tests}" \
+            "${framework_probes}" "${framework_probes}" \
+            "${normative_checks}" "${normative_boundaries}" \
+            "${executable_cases}" "${declared_cases}" \
+            "${minimum_implemented}" "${minimum_total}" \
+            >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload validated EUDI Wallet result
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eudi-wallet-conformance-${{ github.sha }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/eudi-wallet-conformance-result.json
+          path: |
+            ${{ runner.temp }}/eudi-wallet-conformance-result.json
+            ${{ runner.temp }}/product-conformance-statement.json
           if-no-files-found: error
           retention-days: 7
 
@@ -142,4 +268,8 @@ jobs:
         run: |
           rm -rf -- "${RUNNER_TEMP:?}/eudi-wallet-conformance-inputs" \
             "${RUNNER_TEMP:?}/eudi-wallet-conformance-result.json" \
+            "${RUNNER_TEMP:?}/product-conformance-statement.json" \
+            "${RUNNER_TEMP:?}/wallet-preflight-run.json" \
+            "${RUNNER_TEMP:?}/wallet-preflight-jobs.json" \
+            "${RUNNER_TEMP:?}/identity-conformance-framework-release" \
             "${GITHUB_WORKSPACE:?}/components"

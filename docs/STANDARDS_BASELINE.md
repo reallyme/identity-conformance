@@ -1,13 +1,13 @@
 <!-- BEGIN GENERATED CONFORMANCE CATALOG -->
 # Standards baseline
 
-Framework version: **v0.2.0**
+Framework version: **v0.3.0**
 
 The framework pins the specifications, requirements, and test suites listed
 below. Each entry identifies the upstream version, the implemented validation,
 and when the pin was last reviewed.
 
-[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.2.0&color=475569)](../VERSION)
+[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.0&color=475569)](../VERSION)
 [![EU ARF](https://img.shields.io/static/v1?label=EU%20ARF&message=v3.0.0%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md)
 [![EU technical specifications](https://img.shields.io/static/v1?label=EU%20technical%20specifications&message=included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md)
 [![EU FCAF](https://img.shields.io/static/v1?label=EU%20FCAF&message=v0.0.10%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md)
@@ -37,6 +37,6 @@ review, not upstream publication.
 | [OpenID for Verifiable Credential Issuance](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | `1.0 Final` | Final specification for Issuer and Wallet certification plans. SHA-256 `f123c3178cacd27688b15b762098a045e9eb35eccfe2f5f18a357c3815e06ba7` | 2026-11-11 |
 | [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | `1.0 Final` | Final specification for Verifier and Wallet certification plans. SHA-256 `e4f0abc689afd0a4f6c41b83954d7f970c5263a26143ad861216aea9918993bb` | 2026-11-11 |
 | [OpenID4VC High Assurance Interoperability Profile](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0-final.html) | `1.0 Final` | High-assurance profile for OID4VCI and OID4VP plans. SHA-256 `3996e0479d06b72d6d68668b8ae3cd39fddfc29ae9220c0c3fead7dc060ec4fb` | 2026-11-11 |
-| [OpenID Conformance Suite](https://gitlab.com/openid/conformance-suite/-/tree/23353b36957d6466010de767c812d2c91ed37638) | `release-v5.3.4` | Executable certification suite for the plan matrix. Commit `23353b36957d6466010de767c812d2c91ed37638` | 2026-10-26 |
+| [OpenID Conformance Suite](https://gitlab.com/openid/conformance-suite/-/tree/23353b36957d6466010de767c812d2c91ed37638) | `release-v5.3.4` | Executable certification suite. The Wallet subset contains `10` configurations and `278` module executions. Commit `23353b36957d6466010de767c812d2c91ed37638` | 2026-10-26 |
 
 <!-- END GENERATED CONFORMANCE CATALOG -->
