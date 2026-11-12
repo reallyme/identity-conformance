@@ -1,0 +1,61 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/oidf-normative-ledger-v1.json",
+  "title": "ReallyMe OIDF normative plan ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema_version", "ledger_id", "domain", "authority", "suite", "specification_ids", "plan_path", "coverage", "rules"],
+  "properties": {
+    "$comment": {"type": "string", "minLength": 1},
+    "schema_version": {"const": 1},
+    "ledger_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"},
+    "domain": {"const": "oidf"},
+    "authority": {"const": "oidf_conformance_suite"},
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lock_path", "repository", "ref", "commit"],
+      "properties": {
+        "lock_path": {"const": "upstream/oidf/conformance-suite.lock.json"},
+        "repository": {"const": "https://gitlab.com/openid/conformance-suite.git"},
+        "ref": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "specification_ids": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "plan_path": {"const": "plans/oidf/certification.json"},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "complete_for_declared_plans", "certification_claim"],
+      "properties": {
+        "scope": {"const": "certification_plan_variant_values"},
+        "complete_for_declared_plans": {"const": true},
+        "certification_claim": {"const": false}
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "plan_id", "plan_projection", "expected", "suite_assertion_paths"],
+        "properties": {
+          "rule_id": {"type": "string", "minLength": 1},
+          "plan_id": {"type": "string", "minLength": 1},
+          "plan_projection": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "expected": {"type": "object", "minProperties": 1},
+          "suite_assertion_paths": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.release_source_inventory.v1",
+  "purpose": "latest-published-release-conformance-inputs",
+  "sources": [
+    {
+      "component_id": "ssi",
+      "repository": "https://github.com/reallyme/ssi",
+      "release_prefix": "reallyme-ssi-v",
+      "update_strategy": "latest_release"
+    },
+    {
+      "component_id": "identity",
+      "repository": "https://github.com/reallyme/identity",
+      "release_prefix": "reallyme-identity-v",
+      "update_strategy": "latest_release"
+    },
+    {
+      "component_id": "zk",
+      "repository": "https://github.com/reallyme/zk",
+      "release_prefix": "reallyme-zk-v",
+      "update_strategy": "latest_release"
+    },
+    {
+      "component_id": "wallet",
+      "repository": "https://github.com/reallyme/wallet",
+      "release_prefix": "reallyme-wallet-v",
+      "update_strategy": "latest_release"
+    },
+    {
+      "component_id": "openid4vci",
+      "repository": "https://github.com/reallyme/openid4vci",
+      "release_prefix": "reallyme-openid4vci-v",
+      "update_strategy": "latest_release"
+    },
+    {
+      "component_id": "openid4vp",
+      "repository": "https://github.com/reallyme/openid4vp",
+      "release_prefix": "reallyme-openid4vp-v",
+      "update_strategy": "latest_release"
+    }
+  ]
+}

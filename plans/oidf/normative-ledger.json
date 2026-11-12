@@ -1,0 +1,165 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "ledger_id": "oidf-certification-suite-release-v5.3.4",
+  "domain": "oidf",
+  "authority": "oidf_conformance_suite",
+  "suite": {
+    "lock_path": "upstream/oidf/conformance-suite.lock.json",
+    "repository": "https://gitlab.com/openid/conformance-suite.git",
+    "ref": "release-v5.3.4",
+    "commit": "23353b36957d6466010de767c812d2c91ed37638"
+  },
+  "specification_ids": [
+    "openid4vci-1.0-final",
+    "openid4vp-1.0-final",
+    "openid4vc-haip-1.0-final"
+  ],
+  "plan_path": "plans/oidf/certification.json",
+  "coverage": {
+    "scope": "certification_plan_variant_values",
+    "complete_for_declared_plans": true,
+    "certification_claim": false
+  },
+  "rules": [
+    {
+      "rule_id": "oidf.openid4vci.issuer.plan_values",
+      "plan_id": "oid4vci-1_0-issuer-haip-test-plan",
+      "plan_projection": [
+        "plan_id",
+        "selectable_parameters",
+        "fixed_parameters"
+      ],
+      "expected": {
+        "plan_id": "oid4vci-1_0-issuer-haip-test-plan",
+        "selectable_parameters": {
+          "credential_format": ["sd_jwt_vc", "mdoc"],
+          "vci_authorization_code_flow_variant": ["wallet_initiated", "issuer_initiated"]
+        },
+        "fixed_parameters": {
+          "sender_constrain": ["dpop"],
+          "fapi_profile": ["vci_haip"],
+          "fapi_request_method": ["unsigned"],
+          "client_auth_type": ["client_attestation"],
+          "vci_grant_type": ["authorization_code"],
+          "authorization_request_type": ["simple"],
+          "vci_credential_encryption": ["plain", "encrypted"],
+          "openid": ["plain_oauth"],
+          "fapi_response_mode": ["plain_response"]
+        }
+      },
+      "suite_assertion_paths": [
+        "src/main/java/net/openid/conformance/vci10issuer/VCIIssuerTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/variant/VCI1FinalCredentialFormat.java",
+        "src/main/java/net/openid/conformance/variant/VCIAuthorizationCodeFlowVariant.java"
+      ]
+    },
+    {
+      "rule_id": "oidf.openid4vci.wallet.plan_values",
+      "plan_id": "oid4vci-1_0-wallet-haip-test-plan",
+      "plan_projection": [
+        "plan_id",
+        "selectable_parameters",
+        "fixed_parameters"
+      ],
+      "expected": {
+        "plan_id": "oid4vci-1_0-wallet-haip-test-plan",
+        "selectable_parameters": {
+          "credential_format": ["sd_jwt_vc", "mdoc"],
+          "vci_authorization_code_flow_variant": ["wallet_initiated", "issuer_initiated"],
+          "vci_credential_offer_variant": {
+            "when": {"vci_authorization_code_flow_variant": "issuer_initiated"},
+            "values": ["by_value", "by_reference"]
+          }
+        },
+        "fixed_parameters": {
+          "sender_constrain": ["dpop"],
+          "fapi_profile": ["vci_haip"],
+          "fapi_request_method": ["unsigned"],
+          "client_auth_type": ["client_attestation"],
+          "vci_grant_type": ["authorization_code"],
+          "authorization_request_type": ["simple"],
+          "fapi_client_type": ["plain_oauth"],
+          "fapi_response_mode": ["plain_response"],
+          "vci_credential_issuance_mode": ["immediate", "deferred"],
+          "vci_credential_encryption": ["plain", "encrypted"]
+        }
+      },
+      "suite_assertion_paths": [
+        "src/main/java/net/openid/conformance/vci10wallet/VCIWalletTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vci10wallet/AbstractVCIWalletTest.java",
+        "src/main/java/net/openid/conformance/variant/VCI1FinalCredentialFormat.java",
+        "src/main/java/net/openid/conformance/variant/VCIWalletAuthorizationCodeFlowVariant.java",
+        "src/main/java/net/openid/conformance/variant/VCICredentialOfferParameterVariant.java"
+      ]
+    },
+    {
+      "rule_id": "oidf.openid4vp.verifier.plan_values",
+      "plan_id": "oid4vp-1final-verifier-haip-test-plan",
+      "plan_projection": [
+        "plan_id",
+        "selectable_parameters",
+        "fixed_parameters"
+      ],
+      "expected": {
+        "plan_id": "oid4vp-1final-verifier-haip-test-plan",
+        "selectable_parameters": {
+          "credential_format": ["sd_jwt_vc", "iso_mdl"],
+          "response_mode": ["direct_post.jwt"]
+        },
+        "fixed_parameters": {
+          "vp_profile": ["haip"],
+          "client_id_prefix": ["x509_hash"],
+          "request_method": ["request_uri_signed"]
+        }
+      },
+      "suite_assertion_paths": [
+        "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierCredentialFormat.java",
+        "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierResponseMode.java"
+      ]
+    },
+    {
+      "rule_id": "oidf.openid4vp.wallet.plan_values",
+      "plan_id": "oid4vp-1final-wallet-haip-test-plan",
+      "plan_projection": [
+        "plan_id",
+        "selectable_parameters",
+        "credential_type_by_credential_format",
+        "fixed_parameters_by_response_mode"
+      ],
+      "expected": {
+        "plan_id": "oid4vp-1final-wallet-haip-test-plan",
+        "selectable_parameters": {
+          "credential_format": ["sd_jwt_vc", "iso_mdl"],
+          "response_mode": ["direct_post.jwt", "dc_api.jwt"]
+        },
+        "credential_type_by_credential_format": {
+          "sd_jwt_vc": "eudi_pid",
+          "iso_mdl": "mdl"
+        },
+        "fixed_parameters_by_response_mode": {
+          "direct_post.jwt": {
+            "vp_profile": "haip",
+            "client_id_prefix": "x509_hash",
+            "request_method": "request_uri_signed"
+          },
+          "dc_api.jwt": {
+            "vp_profile": "haip",
+            "module_variants": [
+              {"client_id_prefix": "web-origin", "request_method": "request_uri_unsigned"},
+              {"client_id_prefix": "x509_hash", "request_method": "request_uri_signed"},
+              {"client_id_prefix": "x509_hash", "request_method": "request_uri_multisigned"}
+            ]
+          }
+        }
+      },
+      "suite_assertion_paths": [
+        "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletTestPlanHaip.java",
+        "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletCredentialFormat.java",
+        "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletResponseMode.java",
+        "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletCredentialType.java"
+      ]
+    }
+  ]
+}

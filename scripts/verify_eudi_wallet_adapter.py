@@ -51,13 +51,33 @@ EXPECTED_UPSTREAM_SOURCE_IDS = {
     "eudi-itb",
 }
 EXPECTED_ASSERTIONS = {
-    "candidate_source_integrity",
-    "upstream_reference_binding",
-    "eudi_minimum_requirements",
-    "issuance_flow",
-    "presentation_flow",
-    "malicious_input_rejection",
-    "wallet_release_quality",
+    "candidate_source_integrity": ["source.cargo-lock", "source.wallet-sources-lock"],
+    "upstream_reference_binding": [
+        "source.reference-implementation-lock",
+        "source.upstream-tests",
+        "framework.eudi-source-lock",
+        "framework.eudi-legal-source-lock",
+        "framework.eudi-publications-lock",
+    ],
+    "eudi_minimum_requirements": [
+        "source.eudi-wallet-minimums",
+        "normative.eu.arf.wua-33",
+        "normative.eu.arf.ew-dm-44-027",
+        "normative.eu.technical-specification.ts3-wia-ttl",
+        "cargo.reallyme-wallet-conformance",
+    ],
+    "issuance_flow": ["cargo.reallyme-wallet-conformance", "attestation.integration"],
+    "presentation_flow": ["cargo.reallyme-wallet-conformance", "attestation.vector"],
+    "malicious_input_rejection": [
+        "cargo.reallyme-wallet-conformance",
+        "attestation.security",
+    ],
+    "wallet_release_quality": [
+        "attestation.format",
+        "attestation.lint",
+        "attestation.unit",
+        "attestation.build",
+    ],
 }
 EXPECTED_SOURCE_ARTIFACTS = {
     "cargo-lock": "Cargo.lock",
@@ -175,8 +195,7 @@ def validate_plan(plan: dict[str, object]) -> None:
             or assertion_id in observed
             or assertion_id not in EXPECTED_ASSERTIONS
             or not isinstance(checks, list)
-            or not checks
-            or len(checks) != len(set(checks))
+            or checks != EXPECTED_ASSERTIONS.get(assertion_id)
             or not all(
                 isinstance(check, str) and IDENTIFIER.fullmatch(check) is not None
                 for check in checks

@@ -34,9 +34,10 @@ MANIFEST = load_script()
 
 class ReleaseManifestTests(unittest.TestCase):
     def test_repository_release_inputs_build_deterministically(self) -> None:
-        first = MANIFEST.build_manifest("1.2.3-rc.1", "a" * 40)
-        second = MANIFEST.build_manifest("1.2.3-rc.1", "a" * 40)
+        first = MANIFEST.build_manifest("a" * 40)
+        second = MANIFEST.build_manifest("a" * 40)
         self.assertEqual(first, second)
+        self.assertEqual(first["release_version"], MANIFEST.read_release_version())
         self.assertGreater(len(first["inputs"]), 10)
         paths = {item["path"] for item in first["inputs"]}
         self.assertIn("adapters/eudi-wallet/adapter.json", paths)
@@ -44,6 +45,8 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertIn("schemas/eudi-upstream-sources.schema.json", paths)
         self.assertIn("scripts/verify_eudi_upstream_coverage.py", paths)
         self.assertIn("references/eudi-publications.lock.json", paths)
+        self.assertIn("references/reallyme/release-sources.json", paths)
+        self.assertIn("references/upstream-update-policy.json", paths)
         self.assertIn("scripts/verify_eudi_publications.py", paths)
         self.assertIn("adapters/zk/adapter.json", paths)
         self.assertIn("adapters/wallet/README.md", paths)
@@ -53,7 +56,7 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(MANIFEST.validate_manifest(first), first)
 
     def test_manifest_rejects_a_tampered_aggregate_digest(self) -> None:
-        value = MANIFEST.build_manifest("1.2.3", "a" * 40)
+        value = MANIFEST.build_manifest("a" * 40)
         value["input_set_sha256"] = "f" * 64
         with self.assertRaises(MANIFEST.ManifestError):
             MANIFEST.validate_manifest(value)
@@ -69,12 +72,15 @@ class ReleaseManifestTests(unittest.TestCase):
             )
 
     def test_invalid_version_is_rejected(self) -> None:
-        with self.assertRaises(MANIFEST.ManifestError):
-            MANIFEST.build_manifest("release-latest", "a" * 40)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "VERSION").write_text("release-latest\n", encoding="ascii")
+            with self.assertRaises(MANIFEST.ManifestError):
+                MANIFEST.read_release_version(root)
 
     def test_short_commit_is_rejected(self) -> None:
         with self.assertRaises(MANIFEST.ManifestError):
-            MANIFEST.build_manifest("1.2.3", "abc123")
+            MANIFEST.build_manifest("abc123")
 
     def test_aggregate_digest_binds_path_hash_and_size(self) -> None:
         original = [MANIFEST.InputDigest("plans/a.json", "a" * 64, 10)]
@@ -96,7 +102,7 @@ class ReleaseManifestTests(unittest.TestCase):
     def test_manifest_is_written_as_valid_json(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "manifest.json"
-            value = MANIFEST.build_manifest("1.2.3", "b" * 40)
+            value = MANIFEST.build_manifest("b" * 40)
             MANIFEST.write_manifest(output, value)
             self.assertEqual(json.loads(output.read_text(encoding="utf-8")), value)
 

@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: OIDF conformance - certification-suite ledger
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-suite-ledger:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: identity-conformance
+          persist-credentials: false
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+      - name: Checkout the exact GitLab conformance-suite release
+        working-directory: identity-conformance
+        run: |
+          repository="$(jq -er '.repository' upstream/oidf/conformance-suite.lock.json)"
+          pinned_ref="$(jq -er '.pinned_ref' upstream/oidf/conformance-suite.lock.json)"
+          expected_commit="$(jq -er '.commit' upstream/oidf/conformance-suite.lock.json)"
+          [[ "${expected_commit}" =~ ^[0-9a-f]{40}$ ]]
+          suite_dir="${RUNNER_TEMP}/openid-conformance-suite"
+          git clone --depth 1 --branch "${pinned_ref}" -- "${repository}" "${suite_dir}"
+          test "$(git -C "${suite_dir}" rev-parse HEAD)" = "${expected_commit}"
+          test -z "$(git -C "${suite_dir}" status --porcelain)"
+      - name: Verify OIDF plan values against the exact suite source
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/verify_oidf_normative_ledger.py --suite-repository "${RUNNER_TEMP}/openid-conformance-suite"
+          version="$(tr -d '\n' < VERSION)"
+          printf '## OIDF · Identity Conformance v%s\n' "${version}" >> "${GITHUB_STEP_SUMMARY}"

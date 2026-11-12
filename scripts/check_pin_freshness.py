@@ -38,6 +38,7 @@ EUDI_SOURCES = REPOSITORY_ROOT / "upstream/eudi/sources.lock.json"
 EUDI_PUBLICATIONS = REPOSITORY_ROOT / "references/eudi-publications.lock.json"
 OIDF_SPECIFICATIONS = REPOSITORY_ROOT / "upstream/oidf/specifications.lock.json"
 PIN_POLICY = REPOSITORY_ROOT / "references/pin-policy.json"
+TRACE_SOURCES = REPOSITORY_ROOT / "references/reallyme/trace-sources.lock.json"
 MAX_LOCAL_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 HTTP_TIMEOUT_SECONDS = 20
@@ -71,6 +72,15 @@ class CheckResult:
     status: str
     expected: str
     observed: str
+
+
+@dataclass(frozen=True)
+class UnavailableCheck:
+    check_id: str
+    reason: str
+
+
+CheckOperation = Callable[[], tuple[list[CheckResult], list[str]]]
 
 
 def fail(message: str, exit_code: int) -> NoReturn:
@@ -417,6 +427,46 @@ def check_oidf(fetcher: FetchJson) -> list[CheckResult]:
             required_string(branch["commit"].get("id"), "OIDF master commit"),
         ),
     ]
+
+
+def check_reallyme_trace_releases(fetcher: FetchJson) -> list[CheckResult]:
+    lock = read_object(TRACE_SOURCES)
+    sources = required_list(lock.get("sources"), "ReallyMe trace sources")
+    results: list[CheckResult] = []
+    observed_components: set[str] = set()
+    for raw_source in sources:
+        if not isinstance(raw_source, dict):
+            raise FreshnessError("ReallyMe trace source is invalid")
+        component_id = required_string(
+            raw_source.get("component_id"), "ReallyMe component id"
+        )
+        if component_id in observed_components:
+            raise FreshnessError("ReallyMe trace source is duplicated")
+        observed_components.add(component_id)
+        if raw_source.get("update_strategy") != "latest_release":
+            raise FreshnessError("ReallyMe trace source policy is invalid")
+        repository = github_repository_from_url(
+            raw_source.get("repository"), "ReallyMe component repository"
+        )
+        expected_repository = f"reallyme/{component_id}"
+        if repository != expected_repository:
+            raise FreshnessError("ReallyMe component repository identity is invalid")
+        results.extend(
+            check_github_release(
+                f"reallyme.trace.{component_id}",
+                repository,
+                required_string(
+                    raw_source.get("release_ref"), "ReallyMe component release"
+                ),
+                required_string(
+                    raw_source.get("commit"), "ReallyMe component release commit"
+                ),
+                fetcher,
+            )
+        )
+    if observed_components != {"openid4vci", "openid4vp", "ssi"}:
+        raise FreshnessError("ReallyMe trace source inventory is invalid")
+    return results
 
 
 def github_repository_from_url(value: object, context: str) -> str:
@@ -870,21 +920,9 @@ def check_policy(fetcher: FetchJson) -> tuple[list[CheckResult], list[str]]:
     return results, manual_sources
 
 
-def run_checks(
-    fetcher: FetchJson = fetch_json, byte_fetcher: FetchBytes = fetch_bytes
-) -> tuple[list[CheckResult], list[str]]:
-    results: list[CheckResult] = []
-    results.extend(check_oidf(fetcher))
-    results.extend(check_oidf_specifications(fetcher, byte_fetcher))
-    results.extend(check_eudi_sources(fetcher))
-    publication_results, publication_manual_sources = check_eudi_publications(
-        byte_fetcher
-    )
-    results.extend(publication_results)
-    results.extend(check_eudi_reference(fetcher))
-    policy_results, manual_sources = check_policy(fetcher)
-    results.extend(policy_results)
+def check_maven_releases(byte_fetcher: FetchBytes) -> list[CheckResult]:
     policy = read_object(PIN_POLICY)
+    results: list[CheckResult] = []
     for raw_monitor in required_list(
         policy.get("maven_release_monitors"), "Maven release monitors"
     ):
@@ -917,6 +955,12 @@ def run_checks(
                         observed="absent",
                     )
                 )
+    return results
+
+
+def check_rust_toolchains(byte_fetcher: FetchBytes) -> list[CheckResult]:
+    policy = read_object(PIN_POLICY)
+    results: list[CheckResult] = []
     for raw_monitor in required_list(
         policy.get("rust_toolchain_monitors"), "Rust toolchain monitors"
     ):
@@ -944,7 +988,100 @@ def run_checks(
                         observed="absent",
                     )
                 )
-    return results, publication_manual_sources + manual_sources
+    return results
+
+
+def collect_check_group(
+    check_id: str,
+    operation: CheckOperation,
+    results: list[CheckResult],
+    manual_sources: list[str],
+    unavailable_checks: list[UnavailableCheck],
+) -> None:
+    """Run an independent publisher group without hiding other observations."""
+
+    try:
+        group_results, group_manual_sources = operation()
+    except FreshnessError as error:
+        unavailable_checks.append(
+            UnavailableCheck(check_id=check_id, reason=str(error))
+        )
+        return
+    results.extend(group_results)
+    manual_sources.extend(group_manual_sources)
+
+
+def run_checks(
+    fetcher: FetchJson = fetch_json, byte_fetcher: FetchBytes = fetch_bytes
+) -> tuple[list[CheckResult], list[str], list[UnavailableCheck]]:
+    results: list[CheckResult] = []
+    manual_sources: list[str] = []
+    unavailable_checks: list[UnavailableCheck] = []
+
+    collect_check_group(
+        "reallyme_trace_releases",
+        lambda: (check_reallyme_trace_releases(fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "oidf_suite",
+        lambda: (check_oidf(fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "oidf_specifications",
+        lambda: (check_oidf_specifications(fetcher, byte_fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "eudi_sources",
+        lambda: (check_eudi_sources(fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "eudi_publications",
+        lambda: check_eudi_publications(byte_fetcher),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "eudi_reference",
+        lambda: (check_eudi_reference(fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "pin_policy",
+        lambda: check_policy(fetcher),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "maven_releases",
+        lambda: (check_maven_releases(byte_fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    collect_check_group(
+        "rust_toolchains",
+        lambda: (check_rust_toolchains(byte_fetcher), []),
+        results,
+        manual_sources,
+        unavailable_checks,
+    )
+    return results, manual_sources, unavailable_checks
 
 
 def main() -> int:
@@ -957,7 +1094,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
-        results, manual_sources = run_checks()
+        results, manual_sources, unavailable_checks = run_checks()
     except FreshnessError as error:
         if args.format == "json":
             print(
@@ -967,7 +1104,14 @@ def main() -> int:
                         "status": "unavailable",
                         "checks": [],
                         "manual_sources": [],
-                        "error": {"code": "authoritative_source_unavailable"},
+                        "unavailable_checks": [
+                            asdict(
+                                UnavailableCheck(
+                                    check_id="freshness_evaluation",
+                                    reason=str(error),
+                                )
+                            )
+                        ],
                     },
                     indent=2,
                 )
@@ -975,14 +1119,20 @@ def main() -> int:
             return EXIT_UNAVAILABLE
         fail(str(error), EXIT_UNAVAILABLE)
     stale = [result for result in results if result.status == "stale"]
+    report_status = (
+        "stale" if stale else "unavailable" if unavailable_checks else "current"
+    )
     if args.format == "json":
         print(
             json.dumps(
                 {
                     "schema": "reallyme.identity.pin_freshness_report.v1",
-                    "status": "stale" if stale else "current",
+                    "status": report_status,
                     "checks": [asdict(result) for result in results],
                     "manual_sources": manual_sources,
+                    "unavailable_checks": [
+                        asdict(unavailable) for unavailable in unavailable_checks
+                    ],
                 },
                 indent=2,
             )
@@ -995,7 +1145,16 @@ def main() -> int:
             )
         for source in manual_sources:
             print(f"manual: {source}")
-    return EXIT_STALE if stale else 0
+        for unavailable in unavailable_checks:
+            print(
+                f"unavailable: {unavailable.check_id}: {unavailable.reason}",
+                file=sys.stderr,
+            )
+    if stale:
+        return EXIT_STALE
+    if unavailable_checks:
+        return EXIT_UNAVAILABLE
+    return 0
 
 
 if __name__ == "__main__":

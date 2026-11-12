@@ -37,7 +37,7 @@
   "assertions": [
     {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock"]},
     {"assertion_id": "upstream_reference_binding", "required_checks": ["source.reference-implementation-lock", "source.upstream-tests", "framework.eudi-source-lock", "framework.eudi-legal-source-lock", "framework.eudi-publications-lock"]},
-    {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "cargo.reallyme-wallet-conformance"]},
+    {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "normative.eu.arf.wua-33", "normative.eu.arf.ew-dm-44-027", "normative.eu.technical-specification.ts3-wia-ttl", "cargo.reallyme-wallet-conformance"]},
     {"assertion_id": "issuance_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.integration"]},
     {"assertion_id": "presentation_flow", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.vector"]},
     {"assertion_id": "malicious_input_rejection", "required_checks": ["cargo.reallyme-wallet-conformance", "attestation.security"]},

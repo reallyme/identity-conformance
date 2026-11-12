@@ -76,6 +76,7 @@ def valid_result() -> dict[str, object]:
         "plan_id": "eudi-wallet-engineering-v1",
         "result": "passed",
         "created_at": "2026-11-11T12:00:00Z",
+        "framework_version": RUNNER.framework_version(),
         "framework_revision": "2" * 40,
         "workflow_revision": "3" * 40,
         "candidate_sha256": "0" * 64,
@@ -87,6 +88,7 @@ def valid_result() -> dict[str, object]:
             "eudi_legal_sources_sha256": "d" * 64,
             "eudi_publications_sha256": "e" * 64,
         },
+        "normative_ledgers": RUNNER.normative_ledger_digests(),
         "checks": [
             {"check_id": check_id, "kind": kind, "result": "passed"}
             for check_id, kind in sorted(kinds.items())
@@ -103,10 +105,12 @@ def valid_result() -> dict[str, object]:
     }
     candidate = {
         "plan_id": result["plan_id"],
+        "framework_version": result["framework_version"],
         "component": result["component"],
         "release_artifact": deployment["release_artifact"],
         "component_attestation_sha256": result["component_attestation_sha256"],
         "source_locks": result["source_locks"],
+        "normative_ledgers": result["normative_ledgers"],
     }
     result["candidate_sha256"] = RUNNER.candidate_digest(candidate)
     return result
@@ -195,6 +199,12 @@ class EudiWalletConformanceTests(unittest.TestCase):
     def test_result_rejects_mixed_candidate_inputs(self) -> None:
         changed = valid_result()
         changed["release_artifact_sha256"] = "f" * 64
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_substituted_normative_ledger_digest(self) -> None:
+        changed = valid_result()
+        changed["normative_ledgers"]["eu_arf_sha256"] = "f" * 64
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
 

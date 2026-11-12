@@ -1,0 +1,51 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "ledger_id": "eu-arf-wallet-v3.0.0",
+  "domain": "eu",
+  "authority": "arf",
+  "source": {
+    "source_id": "eudi-arf",
+    "ref": "v3.0.0",
+    "commit": "c64f2cbb19aee37c571c58af66d359c4d5be29c8",
+    "path": "docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md"
+  },
+  "coverage": {
+    "component_id": "wallet",
+    "scope": "implemented_numeric_and_enumerated_wallet_boundaries",
+    "complete_for_declared_boundaries": true,
+    "certification_claim": false
+  },
+  "rules": [
+    {
+      "rule_id": "eu.arf.WUA_33.wia_technical_validity",
+      "source_requirement_id": "WUA_33",
+      "source_path": "docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md",
+      "requirement_level": "shall",
+      "boundary_id": "wallet.wia.technical_validity_seconds",
+      "statement": "the technical validity period of a WIA SHALL be less than 24 hours",
+      "expected": {
+        "value_type": "duration_seconds",
+        "operator": "less_than",
+        "value": 86400
+      }
+    },
+    {
+      "rule_id": "eu.arf.EW-DM-44-027.unregistered_attribute_policy",
+      "source_requirement_id": "EW-DM-44-027",
+      "source_path": "docs/annexes/annex-2/annex-2.03-high-level-requirements-by-category.md",
+      "requirement_level": "shall",
+      "boundary_id": "wallet.presentation.unregistered_attribute_policy",
+      "statement": "the Wallet Provider SHALL determine, based on its risk analysis and security policy, whether the Wallet Unit must a) enable the User to approve (or reject) the presentation of all requested attributes, including the non-registered ones, b) enable the User to approve (or reject) the presentation of the registered attributes only, or c) reject the presentation of all requested attributes.",
+      "expected": {
+        "value_type": "string_set",
+        "operator": "one_of",
+        "value": [
+          "warn_and_allow_all",
+          "registered_only",
+          "reject_request"
+        ]
+      }
+    }
+  ]
+}

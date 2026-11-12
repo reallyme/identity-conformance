@@ -1,0 +1,88 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eu-normative-ledger-v1.json",
+  "title": "ReallyMe EU normative ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema_version", "ledger_id", "domain", "authority", "source", "coverage", "rules"],
+  "properties": {
+    "$comment": {"type": "string", "minLength": 1},
+    "schema_version": {"const": 1},
+    "ledger_id": {"$ref": "#/$defs/id"},
+    "domain": {"const": "eu"},
+    "authority": {"enum": ["arf", "technical_specification", "fcaf"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "ref", "commit", "path"],
+      "properties": {
+        "source_id": {"$ref": "#/$defs/id"},
+        "ref": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "scope", "complete_for_declared_boundaries", "certification_claim"],
+      "properties": {
+        "component_id": {"const": "wallet"},
+        "scope": {"type": "string", "minLength": 1},
+        "complete_for_declared_boundaries": {"const": true},
+        "certification_claim": {"const": false}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_state", "executable_test_case_count", "required_classes"],
+      "properties": {
+        "execution_state": {"const": "methodology_only"},
+        "executable_test_case_count": {"const": 0},
+        "required_classes": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "rules": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/rule"}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"authority": {"const": "fcaf"}}, "required": ["authority"]},
+      "then": {"required": ["assessment"], "properties": {"rules": {"maxItems": 0}}},
+      "else": {"properties": {"rules": {"minItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"},
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "source_requirement_id", "source_path", "requirement_level", "boundary_id", "statement", "expected"],
+      "properties": {
+        "rule_id": {"$ref": "#/$defs/id"},
+        "source_requirement_id": {"type": "string", "minLength": 1},
+        "source_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+        "requirement_level": {"const": "shall"},
+        "boundary_id": {"$ref": "#/$defs/id"},
+        "statement": {"type": "string", "minLength": 16},
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value_type", "operator", "value"],
+          "properties": {
+            "value_type": {"enum": ["duration_seconds", "integer", "string_set"]},
+            "operator": {"enum": ["less_than", "less_than_or_equal", "equal", "one_of"]},
+            "value": {"oneOf": [{"type": "integer"}, {"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+          }
+        }
+      }
+    }
+  }
+}

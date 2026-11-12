@@ -16,7 +16,7 @@
   },
   "source_integrity": {
     "ssi_repository": "https://github.com/reallyme/ssi",
-    "ssi_commit": "43dddafe1c9be46260c01334bcf3d9e34f5c066a",
+    "ssi_commit": "78752d5dcd0184d4c8917308354ce5b932d55d4e",
     "trace_path": "crates/eudi/etsi-eaa-conformance/requirements/requirement-trace.tsv",
     "trace_sha256": "d17548a1ace992b123c3eb1719ad80c976d8395fdd1f9251a91bd30fbfa82206",
     "index_sha256": "2c2e1afc6207893b84f39f4a734de6041b691e97cb123f28c117338920324b90",

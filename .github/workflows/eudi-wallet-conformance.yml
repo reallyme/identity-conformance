@@ -48,7 +48,12 @@ jobs:
       - name: Verify the framework checkout
         env:
           FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
-        run: test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+        run: |
+          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
+          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          printf '## Identity Conformance v%s\n\nFramework commit: %s\n' \
+            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Install latest Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -75,18 +80,25 @@ jobs:
           python3 identity-conformance/scripts/verify_eudi_wallet_deployment_manifest.py \
             --manifest "${input_dir}/deployment.json"
 
-      - name: Resolve exact wallet source revision
+      - name: Resolve latest published Wallet release
         id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           commit="$(jq -er '.component.commit' "${RUNNER_TEMP}/eudi-wallet-conformance-inputs/deployment.json")"
           [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
-          printf 'commit=%s\n' "${commit}" >> "${GITHUB_OUTPUT}"
+          release_ref="$(gh api 'repos/reallyme/wallet/releases/latest' --jq '.tag_name')"
+          [[ "${release_ref}" =~ ^reallyme-wallet-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
+          release_commit="$(gh api "repos/reallyme/wallet/commits/${release_ref}" --jq '.sha')"
+          test "${commit}" = "${release_commit}"
+          printf 'commit=%s\n' "${release_commit}" >> "${GITHUB_OUTPUT}"
+          printf 'release_ref=%s\n' "${release_ref}" >> "${GITHUB_OUTPUT}"
 
       - name: Checkout exact wallet source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/wallet
-          ref: ${{ steps.source.outputs.commit }}
+          ref: ${{ steps.source.outputs.release_ref }}
           path: components/wallet
           persist-credentials: false
 
@@ -128,6 +140,6 @@ jobs:
       - name: Remove working material
         if: always()
         run: |
-          rm -rf -- "${RUNNER_TEMP}/eudi-wallet-conformance-inputs" \
-            "${RUNNER_TEMP}/eudi-wallet-conformance-result.json" \
-            "${GITHUB_WORKSPACE}/components"
+          rm -rf -- "${RUNNER_TEMP:?}/eudi-wallet-conformance-inputs" \
+            "${RUNNER_TEMP:?}/eudi-wallet-conformance-result.json" \
+            "${GITHUB_WORKSPACE:?}/components"

@@ -87,7 +87,7 @@
     },
     {
       "source_id": "eudi-ios-wallet-kit", "role": "released_mobile_wallet_core_interoperability_target", "coverage_class": "interoperability_target",
-      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit", "ref": "v0.61.0", "update_strategy": "latest_release", "commit": "b45c4a0e1841fad0d1f73b6206861577d1ec16ee", "license": "Apache-2.0", "certification_claim": false,
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit", "ref": "v0.61.1", "update_strategy": "latest_release", "commit": "b210513db57df08ae284594aa230a091281ea43b", "license": "Apache-2.0", "certification_claim": false,
       "local_checkout": "upstream/eudi/checkouts/eudi-lib-ios-wallet-kit"
     },
     {

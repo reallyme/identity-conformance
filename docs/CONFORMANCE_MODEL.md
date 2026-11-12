@@ -55,6 +55,35 @@ Component repositories may trigger this flow, but they do not determine the
 outcome. A trigger is a request to run an immutable framework version, not a
 report that the system is conformant.
 
+## Independent normative oracles
+
+EU and OIDF are different conformance authorities and never share a pass/fail
+bucket. Each authority has its own machine-readable ledger, exact upstream
+pin, source validator, workflow, and badge.
+
+EU conformance is further split by source authority. The ARF lane validates
+requirement identifiers and selected implemented boundary values against the
+exact released ARF. The technical-specification lane independently validates
+values that are stated in the pinned TS documents. The FCAF lane validates the
+published assessment structure and must report `methodology_only` while the
+pinned release has no executable Wallet cases. Future official EU test suites
+must receive their own runner and closed result schema; pinning them does not
+make the ARF or FCAF badges execution evidence.
+
+For Wallet execution, the candidate supplies source and artifacts but never
+the expected EU value. The framework reads the exact candidate source,
+observes the implemented comparison or enumerated boundary, and compares that
+observation with the pinned-source ledger. Missing observations, inclusive
+versus exclusive comparison drift, changed constants, unclassified ledger
+rules, and incomplete enumerations fail closed.
+
+The OIDF source lane binds every declared certification plan projection to the
+exact conformance-suite release. Its assertions are owned by the certification
+plan and resolved from the pinned GitLab commit, including plan-fixed variants,
+selectable parameter definitions, and suite applicability exclusions. A green
+source lane proves the local matrix still describes that suite release; it is
+not an OIDF execution or certification result.
+
 ## Release classes
 
 ### Framework release
@@ -108,7 +137,8 @@ an EU conformity-assessment outcome.
 
 The EUDI Wallet lane is separate from the relying-party lane. It binds the
 wallet source and release artifact to its component attestation, verifies the
-committed EU source-selection and requirement ledgers, and executes the wallet
+committed EU source-selection and requirement ledgers, independently evaluates
+the candidate's machine-observable EU boundary values, and executes the wallet
 conformance package. Its result establishes only the selected internal
 engineering contract; an external testbed or conformity-assessment result must
 be retained as separate evidence.
@@ -150,9 +180,33 @@ governing contract.
 ## Automation policy
 
 Scheduled automation detects upstream releases, source drift, changed
-publication bytes, dependency versions, and tool updates. It can produce a
-review-only update proposal, but it does not change a baseline or issue a
-conformance result. Pin updates require review and regeneration of affected
-plans and snapshots. Framework release creation, product execution, evidence
-promotion, and remote publication remain distinct operations with separate
-authorization.
+publication bytes, dependency versions, and tool updates on a weekly cadence.
+It classifies changes before proposing a framework version:
+
+- a latest stable release or tag may seed a versioned candidate;
+- an untagged default-branch commit enters snapshot review and cannot advance
+  the baseline by itself;
+- changed bytes for an ostensibly immutable publication are an integrity-review
+  event, not a routine upgrade; and
+- monitor-only sources cannot advance the baseline.
+
+An accepted candidate updates the repository-controlled `VERSION`, exact locks,
+affected ledgers and runners, generated README catalog, and source snapshots as
+one reviewable change. Mechanical updates can be automated. A changed normative
+statement or value requires semantic review because a pin update cannot safely
+infer the intended conformance rule.
+
+Candidate construction reads the version from `VERSION`; callers cannot assign
+an unrelated release number. All EU and OIDF gates must pass against the exact
+candidate commit. A separate protected promotion workflow compares the retained
+candidate manifest with a deterministic rebuild before creating `v<VERSION>`.
+Product execution, evidence promotion, and remote publication remain distinct
+operations with separate authorization. Downstream repositories continue to
+use their exact pinned framework revision until they intentionally upgrade.
+
+The ReallyMe latest-release inventory is closed to `ssi`, `identity`, `zk`,
+`wallet`, `openid4vci`, and `openid4vp`. Latest-release regression runs resolve
+published GitHub release tags and verify their exact commits. They do not use a
+repository default branch. Exact-BOM runs remain available for testing an older
+published release or a specifically selected release candidate; their results
+must state that they are not the latest-release lane.

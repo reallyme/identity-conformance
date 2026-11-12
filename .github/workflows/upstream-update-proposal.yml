@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: upstream update proposal
+name: conformance baseline update proposal
 
 on:
   schedule:
@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  oidf-proposal:
-    runs-on: ubuntu-latest
+  baseline-proposal:
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - name: Checkout identity-conformance
@@ -25,17 +25,17 @@ jobs:
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.15.2"
-      - name: Build review-only OIDF update proposal
+      - name: Build versioned conformance update proposal
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           test -n "${GITHUB_TOKEN}"
-          python3 scripts/build_oidf_update_proposal.py \
-            --output "${RUNNER_TEMP}/oidf-update-proposal.json"
+          python3 scripts/build_conformance_update_proposal.py \
+            --output "${RUNNER_TEMP}/conformance-update-proposal.json"
       - name: Retain proposal for review
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: oidf-update-proposal
-          path: ${{ runner.temp }}/oidf-update-proposal.json
+          name: conformance-update-proposal
+          path: ${{ runner.temp }}/conformance-update-proposal.json
           if-no-files-found: error
           retention-days: 14

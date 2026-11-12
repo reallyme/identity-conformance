@@ -18,6 +18,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import run_eudi_wallet_conformance as runner  # noqa: E402
+import verify_eu_wallet_boundaries as normative_boundaries  # noqa: E402
 import verify_eudi_wallet_adapter as adapter_verifier  # noqa: E402
 
 
@@ -47,12 +48,36 @@ def expected_check_kinds(adapter: dict[str, object]) -> dict[str, str]:
                 runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
             )
         package_checks[f"cargo.{package}"] = "cargo"
+    boundary_adapter = normative_boundaries.load_adapter()
+    raw_boundaries = boundary_adapter.get("implemented_boundaries")
+    if not isinstance(raw_boundaries, list):
+        raise runner.EudiWalletRunnerError(
+            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        )
+    normative_checks: dict[str, str] = {}
+    for raw_boundary in raw_boundaries:
+        if not isinstance(raw_boundary, dict):
+            raise runner.EudiWalletRunnerError(
+                runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+            )
+        checks = raw_boundary.get("normative_checks")
+        if not isinstance(checks, dict):
+            raise runner.EudiWalletRunnerError(
+                runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+            )
+        for check_id in checks.values():
+            if not isinstance(check_id, str) or check_id in normative_checks:
+                raise runner.EudiWalletRunnerError(
+                    runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+                )
+            normative_checks[check_id] = "normative"
     return {
         **source_checks,
         "artifact.wallet-release-bundle": "artifact",
         "framework.eudi-source-lock": "source",
         "framework.eudi-legal-source-lock": "source",
         "framework.eudi-publications-lock": "source",
+        **normative_checks,
         **{
             f"attestation.{category}": "attestation"
             for category in adapter_verifier.EXPECTED_ATTESTATION_CATEGORIES
@@ -67,6 +92,7 @@ def verify_result(value: dict[str, object]) -> None:
         "plan_id",
         "result",
         "created_at",
+        "framework_version",
         "framework_revision",
         "workflow_revision",
         "candidate_sha256",
@@ -74,6 +100,7 @@ def verify_result(value: dict[str, object]) -> None:
         "release_artifact_sha256",
         "component_attestation_sha256",
         "source_locks",
+        "normative_ledgers",
         "checks",
         "assertions",
         "evidence_policy",
@@ -88,6 +115,7 @@ def verify_result(value: dict[str, object]) -> None:
         or value["result"] != "passed"
         or not isinstance(value["created_at"], str)
         or TIMESTAMP.fullmatch(value["created_at"]) is None
+        or value["framework_version"] != runner.framework_version()
         or not isinstance(value["framework_revision"], str)
         or re.fullmatch(r"[0-9a-f]{40}", value["framework_revision"]) is None
         or not isinstance(value["workflow_revision"], str)
@@ -112,6 +140,7 @@ def verify_result(value: dict[str, object]) -> None:
             and adapter_verifier.SHA256.fullmatch(digest) is not None
             for digest in value["source_locks"].values()
         )
+        or value["normative_ledgers"] != runner.normative_ledger_digests()
     ):
         raise runner.EudiWalletRunnerError(
             runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
@@ -132,6 +161,7 @@ def verify_result(value: dict[str, object]) -> None:
         )
     candidate = {
         "plan_id": value["plan_id"],
+        "framework_version": value["framework_version"],
         "component": component,
         "release_artifact": {
             "artifact_id": "wallet-release-bundle",
@@ -140,6 +170,7 @@ def verify_result(value: dict[str, object]) -> None:
         },
         "component_attestation_sha256": value["component_attestation_sha256"],
         "source_locks": value["source_locks"],
+        "normative_ledgers": value["normative_ledgers"],
     }
     if value["candidate_sha256"] != runner.candidate_digest(candidate):
         raise runner.EudiWalletRunnerError(
