@@ -35,8 +35,14 @@ CATALOG = load_script()
 class ConformanceCatalogTests(unittest.TestCase):
     def test_checked_in_catalog_matches_release_inputs(self) -> None:
         current_readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
-        expected_readme = CATALOG.replace_generated_section(
+        expected_readme_with_badges = CATALOG.replace_generated_section(
             current_readme,
+            CATALOG.BADGES_START_MARKER,
+            CATALOG.BADGES_END_MARKER,
+            CATALOG.render_badges(),
+        )
+        expected_readme = CATALOG.replace_generated_section(
+            expected_readme_with_badges,
             CATALOG.SUMMARY_START_MARKER,
             CATALOG.SUMMARY_END_MARKER,
             CATALOG.render_summary(),
@@ -82,6 +88,19 @@ class ConformanceCatalogTests(unittest.TestCase):
         self.assertIn("`main @ cfc383e4`", summary)
         self.assertIn("`main @ b0e22243`", summary)
         self.assertIn("docs/STANDARDS_BASELINE.md", summary)
+
+    def test_readme_badges_distinguish_health_from_included_baselines(self) -> None:
+        badges = CATALOG.render_badges()
+        version = CATALOG.read_version()
+        self.assertIn("release-readiness.yml/badge.svg", badges)
+        self.assertIn("secret-scan.yml/badge.svg", badges)
+        self.assertIn(f"label=Framework&message=v{version}", badges)
+        self.assertIn("label=EU%20ARF&message=v3.0.0%20included", badges)
+        self.assertIn(
+            "label=OIDF%20suite&message=release-v5.3.4%20included",
+            badges,
+        )
+        self.assertNotIn("message=passing", badges)
 
     def test_inconsistent_ledger_commit_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

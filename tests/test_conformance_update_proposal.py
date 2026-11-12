@@ -51,7 +51,12 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             patch.object(
                 BUILDER.freshness,
                 "run_checks",
-                return_value=(checks, [], []),
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=tuple(checks),
+                    manual_sources=(),
+                    unavailable_checks=(),
+                    release_sources=(),
+                ),
             ),
             patch.object(
                 BUILDER.oidf,
@@ -76,13 +81,47 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             patch.object(
                 BUILDER.freshness,
                 "run_checks",
-                return_value=([], [], []),
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=(),
+                    manual_sources=(),
+                    unavailable_checks=(),
+                    release_sources=(),
+                ),
             ),
             patch.object(BUILDER.oidf, "build_proposal", return_value={}),
         ):
             proposal = BUILDER.build_proposal()
         self.assertFalse(proposal["update_available"])
         self.assertFalse(proposal["version_candidate_available"])
+        self.assertIsNone(proposal["proposed_framework_version"])
+
+    def test_latest_reallyme_releases_are_reported_without_becoming_pins(self) -> None:
+        observation = BUILDER.freshness.ReleaseSourceObservation(
+            component_id="zk",
+            repository="https://github.com/reallyme/zk",
+            release_ref="reallyme-zk-v0.3.2",
+            commit="a" * 40,
+        )
+        with (
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=(),
+                    manual_sources=(),
+                    unavailable_checks=(),
+                    release_sources=(observation,),
+                ),
+            ),
+            patch.object(BUILDER.oidf, "build_proposal", return_value={}),
+        ):
+            proposal = BUILDER.build_proposal()
+
+        self.assertEqual(
+            proposal["release_sources"],
+            [BUILDER.asdict(observation)],
+        )
+        self.assertFalse(proposal["update_available"])
         self.assertIsNone(proposal["proposed_framework_version"])
 
     def test_default_branch_movement_requires_snapshot_review(self) -> None:
@@ -98,7 +137,12 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             patch.object(
                 BUILDER.freshness,
                 "run_checks",
-                return_value=(checks, [], []),
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=tuple(checks),
+                    manual_sources=(),
+                    unavailable_checks=(),
+                    release_sources=(),
+                ),
             ),
             patch.object(BUILDER.oidf, "build_proposal", return_value={}),
         ):
@@ -120,7 +164,12 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             patch.object(
                 BUILDER.freshness,
                 "run_checks",
-                return_value=([], [], [unavailable]),
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=(),
+                    manual_sources=(),
+                    unavailable_checks=(unavailable,),
+                    release_sources=(),
+                ),
             ),
             patch.object(BUILDER.oidf, "build_proposal", return_value={}),
         ):
@@ -139,7 +188,12 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             patch.object(
                 BUILDER.freshness,
                 "run_checks",
-                return_value=([], [], []),
+                return_value=BUILDER.freshness.FreshnessEvaluation(
+                    checks=(),
+                    manual_sources=(),
+                    unavailable_checks=(),
+                    release_sources=(),
+                ),
             ),
             patch.object(
                 BUILDER.oidf,

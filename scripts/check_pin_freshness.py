@@ -28,6 +28,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import strict_json  # noqa: E402
+import verify_reallyme_release_sources as release_sources  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,9 @@ EUDI_PUBLICATIONS = REPOSITORY_ROOT / "references/eudi-publications.lock.json"
 OIDF_SPECIFICATIONS = REPOSITORY_ROOT / "upstream/oidf/specifications.lock.json"
 PIN_POLICY = REPOSITORY_ROOT / "references/pin-policy.json"
 TRACE_SOURCES = REPOSITORY_ROOT / "references/reallyme/trace-sources.lock.json"
+REALLYME_RELEASE_SOURCES = (
+    REPOSITORY_ROOT / "references/reallyme/release-sources.json"
+)
 MAX_LOCAL_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 HTTP_TIMEOUT_SECONDS = 20
@@ -78,6 +82,22 @@ class CheckResult:
 class UnavailableCheck:
     check_id: str
     reason: str
+
+
+@dataclass(frozen=True)
+class ReleaseSourceObservation:
+    component_id: str
+    repository: str
+    release_ref: str
+    commit: str
+
+
+@dataclass(frozen=True)
+class FreshnessEvaluation:
+    checks: tuple[CheckResult, ...]
+    manual_sources: tuple[str, ...]
+    unavailable_checks: tuple[UnavailableCheck, ...]
+    release_sources: tuple[ReleaseSourceObservation, ...]
 
 
 CheckOperation = Callable[[], tuple[list[CheckResult], list[str]]]
@@ -467,6 +487,72 @@ def check_reallyme_trace_releases(fetcher: FetchJson) -> list[CheckResult]:
     if observed_components != {"openid4vci", "openid4vp", "ssi"}:
         raise FreshnessError("ReallyMe trace source inventory is invalid")
     return results
+
+
+def observe_reallyme_release_sources(
+    fetcher: FetchJson,
+) -> tuple[list[ReleaseSourceObservation], list[UnavailableCheck]]:
+    """Resolve latest release inputs without turning them into framework pins."""
+
+    inventory = read_object(REALLYME_RELEASE_SOURCES)
+    try:
+        release_sources.verify_inventory(inventory)
+    except release_sources.ReleaseSourceError as error:
+        raise FreshnessError("ReallyMe release source inventory is invalid") from error
+
+    observations: list[ReleaseSourceObservation] = []
+    unavailable: list[UnavailableCheck] = []
+    raw_sources = required_list(
+        inventory.get("sources"), "ReallyMe release sources"
+    )
+    for raw_source in raw_sources:
+        if not isinstance(raw_source, dict):
+            raise FreshnessError("ReallyMe release source is invalid")
+        component_id = required_string(
+            raw_source.get("component_id"), "ReallyMe release component id"
+        )
+        repository = github_repository_from_url(
+            raw_source.get("repository"), "ReallyMe release repository"
+        )
+        release_prefix = required_string(
+            raw_source.get("release_prefix"), "ReallyMe release prefix"
+        )
+        try:
+            value = fetcher(github_api(repository, "releases/latest"))
+            if (
+                not isinstance(value, dict)
+                or value.get("draft") is not False
+                or value.get("prerelease") is not False
+            ):
+                raise FreshnessError("GitHub release metadata is invalid")
+            release_ref = required_string(
+                value.get("tag_name"), "ReallyMe latest release tag"
+            )
+            if (
+                not release_ref.startswith(release_prefix)
+                or release_sources.RELEASE_PREFIX.fullmatch(release_ref) is None
+            ):
+                raise FreshnessError("ReallyMe latest release tag is invalid")
+            commit = resolve_github_ref(
+                repository, f"tags/{release_ref}", fetcher
+            )
+        except FreshnessError as error:
+            unavailable.append(
+                UnavailableCheck(
+                    check_id=f"reallyme.release.{component_id}",
+                    reason=str(error),
+                )
+            )
+            continue
+        observations.append(
+            ReleaseSourceObservation(
+                component_id=component_id,
+                repository=f"https://github.com/{repository}",
+                release_ref=release_ref,
+                commit=commit,
+            )
+        )
+    return observations, unavailable
 
 
 def github_repository_from_url(value: object, context: str) -> str:
@@ -1013,10 +1099,26 @@ def collect_check_group(
 
 def run_checks(
     fetcher: FetchJson = fetch_json, byte_fetcher: FetchBytes = fetch_bytes
-) -> tuple[list[CheckResult], list[str], list[UnavailableCheck]]:
+) -> FreshnessEvaluation:
     results: list[CheckResult] = []
     manual_sources: list[str] = []
     unavailable_checks: list[UnavailableCheck] = []
+    release_source_observations: list[ReleaseSourceObservation] = []
+
+    try:
+        observations, unavailable_releases = observe_reallyme_release_sources(
+            fetcher
+        )
+    except FreshnessError as error:
+        unavailable_checks.append(
+            UnavailableCheck(
+                check_id="reallyme_release_sources",
+                reason=str(error),
+            )
+        )
+    else:
+        release_source_observations.extend(observations)
+        unavailable_checks.extend(unavailable_releases)
 
     collect_check_group(
         "reallyme_trace_releases",
@@ -1081,7 +1183,12 @@ def run_checks(
         manual_sources,
         unavailable_checks,
     )
-    return results, manual_sources, unavailable_checks
+    return FreshnessEvaluation(
+        checks=tuple(results),
+        manual_sources=tuple(manual_sources),
+        unavailable_checks=tuple(unavailable_checks),
+        release_sources=tuple(release_source_observations),
+    )
 
 
 def main() -> int:
@@ -1094,7 +1201,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
-        results, manual_sources, unavailable_checks = run_checks()
+        evaluation = run_checks()
     except FreshnessError as error:
         if args.format == "json":
             print(
@@ -1103,6 +1210,7 @@ def main() -> int:
                         "schema": "reallyme.identity.pin_freshness_report.v1",
                         "status": "unavailable",
                         "checks": [],
+                        "release_sources": [],
                         "manual_sources": [],
                         "unavailable_checks": [
                             asdict(
@@ -1118,9 +1226,15 @@ def main() -> int:
             )
             return EXIT_UNAVAILABLE
         fail(str(error), EXIT_UNAVAILABLE)
-    stale = [result for result in results if result.status == "stale"]
+    stale = [
+        result for result in evaluation.checks if result.status == "stale"
+    ]
     report_status = (
-        "stale" if stale else "unavailable" if unavailable_checks else "current"
+        "stale"
+        if stale
+        else "unavailable"
+        if evaluation.unavailable_checks
+        else "current"
     )
     if args.format == "json":
         print(
@@ -1128,31 +1242,40 @@ def main() -> int:
                 {
                     "schema": "reallyme.identity.pin_freshness_report.v1",
                     "status": report_status,
-                    "checks": [asdict(result) for result in results],
-                    "manual_sources": manual_sources,
+                    "checks": [asdict(result) for result in evaluation.checks],
+                    "release_sources": [
+                        asdict(source) for source in evaluation.release_sources
+                    ],
+                    "manual_sources": list(evaluation.manual_sources),
                     "unavailable_checks": [
-                        asdict(unavailable) for unavailable in unavailable_checks
+                        asdict(unavailable)
+                        for unavailable in evaluation.unavailable_checks
                     ],
                 },
                 indent=2,
             )
         )
     else:
-        for result in results:
+        for result in evaluation.checks:
             print(
                 f"{result.status}: {result.check_id}: "
                 f"expected={result.expected} observed={result.observed}"
             )
-        for source in manual_sources:
+        for source in evaluation.release_sources:
+            print(
+                f"release: {source.component_id}: "
+                f"ref={source.release_ref} commit={source.commit}"
+            )
+        for source in evaluation.manual_sources:
             print(f"manual: {source}")
-        for unavailable in unavailable_checks:
+        for unavailable in evaluation.unavailable_checks:
             print(
                 f"unavailable: {unavailable.check_id}: {unavailable.reason}",
                 file=sys.stderr,
             )
     if stale:
         return EXIT_STALE
-    if unavailable_checks:
+    if evaluation.unavailable_checks:
         return EXIT_UNAVAILABLE
     return 0
 
