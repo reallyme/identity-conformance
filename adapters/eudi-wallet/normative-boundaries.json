@@ -1,0 +1,61 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "adapter_id": "eudi_wallet_normative_boundaries_v1",
+  "component_id": "wallet",
+  "repository": "https://github.com/reallyme/wallet",
+  "required_ledgers": [
+    "plans/eudi/normative/arf-wallet.json",
+    "plans/eudi/normative/technical-specifications-wallet.json",
+    "plans/eudi/normative/fcaf-wallet.json"
+  ],
+  "implemented_boundaries": [
+    {
+      "boundary_id": "wallet.wia.technical_validity_seconds",
+      "normative_rule_ids": [
+        "eu.arf.WUA_33.wia_technical_validity",
+        "eu.ts3.section-2.2.1.1.wia_time_to_live"
+      ],
+      "normative_checks": {
+        "eu.arf.WUA_33.wia_technical_validity": "normative.eu.arf.wua-33",
+        "eu.ts3.section-2.2.1.1.wia_time_to_live": "normative.eu.technical-specification.ts3-wia-ttl"
+      },
+      "observation": {
+        "kind": "rust_integer_guard",
+        "path": "crates/attestation/src/validate.rs",
+        "function": "validate_fields",
+        "constant": "WALLET_UNIT_ATTESTATION_LIFETIME_LIMIT_SECONDS",
+        "measured_expression": "lifetime"
+      }
+    },
+    {
+      "boundary_id": "wallet.presentation.unregistered_attribute_policy",
+      "normative_rule_ids": [
+        "eu.arf.EW-DM-44-027.unregistered_attribute_policy"
+      ],
+      "normative_checks": {
+        "eu.arf.EW-DM-44-027.unregistered_attribute_policy": "normative.eu.arf.ew-dm-44-027"
+      },
+      "observation": {
+        "kind": "rust_enum_variants",
+        "path": "crates/consent/src/apply_unregistered_attribute_policy.rs",
+        "enum": "UnregisteredAttributePolicy",
+        "expected_to_variant": {
+          "warn_and_allow_all": "WarnAndAllowAll",
+          "registered_only": "RegisteredOnly",
+          "reject_request": "RejectRequest"
+        }
+      }
+    }
+  ],
+  "product_policy_boundaries": [
+    {
+      "boundary_id": "wallet.key_attestation.maximum_age_seconds",
+      "reason": "ReallyMe freshness policy; no EU numeric value is claimed."
+    },
+    {
+      "boundary_id": "wallet.attestation.maximum_evidence_bytes",
+      "reason": "ReallyMe resource-exhaustion policy; no EU numeric value is claimed."
+    }
+  ]
+}

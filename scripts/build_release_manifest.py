@@ -27,10 +27,13 @@ VERSION = re.compile(
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 FIXED_INPUTS = (
+    "VERSION",
     "references/reallyme/trace-sources.lock.json",
+    "references/reallyme/release-sources.json",
     "references/normative-sources.lock.json",
     "references/eudi-publications.lock.json",
     "references/pin-policy.json",
+    "references/upstream-update-policy.json",
     "references/etsi-eaa-pid/requirement-trace.json",
     "upstream/eudi/sources.lock.json",
     "upstream/eudi/legal-sources.lock.json",
@@ -54,6 +57,20 @@ IGNORED_INPUT_SUFFIXES = {".pyc", ".pyo"}
 
 class ManifestError(Exception):
     """Raised when release inputs cannot be bound safely."""
+
+
+def read_release_version(root: Path = REPOSITORY_ROOT) -> str:
+    path = root / "VERSION"
+    try:
+        metadata = path.lstat()
+        if path.is_symlink() or not path.is_file() or not 1 <= metadata.st_size <= 64:
+            raise ManifestError("framework VERSION is unavailable or invalid")
+        version = path.read_text(encoding="ascii").strip()
+    except (OSError, UnicodeError) as error:
+        raise ManifestError("framework VERSION is unavailable or invalid") from error
+    if VERSION.fullmatch(version) is None:
+        raise ManifestError("framework VERSION must use stable semantic versioning")
+    return version
 
 
 @dataclass(frozen=True)
@@ -116,10 +133,9 @@ def aggregate_digest(inputs: list[InputDigest]) -> str:
 
 
 def build_manifest(
-    version: str, repository_commit: str, root: Path = REPOSITORY_ROOT
+    repository_commit: str, root: Path = REPOSITORY_ROOT
 ) -> dict[str, object]:
-    if VERSION.fullmatch(version) is None:
-        raise ManifestError("release version must be stable semantic versioning")
+    version = read_release_version(root)
     if COMMIT.fullmatch(repository_commit) is None:
         raise ManifestError("repository commit must be a full lowercase Git commit")
     inputs = [digest_input(path, root) for path in release_inputs(root)]
@@ -224,12 +240,11 @@ def write_manifest(output: Path, manifest: dict[str, object]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", required=True)
     parser.add_argument("--repository-commit", required=True)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
-        manifest = build_manifest(args.version, args.repository_commit)
+        manifest = build_manifest(args.repository_commit)
         write_manifest(args.output, manifest)
     except ManifestError as error:
         fail(str(error))

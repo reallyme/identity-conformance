@@ -468,9 +468,16 @@
       "path": "src/main/java/net/openid/conformance/vci10issuer/VCIIssuerTestPlanHaip.java",
       "required_tokens": [
         "oid4vci-1_0-issuer-haip-test-plan",
+        "new Variant(FAPI2SenderConstrainMethod.class, \"dpop\")",
         "new Variant(FAPI2FinalOPProfile.class, \"vci_haip\")",
+        "new Variant(FAPI2AuthRequestMethod.class, \"unsigned\")",
         "new Variant(ClientAuthType.class, \"client_attestation\")",
         "new Variant(VCIGrantType.class, \"authorization_code\")",
+        "new Variant(AuthorizationRequestType.class, \"simple\")",
+        "new Variant(VCICredentialEncryption.class, \"plain\")",
+        "new Variant(VCICredentialEncryption.class, \"encrypted\")",
+        "new Variant(FAPIOpenIDConnect.class, \"plain_oauth\")",
+        "new Variant(FAPIResponseMode.class, \"plain_response\")",
         "VCI1FinalCredentialFormat.class",
         "VCIAuthorizationCodeFlowVariant.class"
       ]
@@ -479,9 +486,18 @@
       "path": "src/main/java/net/openid/conformance/vci10wallet/VCIWalletTestPlanHaip.java",
       "required_tokens": [
         "oid4vci-1_0-wallet-haip-test-plan",
+        "new Variant(FAPI2AuthRequestMethod.class, \"unsigned\")",
+        "new Variant(FAPI2SenderConstrainMethod.class, \"dpop\")",
         "new Variant(FAPI2FinalOPProfile.class, \"vci_haip\")",
+        "new Variant(VCIGrantType.class, \"authorization_code\")",
+        "new Variant(AuthorizationRequestType.class, \"simple\")",
         "new Variant(ClientAuthType.class, \"client_attestation\")",
+        "new Variant(FAPIClientType.class, \"plain_oauth\")",
+        "new Variant(FAPIResponseMode.class, \"plain_response\")",
+        "new Variant(VCICredentialIssuanceMode.class, \"immediate\")",
         "new Variant(VCICredentialIssuanceMode.class, \"deferred\")",
+        "new Variant(VCICredentialEncryption.class, \"plain\")",
+        "new Variant(VCICredentialEncryption.class, \"encrypted\")",
         "VCICredentialOfferParameterVariant.class",
         "VCIWalletAuthorizationCodeFlowVariant.class"
       ]
@@ -492,17 +508,25 @@
         "oid4vp-1final-verifier-haip-test-plan",
         "new Variant(VPProfile.class, \"haip\")",
         "new Variant(VP1FinalVerifierClientIdPrefix.class, \"x509_hash\")",
-        "new Variant(VP1FinalVerifierRequestMethod.class, \"request_uri_signed\")"
+        "new Variant(VP1FinalVerifierRequestMethod.class, \"request_uri_signed\")",
+        "VP1FinalVerifierResponseMode.class",
+        "VP1FinalVerifierCredentialFormat.class"
       ]
     },
     {
       "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletTestPlanHaip.java",
       "required_tokens": [
         "oid4vp-1final-wallet-haip-test-plan",
+        "new Variant(VPProfile.class, \"haip\")",
+        "new Variant(VP1FinalWalletClientIdPrefix.class, \"x509_hash\")",
+        "new Variant(VP1FinalWalletClientIdPrefix.class, \"web-origin\")",
+        "new Variant(VP1FinalWalletRequestMethod.class, \"request_uri_signed\")",
+        "new Variant(VP1FinalWalletRequestMethod.class, \"request_uri_unsigned\")",
+        "new Variant(VP1FinalWalletRequestMethod.class, \"request_uri_multisigned\")",
         "\"direct_post.jwt\"",
         "\"dc_api.jwt\"",
-        "\"web-origin\"",
-        "\"request_uri_multisigned\""
+        "VP1FinalWalletResponseMode.class",
+        "VP1FinalWalletCredentialFormat.class"
       ]
     },
     {
@@ -520,6 +544,14 @@
       ]
     },
     {
+      "path": "src/main/java/net/openid/conformance/variant/VCIWalletAuthorizationCodeFlowVariant.java",
+      "required_tokens": [
+        "WALLET_INITIATED",
+        "ISSUER_INITIATED",
+        "ISSUER_INITIATED_DC_API"
+      ]
+    },
+    {
       "path": "src/main/java/net/openid/conformance/variant/VCICredentialOfferParameterVariant.java",
       "required_tokens": [
         "BY_VALUE",
@@ -527,10 +559,46 @@
       ]
     },
     {
+      "path": "src/main/java/net/openid/conformance/vci10wallet/AbstractVCIWalletTest.java",
+      "required_tokens": [
+        "parameter = VCIWalletAuthorizationCodeFlowVariant.class",
+        "values = {\"issuer_initiated_dc_api\"},  // No DC API tests for HAIP",
+        "whenParameter = FAPI2FinalOPProfile.class",
+        "hasValues = \"vci_haip\""
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierCredentialFormat.java",
+      "required_tokens": [
+        "SD_JWT_VC(\"sd_jwt_vc\")",
+        "ISO_MDL(\"iso_mdl\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalverifier/VP1FinalVerifierResponseMode.java",
+      "required_tokens": [
+        "DIRECT_POST_JWT(\"direct_post.jwt\")"
+      ]
+    },
+    {
       "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletCredentialFormat.java",
       "required_tokens": [
         "SD_JWT_VC(\"sd_jwt_vc\")",
         "ISO_MDL(\"iso_mdl\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletResponseMode.java",
+      "required_tokens": [
+        "DIRECT_POST_JWT(\"direct_post.jwt\")",
+        "DC_API_JWT(\"dc_api.jwt\")"
+      ]
+    },
+    {
+      "path": "src/main/java/net/openid/conformance/vp1finalwallet/VP1FinalWalletCredentialType.java",
+      "required_tokens": [
+        "EUDI_PID(\"eudi_pid\", \"/json/dcql/vp1final-wallet-eudi-pid\", \"/json/dcql/vp1final-wallet-eudi-pid-mdoc\")",
+        "MDL(\"mdl\", null, \"/json/dcql/vp1final-wallet-mdl\")"
       ]
     },
     {

@@ -106,11 +106,13 @@ NOT_APPLICABLE_DISPOSITION = "not_applicable"
 IDENTIFIER = re.compile(r"^[^\x00-\x1f\x7f]{1,512}$")
 SYMBOL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
+RELEASE_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class Component(NamedTuple):
     component_id: str
     checkout: Path
+    release_ref: str
     commit: str
 
 
@@ -148,7 +150,7 @@ def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]
         raise AuditError("trace source lock is invalid") from error
     if (
         not isinstance(value, dict)
-        or value.get("schema_version") != 1
+        or value.get("schema_version") != 2
         or value.get("purpose") != "etsi-eaa-pid-trace-source-lock"
         or not isinstance(value.get("sources"), list)
     ):
@@ -160,17 +162,24 @@ def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]
             raise AuditError("trace source lock entry is invalid")
         component_id = raw.get("component_id")
         relative_checkout = raw.get("local_checkout")
+        release_ref = raw.get("release_ref")
+        update_strategy = raw.get("update_strategy")
         commit = raw.get("commit")
         if (
             not isinstance(component_id, str)
             or not isinstance(relative_checkout, str)
+            or not isinstance(release_ref, str)
+            or RELEASE_REF.fullmatch(release_ref) is None
+            or update_strategy != "latest_release"
             or not isinstance(commit, str)
             or COMMIT.fullmatch(commit) is None
             or component_id in components
         ):
             raise AuditError("trace source lock entry is invalid")
         checkout = (REPOSITORY_ROOT / relative_checkout).resolve()
-        components[component_id] = Component(component_id, checkout, commit)
+        components[component_id] = Component(
+            component_id, checkout, release_ref, commit
+        )
     return components
 
 

@@ -27,11 +27,26 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import verify_component_attestation as component_attestation  # noqa: E402
+import verify_eu_wallet_boundaries as normative_boundaries  # noqa: E402
 import verify_eudi_wallet_adapter as wallet_adapter  # noqa: E402
 
 
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024
 COMMAND_TIMEOUT_SECONDS = 3_600
+NORMATIVE_LEDGER_PATHS = {
+    "eu_arf_sha256": wallet_adapter.REPOSITORY_ROOT
+    / "plans/eudi/normative/arf-wallet.json",
+    "eu_fcaf_sha256": wallet_adapter.REPOSITORY_ROOT
+    / "plans/eudi/normative/fcaf-wallet.json",
+    "eu_technical_specifications_sha256": wallet_adapter.REPOSITORY_ROOT
+    / "plans/eudi/normative/technical-specifications-wallet.json",
+    "eu_wallet_boundary_adapter_sha256": wallet_adapter.REPOSITORY_ROOT
+    / "adapters/eudi-wallet/normative-boundaries.json",
+}
+FRAMEWORK_VERSION_PATH = wallet_adapter.REPOSITORY_ROOT / "VERSION"
+SEMANTIC_VERSION = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
+)
 
 
 class EudiWalletRunnerErrorReason(Enum):
@@ -136,13 +151,43 @@ def validate_deployment(
     return artifact
 
 
+def normative_ledger_digests() -> dict[str, str]:
+    return {
+        identifier: hash_regular_file(path)
+        for identifier, path in sorted(NORMATIVE_LEDGER_PATHS.items())
+    }
+
+
+def framework_version() -> str:
+    try:
+        metadata = FRAMEWORK_VERSION_PATH.lstat()
+        if (
+            FRAMEWORK_VERSION_PATH.is_symlink()
+            or not FRAMEWORK_VERSION_PATH.is_file()
+            or not 1 <= metadata.st_size <= 64
+        ):
+            raise EudiWalletRunnerError(
+                EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+            )
+        version = FRAMEWORK_VERSION_PATH.read_text(encoding="ascii").strip()
+    except (OSError, UnicodeError) as error:
+        raise EudiWalletRunnerError(
+            EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        ) from error
+    if SEMANTIC_VERSION.fullmatch(version) is None:
+        raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+    return version
+
+
 def candidate_digest(deployment: dict[str, object]) -> str:
     candidate = {
         "plan_id": deployment["plan_id"],
+        "framework_version": deployment.get("framework_version", framework_version()),
         "component": deployment["component"],
         "release_artifact": deployment["release_artifact"],
         "component_attestation_sha256": deployment["component_attestation_sha256"],
         "source_locks": deployment["source_locks"],
+        "normative_ledgers": normative_ledger_digests(),
     }
     encoded = json.dumps(
         candidate, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -348,6 +393,45 @@ def main() -> int:
                     "passed" if category in categories else "failed",
                 )
             )
+        try:
+            evaluated_boundaries = normative_boundaries.evaluate(args.source)
+        except normative_boundaries.BoundaryError as error:
+            if (
+                error.reason
+                is not normative_boundaries.BoundaryErrorReason.OBSERVATION_UNAVAILABLE
+            ):
+                raise EudiWalletRunnerError(
+                    EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+                ) from error
+            evaluated_boundaries = []
+        boundary_adapter = normative_boundaries.load_adapter()
+        raw_boundaries = boundary_adapter.get("implemented_boundaries")
+        if not isinstance(raw_boundaries, list):
+            raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+        expected_normative_checks: set[str] = set()
+        for raw_boundary in raw_boundaries:
+            if not isinstance(raw_boundary, dict):
+                raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+            normative_checks = raw_boundary.get("normative_checks")
+            if not isinstance(normative_checks, dict):
+                raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+            for check_id in normative_checks.values():
+                if not isinstance(check_id, str):
+                    raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+                expected_normative_checks.add(check_id)
+        observed_normative_checks = {
+            check_id: boundary.passed
+            for boundary in evaluated_boundaries
+            for check_id in boundary.normative_checks
+        }
+        for check_id in sorted(expected_normative_checks):
+            checks.append(
+                Check(
+                    check_id,
+                    "normative",
+                    "passed" if observed_normative_checks.get(check_id) is True else "failed",
+                )
+            )
         packages = adapter["cargo_packages"]
         if not isinstance(packages, list):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
@@ -370,6 +454,7 @@ def main() -> int:
             "plan_id": "eudi-wallet-engineering-v1",
             "result": "passed" if passed else "failed",
             "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "framework_version": framework_version(),
             "framework_revision": args.framework_revision,
             "workflow_revision": args.workflow_revision,
             "candidate_sha256": candidate_digest(deployment),
@@ -377,6 +462,7 @@ def main() -> int:
             "release_artifact_sha256": artifact_digest,
             "component_attestation_sha256": deployment["component_attestation_sha256"],
             "source_locks": source_locks,
+            "normative_ledgers": normative_ledger_digests(),
             "checks": [check.__dict__ for check in sorted(checks, key=lambda item: item.check_id)],
             "assertions": sorted(assertions, key=lambda item: str(item["assertion_id"])),
             "evidence_policy": wallet_adapter.EXPECTED_POLICY,

@@ -6,41 +6,77 @@ name: build conformance framework release candidate
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: Semantic version for the candidate manifest
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   build-candidate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_ARCHIVE_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
       - name: Checkout identity-conformance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: identity-conformance
+          fetch-depth: 0
           persist-credentials: false
       - name: Resolve pinned trace source revisions
         id: component-revisions
         working-directory: identity-conformance
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           for component in openid4vci openid4vp ssi; do
-            revision="$(
+            repository="$(
+              jq -er --arg component "${component}" '
+                [.sources[] | select(.component_id == $component)]
+                | if length == 1 then .[0].repository else error("component inventory is not unique") end
+              ' references/reallyme/trace-sources.lock.json
+            )"
+            locked_ref="$(
+              jq -er --arg component "${component}" '
+                [.sources[] | select(.component_id == $component)]
+                | if length == 1 and .[0].update_strategy == "latest_release"
+                  then .[0].release_ref else error("component release policy is invalid") end
+              ' references/reallyme/trace-sources.lock.json
+            )"
+            locked_commit="$(
               jq -er --arg component "${component}" '
                 [.sources[] | select(.component_id == $component)]
                 | if length == 1 then .[0].commit else error("component inventory is not unique") end
               ' references/reallyme/trace-sources.lock.json
             )"
-            if [[ ! "${revision}" =~ ^[0-9a-f]{40}$ ]]; then
-              printf 'The %s component revision is not a full Git commit.\n' "${component}" >&2
+            expected_repository="https://github.com/reallyme/${component}"
+            test "${repository}" = "${expected_repository}"
+            [[ "${locked_ref}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]
+            [[ "${locked_commit}" =~ ^[0-9a-f]{40}$ ]]
+            latest_ref="$(gh api "repos/reallyme/${component}/releases/latest" --jq '.tag_name')"
+            [[ "${latest_ref}" =~ ^reallyme-${component}-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
+            latest_commit="$(gh api "repos/reallyme/${component}/commits/${latest_ref}" --jq '.sha')"
+            if [[ "${latest_ref}" != "${locked_ref}" || "${latest_commit}" != "${locked_commit}" ]]; then
+              printf 'The %s trace source lock is not the latest published release.\n' "${component}" >&2
               exit 65
             fi
-            printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
+            printf '%s=%s\n' "${component}" "${latest_commit}" >> "${GITHUB_OUTPUT}"
+            printf '%s_release_ref=%s\n' "${component}" "${latest_ref}" >> "${GITHUB_OUTPUT}"
+          done
+          for source_id in eudi-arf eudi-fcaf eudi-technical-specifications; do
+            revision="$(
+              jq -er --arg source_id "${source_id}" '
+                [.sources[] | select(.source_id == $source_id)]
+                | if length == 1 then .[0].commit else error("EUDI source inventory is not unique") end
+              ' upstream/eudi/sources.lock.json
+            )"
+            if [[ ! "${revision}" =~ ^[0-9a-f]{40}$ ]]; then
+              printf 'The %s source revision is not a full Git commit.\n' "${source_id}" >&2
+              exit 65
+            fi
+            output_name="${source_id//-/_}"
+            printf '%s=%s\n' "${output_name}" "${revision}" >> "${GITHUB_OUTPUT}"
           done
       # The release gate validates source-bound ETSI trace entries before it
       # creates a manifest, so each owning repository must be present.
@@ -48,22 +84,48 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/openid4vci
-          ref: ${{ steps.component-revisions.outputs.openid4vci }}
+          ref: ${{ steps.component-revisions.outputs.openid4vci_release_ref }}
           path: openid4vci
           persist-credentials: false
       - name: Checkout pinned OpenID4VP trace sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/openid4vp
-          ref: ${{ steps.component-revisions.outputs.openid4vp }}
+          ref: ${{ steps.component-revisions.outputs.openid4vp_release_ref }}
           path: openid4vp
           persist-credentials: false
       - name: Checkout pinned SSI trace inputs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/ssi
-          ref: ${{ steps.component-revisions.outputs.ssi }}
+          ref: ${{ steps.component-revisions.outputs.ssi_release_ref }}
           path: ssi
+          persist-credentials: false
+      - name: Verify latest ReallyMe release checkouts
+        run: |
+          test "$(git -C openid4vci rev-parse HEAD)" = "${{ steps.component-revisions.outputs.openid4vci }}"
+          test "$(git -C openid4vp rev-parse HEAD)" = "${{ steps.component-revisions.outputs.openid4vp }}"
+          test "$(git -C ssi rev-parse HEAD)" = "${{ steps.component-revisions.outputs.ssi }}"
+      - name: Checkout pinned EU ARF source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework
+          ref: ${{ steps.component-revisions.outputs.eudi_arf }}
+          path: eudi-arf
+          persist-credentials: false
+      - name: Checkout pinned EU FCAF source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment
+          ref: ${{ steps.component-revisions.outputs.eudi_fcaf }}
+          path: eudi-fcaf
+          persist-credentials: false
+      - name: Checkout pinned EU technical specifications
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications
+          ref: ${{ steps.component-revisions.outputs.eudi_technical_specifications }}
+          path: eudi-technical-specifications
           persist-credentials: false
       - name: Install Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -76,28 +138,60 @@ jobs:
       - name: Run shared release readiness
         working-directory: identity-conformance
         run: npm exec --yes --allow-remote=root --package=github:reallyme/release-readiness#18a6d91d99837e80f92e41fe04effb0b043d754e -- reallyme-release-readiness
+      - name: Verify normative ledgers against exact upstream sources
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/verify_eu_normative_ledgers.py --authority arf --source-repository ../eudi-arf
+          python3 scripts/verify_eu_normative_ledgers.py --authority fcaf --source-repository ../eudi-fcaf
+          python3 scripts/verify_eu_normative_ledgers.py --authority technical_specification --source-repository ../eudi-technical-specifications
+          repository="$(jq -er '.repository' upstream/oidf/conformance-suite.lock.json)"
+          pinned_ref="$(jq -er '.pinned_ref' upstream/oidf/conformance-suite.lock.json)"
+          expected_commit="$(jq -er '.commit' upstream/oidf/conformance-suite.lock.json)"
+          [[ "${expected_commit}" =~ ^[0-9a-f]{40}$ ]]
+          suite_dir="${RUNNER_TEMP}/openid-conformance-suite"
+          git clone --depth 1 --branch "${pinned_ref}" -- "${repository}" "${suite_dir}"
+          test "$(git -C "${suite_dir}" rev-parse HEAD)" = "${expected_commit}"
+          python3 scripts/verify_oidf_normative_ledger.py --suite-repository "${suite_dir}"
       - name: Run repository tests
         working-directory: identity-conformance
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Lint GitHub workflows
         working-directory: identity-conformance
         run: scripts/run_actionlint.sh
+      - name: Install verified Gitleaks
+        run: |
+          archive="${RUNNER_TEMP}/gitleaks.tar.gz"
+          curl --fail --show-error --silent --location --output "${archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          printf '%s  %s\n' "${GITLEAKS_ARCHIVE_SHA256}" "${archive}" | sha256sum --check --strict
+          tar --extract --gzip --file "${archive}" --directory "${RUNNER_TEMP}" gitleaks
+          chmod 0755 "${RUNNER_TEMP}/gitleaks"
+      - name: Scan complete Git history
+        working-directory: identity-conformance
+        run: |
+          "${RUNNER_TEMP}/gitleaks" git --redact --no-banner --verbose .
+      - name: Resolve repository-controlled framework version
+        id: framework-version
+        working-directory: identity-conformance
+        run: |
+          version="$(tr -d '\n' < VERSION)"
+          [[ "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          printf 'version=%s\n' "${version}" >> "${GITHUB_OUTPUT}"
+          printf '## Framework release candidate v%s\n' "${version}" >> "${GITHUB_STEP_SUMMARY}"
       # Release construction binds the reviewed locks and must remain deterministic.
       # Live publisher availability is monitored by pin-freshness.yml.
       - name: Build deterministic candidate manifest
         working-directory: identity-conformance
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
           REPOSITORY_COMMIT: ${{ github.sha }}
         run: |
           python3 scripts/build_release_manifest.py \
-            --version "${RELEASE_VERSION}" \
             --repository-commit "${REPOSITORY_COMMIT}" \
             --output dist/conformance-framework-release.json
       - name: Retain candidate manifest
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: conformance-framework-release-${{ inputs.version }}
+          name: conformance-framework-release-${{ steps.framework-version.outputs.version }}
           path: identity-conformance/dist/conformance-framework-release.json
           if-no-files-found: error
           retention-days: 30

@@ -59,10 +59,73 @@ class PinFreshnessTests(unittest.TestCase):
         self.assertEqual(status, FRESHNESS.EXIT_UNAVAILABLE)
         self.assertEqual(report["status"], "unavailable")
         self.assertEqual(
-            report["error"], {"code": "authoritative_source_unavailable"}
+            report["unavailable_checks"],
+            [
+                {
+                    "check_id": "freshness_evaluation",
+                    "reason": "source unavailable",
+                }
+            ],
         )
         self.assertEqual(report["checks"], [])
         self.assertEqual(errors.getvalue(), "")
+
+    def test_unavailable_group_does_not_hide_completed_or_later_checks(self) -> None:
+        results: list[FRESHNESS.CheckResult] = [
+            FRESHNESS.status_result("before", "v1", "v1")
+        ]
+        manual_sources: list[str] = []
+        unavailable_checks: list[FRESHNESS.UnavailableCheck] = []
+
+        def unavailable_operation() -> tuple[list[FRESHNESS.CheckResult], list[str]]:
+            raise FRESHNESS.FreshnessError("publisher unavailable")
+
+        FRESHNESS.collect_check_group(
+            "unavailable_group",
+            unavailable_operation,
+            results,
+            manual_sources,
+            unavailable_checks,
+        )
+        FRESHNESS.collect_check_group(
+            "later_group",
+            lambda: ([FRESHNESS.status_result("after", "v2", "v2")], []),
+            results,
+            manual_sources,
+            unavailable_checks,
+        )
+
+        self.assertEqual([result.check_id for result in results], ["before", "after"])
+        self.assertEqual(len(unavailable_checks), 1)
+        self.assertEqual(unavailable_checks[0].check_id, "unavailable_group")
+
+    def test_stale_result_takes_precedence_over_unavailable_group(self) -> None:
+        output = io.StringIO()
+        stale = FRESHNESS.status_result("stale", "v1", "v2")
+        unavailable = FRESHNESS.UnavailableCheck(
+            check_id="publisher", reason="temporarily unavailable"
+        )
+
+        with (
+            patch.object(
+                FRESHNESS,
+                "run_checks",
+                return_value=([stale], [], [unavailable]),
+            ),
+            patch.object(
+                sys,
+                "argv",
+                ["check_pin_freshness.py", "--format", "json"],
+            ),
+            contextlib.redirect_stdout(output),
+        ):
+            status = FRESHNESS.main()
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(status, FRESHNESS.EXIT_STALE)
+        self.assertEqual(report["status"], "stale")
+        self.assertEqual(len(report["checks"]), 1)
+        self.assertEqual(len(report["unavailable_checks"]), 1)
 
     def test_transient_publication_failure_is_retried(self) -> None:
         response = MagicMock()
@@ -309,6 +372,48 @@ class PinFreshnessTests(unittest.TestCase):
             "example", "reallyme/example", "v1.0.0", None, fetcher
         )
         self.assertEqual(results[0].status, "stale")
+
+    def test_reallyme_trace_sources_follow_latest_releases(self) -> None:
+        commit = "a" * 40
+        lock = {
+            "sources": [
+                {
+                    "component_id": "openid4vci",
+                    "repository": "https://github.com/reallyme/openid4vci",
+                    "release_ref": "reallyme-openid4vci-v1.0.0",
+                    "update_strategy": "latest_release",
+                    "commit": commit,
+                },
+                {
+                    "component_id": "openid4vp",
+                    "repository": "https://github.com/reallyme/openid4vp",
+                    "release_ref": "reallyme-openid4vp-v1.0.0",
+                    "update_strategy": "latest_release",
+                    "commit": commit,
+                },
+                {
+                    "component_id": "ssi",
+                    "repository": "https://github.com/reallyme/ssi",
+                    "release_ref": "reallyme-ssi-v1.0.0",
+                    "update_strategy": "latest_release",
+                    "commit": commit,
+                },
+            ]
+        }
+
+        def fetcher(url: str) -> object:
+            if url.endswith("/releases/latest"):
+                repository = url.split("/repos/", maxsplit=1)[1].split(
+                    "/releases/", maxsplit=1
+                )[0]
+                component = repository.split("/", maxsplit=1)[1]
+                return {"tag_name": f"reallyme-{component}-v1.0.0"}
+            return {"object": {"type": "commit", "sha": commit}}
+
+        with patch.object(FRESHNESS, "read_object", return_value=lock):
+            results = FRESHNESS.check_reallyme_trace_releases(fetcher)
+        self.assertTrue(results)
+        self.assertTrue(all(result.status == "current" for result in results))
 
     def test_repository_identifier_rejects_extra_path_segments(self) -> None:
         with self.assertRaises(FRESHNESS.FreshnessError):

@@ -1,0 +1,26 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.upstream_update_policy.v1",
+  "schedule": {
+    "cadence": "weekly",
+    "automatic_publication": false
+  },
+  "source_strategies": {
+    "latest_release": "tagged_release_candidate",
+    "latest_tag": "tagged_release_candidate",
+    "default_branch": "branch_snapshot_review"
+  },
+  "overrides": {
+    "monitor_only_coverage_class": "monitor_only",
+    "immutable_publication_change": "publication_integrity_review"
+  },
+  "candidate_requirements": {
+    "update_version_file": true,
+    "update_all_affected_locks": true,
+    "regenerate_source_snapshots": true,
+    "regenerate_readme_catalog": true,
+    "validate_normative_semantics": true,
+    "pass_all_affected_lanes": true,
+    "protected_promotion_required": true
+  }
+}

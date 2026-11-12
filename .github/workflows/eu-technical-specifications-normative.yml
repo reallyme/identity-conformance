@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: EU conformance - technical specifications ledger
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-technical-specification-ledger:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: identity-conformance
+          persist-credentials: false
+      - name: Checkout pinned EU technical specifications
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications
+          ref: cfc383e44294d65cfa6cccbbff6c927f0df91f9a
+          path: eudi-technical-specifications
+          persist-credentials: false
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+      - name: Verify technical rules and values against the exact pin
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/verify_eu_normative_ledgers.py --authority technical_specification --source-repository ../eudi-technical-specifications
+          version="$(tr -d '\n' < VERSION)"
+          printf '## EU technical specifications · Identity Conformance v%s\n' "${version}" >> "${GITHUB_STEP_SUMMARY}"

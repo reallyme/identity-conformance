@@ -42,7 +42,7 @@ scripts/verify_oidf_certification_parameters.py "${suite_dir}" --manifest "${man
 temporary_directory="$(mktemp -d)"
 readonly temporary_directory
 cleanup() {
-    rm -rf "${temporary_directory}"
+    rm -rf -- "${temporary_directory:?}"
 }
 trap cleanup EXIT INT TERM
 

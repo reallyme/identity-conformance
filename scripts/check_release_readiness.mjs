@@ -30,19 +30,27 @@ const {
 
 const workflow = ".github/workflows/release-readiness.yml";
 const releaseCandidateWorkflow = ".github/workflows/release-candidate.yml";
+const releasePromotionWorkflow = ".github/workflows/release-promotion.yml";
 const pinFreshnessWorkflow = ".github/workflows/pin-freshness.yml";
+const updateProposalWorkflow = ".github/workflows/upstream-update-proposal.yml";
 const secretScanWorkflow = ".github/workflows/secret-scan.yml";
 const openid4vciCertificationWorkflow =
   ".github/workflows/oidf-openid4vci-certification.yml";
 const openid4vpCertificationWorkflow =
   ".github/workflows/oidf-openid4vp-certification.yml";
 const pythonWorkflows = [
+  ".github/workflows/conformance-catalog.yml",
   ".github/workflows/eudi-relying-party-conformance.yml",
   ".github/workflows/eudi-wallet-conformance.yml",
+  ".github/workflows/eu-arf-normative.yml",
+  ".github/workflows/eu-fcaf-normative.yml",
+  ".github/workflows/eu-technical-specifications-normative.yml",
+  ".github/workflows/oidf-normative-ledger.yml",
   ".github/workflows/oidf-openid4vci-certification.yml",
   ".github/workflows/oidf-openid4vp-certification.yml",
   ".github/workflows/pin-freshness.yml",
   ".github/workflows/release-candidate.yml",
+  ".github/workflows/release-promotion.yml",
   ".github/workflows/release-readiness.yml",
   ".github/workflows/upstream-update-proposal.yml",
   ".github/workflows/zk-conformance.yml",
@@ -50,6 +58,10 @@ const pythonWorkflows = [
 const sharedRevision = "18a6d91d99837e80f92e41fe04effb0b043d754e";
 const gitleaksVersion = "8.30.1";
 const gitleaksArchiveSha256 = "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb";
+const frameworkVersion = readFileSync("VERSION", "utf8").trim();
+if (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(frameworkVersion)) {
+  fail("VERSION must contain a stable semantic version");
+}
 
 assertReallyMeReleasePackagePolicy({
   scriptPath: "scripts/check_release_readiness.mjs",
@@ -96,6 +108,7 @@ for (const path of loadTrackedFiles()) {
     path !== "plans/eudi/relying-party-control-plane.json" &&
     path !== "plans/eudi/wallet.json" &&
     path !== "plans/eudi/upstream-coverage.json" &&
+    !/^plans\/eudi\/normative\/[A-Za-z0-9_.-]+\.json$/u.test(path) &&
     path !== "plans/zk/presentation-proofs.json"
   ) {
     fail(`plan is outside a reviewed ReallyMe conformance-plan boundary: ${path}`);
@@ -121,6 +134,9 @@ assertContains(
 assertContains("LICENSE-MIT", "Copyright (c) 2026 ReallyMe Technologies Limited");
 assertContains("LICENSE-APACHE", "Apache License");
 assertContains("results/.gitignore", "/*");
+assertContains("README.md", `Current framework baseline: **v${frameworkVersion}**`);
+assertContains("README.md", "## Conformance enforced by this release");
+assertContains("scripts/render_conformance_catalog.py", "Baseline updated");
 assertContains("evidence/README.md", "pass both redaction and public-disclosure review");
 assertContains("upstream/oidf/LICENSE.txt", "Copyright (c) 2019-2020 OpenID Foundation");
 assertContains("upstream/oidf/THIRD_PARTY_NOTICES.md", "upstream conformance suite is distributed under the MIT License");
@@ -149,11 +165,22 @@ assertContains("adapters/eudi-relying-party/adapter.json", '"raw_process_output_
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "repository: ${{ github.repository }}");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "candidate_binary_path:");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "--candidate-repository");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "repos/reallyme/ssi/releases/latest");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "scripts/run_eudi_relying_party_conformance.py");
 assertContains("schemas/eudi-public-evidence.schema.json", '"classification": {"const": "public"}');
 assertContains("scripts/build_eudi_public_evidence.py", "private_source_attestation_sha256");
 assertContains("plans/eudi/wallet.json", '"certification_claim": false');
 assertContains("plans/eudi/wallet.json", '"execution_status": "executable"');
+assertContains("plans/eudi/normative/arf-wallet.json", '"source_requirement_id": "WUA_33"');
+assertContains("plans/eudi/normative/technical-specifications-wallet.json", '"operator": "less_than"');
+assertContains("plans/eudi/normative/fcaf-wallet.json", '"execution_state": "methodology_only"');
+assertContains("plans/oidf/normative-ledger.json", '"authority": "oidf_conformance_suite"');
+assertContains("adapters/eudi-wallet/normative-boundaries.json", '"normative.eu.arf.wua-33"');
+assertContains("scripts/run_eudi_wallet_conformance.py", "normative_boundaries.evaluate");
+assertContains(".github/workflows/eu-arf-normative.yml", "--authority arf");
+assertContains(".github/workflows/eu-fcaf-normative.yml", "--authority fcaf");
+assertContains(".github/workflows/eu-technical-specifications-normative.yml", "--authority technical_specification");
+assertContains(".github/workflows/oidf-normative-ledger.yml", "upstream/oidf/conformance-suite.lock.json");
 assertContains("plans/eudi/upstream-coverage.json", '"official_ui_suite_executed": false');
 assertContains("plans/eudi/upstream-coverage.json", '"execution_state": "external_runner_required"');
 assertContains("adapters/eudi-wallet/adapter.json", '"adapter_id": "eudi_wallet_engineering"');
@@ -167,6 +194,8 @@ assertContains(".github/workflows/eudi-wallet-conformance.yml", "actions/downloa
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "digest-mismatch: error");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "test \"${#entries[@]}\" -eq 3");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "git -C components/wallet rev-parse HEAD");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "repos/reallyme/wallet/releases/latest");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "steps.source.outputs.release_ref");
 const eudiWalletWorkflowText = readFileSync(
   ".github/workflows/eudi-wallet-conformance.yml",
   "utf8",
@@ -188,6 +217,18 @@ assertContains("scripts/run_zk_conformance.py", "execute_package");
 assertContains(".github/workflows/zk-conformance.yml", "repository: reallyme/zk");
 assertContains(".github/workflows/zk-conformance.yml", "scripts/run_zk_conformance.py");
 assertContains(".github/workflows/zk-conformance.yml", "release_artifact_path:");
+assertContains(".github/workflows/zk-conformance.yml", "repos/reallyme/zk/releases/latest");
+assertContains(".github/workflows/zk-conformance.yml", "steps.source.outputs.release_ref");
+assertContains(".github/workflows/zk-conformance.yml", "environment: zk-conformance");
+assertContains(".github/workflows/zk-conformance.yml", "Clear controlled checkout paths");
+assertContains(
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  "environment: eudi-conformance",
+);
+assertContains(
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  "Clear controlled checkout paths",
+);
 assertContains("schemas/component-attestation.schema.json", '"classification": {"const": "internal"}');
 assertContains("scripts/verify_component_attestation.py", "raw_process_output_retained");
 assertContains("docs/OIDF_SUBMISSION_CHECKLIST.md", "Publish for certification");
@@ -197,6 +238,18 @@ assertContains("adapters/registry.json", '"contract_path": "adapters/wallet"');
 assertContains(
   "references/reallyme/trace-sources.lock.json",
   '"purpose": "etsi-eaa-pid-trace-source-lock"',
+);
+assertContains(
+  "references/reallyme/trace-sources.lock.json",
+  '"update_strategy": "latest_release"',
+);
+assertContains(
+  "references/reallyme/trace-sources.lock.json",
+  '"release_ref":',
+);
+assertContains(
+  "references/reallyme/release-sources.json",
+  '"purpose": "latest-published-release-conformance-inputs"',
 );
 assertContains(
   "schemas/product-component-bom.schema.json",
@@ -244,6 +297,7 @@ assertContains(
   openid4vciCertificationWorkflow,
   "Execute all OpenID4VCI certification profiles",
 );
+assertContains(openid4vciCertificationWorkflow, "releases/latest");
 assertContains(
   openid4vciCertificationWorkflow,
   '[[ "${revision}" =~ ^[0-9a-f]{40}$ ]]',
@@ -284,10 +338,16 @@ assertContains(
   openid4vciCertificationWorkflow,
   "Validate protected runner artifact paths",
 );
+assertContains(openid4vciCertificationWorkflow, "Clear controlled checkout paths");
+assertContains(
+  openid4vciCertificationWorkflow,
+  'rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"',
+);
 assertContains(
   openid4vpCertificationWorkflow,
   "name: OIDF OpenID4VP Certification",
 );
+assertContains(openid4vpCertificationWorkflow, "releases/latest");
 assertContains(openid4vpCertificationWorkflow, "workflow_call:");
 assertContains(openid4vpCertificationWorkflow, '[[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]');
 assertContains(openid4vpCertificationWorkflow, "repository: reallyme/identity-conformance");
@@ -320,6 +380,11 @@ assertContains(
 assertContains(
   openid4vpCertificationWorkflow,
   "REALLYME_CI_TOKEN: ${{ secrets.REALLYME_CI_TOKEN }}",
+);
+assertContains(openid4vpCertificationWorkflow, "Clear controlled checkout paths");
+assertContains(
+  openid4vpCertificationWorkflow,
+  'rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"',
 );
 assertContains(
   openid4vpCertificationWorkflow,
@@ -439,40 +504,72 @@ assertContains(workflow, "Checkout pinned OpenID4VCI trace sources");
 assertContains(workflow, "repository: reallyme/openid4vci");
 assertContains(
   workflow,
-  'ref: ${{ steps.component-revisions.outputs.openid4vci }}',
+  'ref: ${{ steps.component-revisions.outputs.openid4vci_release_ref }}',
 );
 assertContains(workflow, "path: openid4vci");
 assertContains(workflow, "Checkout pinned OpenID4VP trace sources");
 assertContains(workflow, "repository: reallyme/openid4vp");
 assertContains(
   workflow,
-  'ref: ${{ steps.component-revisions.outputs.openid4vp }}',
+  'ref: ${{ steps.component-revisions.outputs.openid4vp_release_ref }}',
 );
 assertContains(workflow, "path: openid4vp");
 assertContains(workflow, "Checkout pinned SSI trace inputs");
 assertContains(workflow, "repository: reallyme/ssi");
-assertContains(workflow, 'ref: ${{ steps.component-revisions.outputs.ssi }}');
+assertContains(workflow, 'ref: ${{ steps.component-revisions.outputs.ssi_release_ref }}');
 assertContains(workflow, "path: ssi");
+assertContains(workflow, "releases/latest");
+assertContains(workflow, "Verify latest ReallyMe release checkouts");
 for (const candidateNeedle of [
   "Resolve pinned trace source revisions",
   "Checkout pinned OpenID4VCI trace sources",
   "repository: reallyme/openid4vci",
-  'ref: ${{ steps.component-revisions.outputs.openid4vci }}',
+  'ref: ${{ steps.component-revisions.outputs.openid4vci_release_ref }}',
   "path: openid4vci",
   "Checkout pinned OpenID4VP trace sources",
   "repository: reallyme/openid4vp",
-  'ref: ${{ steps.component-revisions.outputs.openid4vp }}',
+  'ref: ${{ steps.component-revisions.outputs.openid4vp_release_ref }}',
   "path: openid4vp",
   "Checkout pinned SSI trace inputs",
   "repository: reallyme/ssi",
-  'ref: ${{ steps.component-revisions.outputs.ssi }}',
+  'ref: ${{ steps.component-revisions.outputs.ssi_release_ref }}',
   "path: ssi",
-  "RELEASE_VERSION: ${{ inputs.version }}",
+  "releases/latest",
+  "Verify latest ReallyMe release checkouts",
+  "runs-on: ubuntu-26.04",
+  "Checkout pinned EU ARF source",
+  "Checkout pinned EU FCAF source",
+  "Checkout pinned EU technical specifications",
+  "Verify normative ledgers against exact upstream sources",
+  "verify_oidf_normative_ledger.py",
+  "Scan complete Git history",
+  `GITLEAKS_VERSION: ${gitleaksVersion}`,
+  `GITLEAKS_ARCHIVE_SHA256: ${gitleaksArchiveSha256}`,
+  "Resolve repository-controlled framework version",
   'REPOSITORY_COMMIT: ${{ github.sha }}',
-  '--version "${RELEASE_VERSION}"',
   '--repository-commit "${REPOSITORY_COMMIT}"',
 ]) {
   assertContains(releaseCandidateWorkflow, candidateNeedle);
+}
+for (const promotionNeedle of [
+  "environment: framework-release",
+  "candidate_run_id:",
+  "expected_commit:",
+  ".github/workflows/release-candidate.yml",
+  "Rebuild and compare the deterministic release manifest",
+  'gh release create "${tag}"',
+  'gh release edit "${tag}" --draft=false',
+  'test "${GITHUB_REF}" = "refs/heads/main"',
+  'test "${GITHUB_SHA}" = "${EXPECTED_COMMIT}"',
+]) {
+  assertContains(releasePromotionWorkflow, promotionNeedle);
+}
+for (const proposalNeedle of [
+  "build_conformance_update_proposal.py",
+  "conformance-update-proposal.json",
+  "runs-on: ubuntu-26.04",
+]) {
+  assertContains(updateProposalWorkflow, proposalNeedle);
 }
 if (readFileSync(releaseCandidateWorkflow, "utf8").includes("check_pin_freshness.py")) {
   fail("release candidate must not depend on live publisher availability");
@@ -496,6 +593,14 @@ for (const pythonWorkflow of pythonWorkflows) {
   assertContains(pythonWorkflow, 'python-version: "3.15.2"');
 }
 assertContains("references/pin-policy.json", '"id": "actions-setup-python"');
+assertContains(
+  "references/upstream-update-policy.json",
+  '"default_branch": "branch_snapshot_review"',
+);
+assertContains(
+  "references/upstream-update-policy.json",
+  '"automatic_publication": false',
+);
 assertContains("references/pin-policy.json", '"id": "python-latest"');
 assertContains("references/pin-policy.json", '"version": "3.15.2"');
 assertContains("references/pin-policy.json", '"id": "python-compatibility"');
@@ -509,12 +614,16 @@ assertWorkflowRunStep(
 );
 
 run("python3", ["scripts/verify_oidf_manifests.py"]);
+run("python3", ["scripts/verify_reallyme_release_sources.py"]);
 run("python3", ["scripts/verify_normative_sources.py"]);
 run("python3", ["scripts/verify_eudi_publications.py"]);
 run("python3", ["scripts/audit_etsi_eaa_pid_trace.py", "--check"]);
 run("python3", ["scripts/verify_eudi_relying_party_plan.py"]);
 run("python3", ["scripts/verify_eudi_legal_sources.py"]);
 run("python3", ["scripts/verify_eudi_upstream_coverage.py"]);
+run("python3", ["scripts/verify_eu_normative_ledgers.py"]);
+run("python3", ["scripts/verify_oidf_normative_ledger.py"]);
+run("python3", ["scripts/render_conformance_catalog.py", "--check"]);
 run("python3", ["scripts/verify_eudi_adapter.py"]);
 run("python3", ["scripts/verify_eudi_wallet_adapter.py"]);
 run("python3", ["scripts/verify_zk_adapter.py"]);

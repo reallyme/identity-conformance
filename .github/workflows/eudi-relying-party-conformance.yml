@@ -66,6 +66,7 @@ jobs:
     name: Execute the EUDI relying-party control-plane plan
     runs-on: [self-hosted, linux, x64, eudi-conformance]
     timeout-minutes: 360
+    environment: eudi-conformance
     steps:
       - name: Require a ReallyMe caller
         run: |
@@ -74,6 +75,14 @@ jobs:
           [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
         env:
           FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+
+      - name: Clear controlled checkout paths
+        run: |
+          test -n "${GITHUB_WORKSPACE}"
+          rm -rf -- \
+            "${GITHUB_WORKSPACE:?}/identity-conformance" \
+            "${GITHUB_WORKSPACE:?}/components" \
+            "${GITHUB_WORKSPACE:?}/upstream/eudi"
 
       - name: Checkout identity-conformance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -89,7 +98,12 @@ jobs:
           python-version: "3.15.2"
 
       - name: Verify the selected framework revision
-        run: test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+        run: |
+          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
+          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          printf '## EU relying party · Identity Conformance v%s\n\nFramework commit: %s\n' \
+            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
         env:
           FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
 
@@ -108,6 +122,8 @@ jobs:
 
       - name: Resolve immutable source revisions
         id: revisions
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           manifest="${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json"
           for component in candidate platform ssi; do
@@ -118,6 +134,14 @@ jobs:
             [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
             printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
           done
+          latest_ssi_ref="$(gh api 'repos/reallyme/ssi/releases/latest' --jq '.tag_name')"
+          [[ "${latest_ssi_ref}" =~ ^reallyme-ssi-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
+          latest_ssi_commit="$(gh api "repos/reallyme/ssi/commits/${latest_ssi_ref}" --jq '.sha')"
+          test "${latest_ssi_commit}" = "$(jq -er '
+            [.components[] | select(.component_id == "ssi")]
+            | if length == 1 then .[0].commit else error("SSI revision must be unique") end
+          ' "${manifest}")"
+          printf 'ssi_release_ref=%s\n' "${latest_ssi_ref}" >> "${GITHUB_OUTPUT}"
           while IFS=$'\t' read -r source_id commit; do
             [[ "${source_id}" =~ ^[a-z0-9-]+$ ]]
             [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
@@ -158,7 +182,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/ssi
-          ref: ${{ steps.revisions.outputs.ssi }}
+          ref: ${{ steps.revisions.outputs.ssi_release_ref }}
           path: components/ssi
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
@@ -297,13 +321,17 @@ jobs:
       - name: Best-effort remove private working material
         if: always()
         run: |
-          input_dir="${RUNNER_TEMP}/eudi-conformance-inputs"
-          result_dir="${RUNNER_TEMP}/eudi-relying-party-conformance"
-          private_source_dir="${GITHUB_WORKSPACE}/components"
+          input_dir="${RUNNER_TEMP:?}/eudi-conformance-inputs"
+          result_dir="${RUNNER_TEMP:?}/eudi-relying-party-conformance"
           for sensitive_dir in "${input_dir}" "${result_dir}"; do
             if [[ -d "${sensitive_dir}" ]] && command -v shred >/dev/null 2>&1; then
               find "${sensitive_dir}" -type f \
                 -exec shred --force --remove --zero {} + 2>/dev/null || true
             fi
           done
-          rm -rf -- "${input_dir}" "${result_dir}" "${private_source_dir}"
+          rm -rf -- \
+            "${input_dir}" \
+            "${result_dir}" \
+            "${GITHUB_WORKSPACE:?}/identity-conformance" \
+            "${GITHUB_WORKSPACE:?}/components" \
+            "${GITHUB_WORKSPACE:?}/upstream/eudi"

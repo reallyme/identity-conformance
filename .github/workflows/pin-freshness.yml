@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check-pins:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - name: Checkout identity-conformance

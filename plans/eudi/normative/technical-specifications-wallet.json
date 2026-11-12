@@ -1,0 +1,34 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "ledger_id": "eu-technical-specifications-wallet",
+  "domain": "eu",
+  "authority": "technical_specification",
+  "source": {
+    "source_id": "eudi-technical-specifications",
+    "ref": "main",
+    "commit": "cfc383e44294d65cfa6cccbbff6c927f0df91f9a",
+    "path": "docs/technical-specifications/ts3-wallet-unit-attestation.md"
+  },
+  "coverage": {
+    "component_id": "wallet",
+    "scope": "implemented_numeric_and_enumerated_wallet_boundaries",
+    "complete_for_declared_boundaries": true,
+    "certification_claim": false
+  },
+  "rules": [
+    {
+      "rule_id": "eu.ts3.section-2.2.1.1.wia_time_to_live",
+      "source_requirement_id": "2.2.1.1",
+      "source_path": "docs/technical-specifications/ts3-wallet-unit-attestation.md",
+      "requirement_level": "shall",
+      "boundary_id": "wallet.wia.technical_validity_seconds",
+      "statement": "When a WIA is sent to the Wallet Unit, it SHALL have a time-to-live of less than 24 hours.",
+      "expected": {
+        "value_type": "duration_seconds",
+        "operator": "less_than",
+        "value": 86400
+      }
+    }
+  ]
+}

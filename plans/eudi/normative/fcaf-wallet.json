@@ -1,0 +1,31 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "ledger_id": "eu-fcaf-wallet-v0.0.10",
+  "domain": "eu",
+  "authority": "fcaf",
+  "source": {
+    "source_id": "eudi-fcaf",
+    "ref": "v0.0.10",
+    "commit": "944b8f89cc17873c47026a05dfa9d212e89b0ee3",
+    "path": "docs/fcaf/suts/wallet_solution/index.md"
+  },
+  "coverage": {
+    "component_id": "wallet",
+    "scope": "wallet_solution_assessment_methodology",
+    "complete_for_declared_boundaries": true,
+    "certification_claim": false
+  },
+  "assessment": {
+    "execution_state": "methodology_only",
+    "executable_test_case_count": 0,
+    "required_classes": [
+      "WalletSolution_RelyingParty",
+      "WalletSolution_PidProvider",
+      "WalletSolution_AttestationProvider",
+      "WalletSolution_Infrastructure",
+      "WalletSolution_UI"
+    ]
+  },
+  "rules": []
+}

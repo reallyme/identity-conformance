@@ -59,6 +59,13 @@ jobs:
           [[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]
           [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
 
+      - name: Clear controlled checkout paths
+        run: |
+          test -n "${GITHUB_WORKSPACE}"
+          for checkout in identity-conformance openid4vci openid4vp wallet ssi identity cose; do
+            rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"
+          done
+
       - name: Checkout identity-conformance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,6 +73,16 @@ jobs:
           ref: ${{ inputs.framework_commit }}
           path: identity-conformance
           persist-credentials: false
+
+      - name: Verify selected framework release
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+        run: |
+          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
+          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
+          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          printf '## OIDF OpenID4VCI · Identity Conformance v%s\n\nFramework commit: %s\n' \
+            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Install latest Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -89,6 +106,8 @@ jobs:
       - name: Resolve the release BOM
         id: release-bom
         working-directory: identity-conformance
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           for component in openid4vci openid4vp wallet ssi identity cose; do
             revision="$(jq -er --arg component "${component}" \
@@ -106,6 +125,13 @@ jobs:
               "${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json")"
             [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
             [[ "${release_ref}" =~ ^[A-Za-z0-9._-]+$ ]]
+            if [[ "${component}" != "cose" ]]; then
+              latest_ref="$(gh api "repos/reallyme/${component}/releases/latest" --jq '.tag_name')"
+              [[ "${latest_ref}" =~ ^reallyme-${component}-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
+              latest_commit="$(gh api "repos/reallyme/${component}/commits/${latest_ref}" --jq '.sha')"
+              test "${release_ref}" = "${latest_ref}"
+              test "${revision}" = "${latest_commit}"
+            fi
             printf '%s_commit=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
             printf '%s_release_ref=%s\n' "${component}" "${release_ref}" >> "${GITHUB_OUTPUT}"
           done
@@ -319,13 +345,15 @@ jobs:
       - name: Best-effort remove materialized private data
         if: always()
         run: |
-          input_dir="${RUNNER_TEMP}/oidf-openid4vci-inputs"
-          result_dir="${RUNNER_TEMP}/openid4vci-certification"
-          if [[ -d "${input_dir}" ]]; then
-            find "${input_dir}" -type f -exec shred --force --remove --zero {} \;
-            rmdir "${input_dir}"
-          fi
-          if [[ -d "${result_dir}" ]]; then
-            find "${result_dir}" -type f -exec shred --force --remove --zero {} \;
-            find "${result_dir}" -depth -type d -empty -delete
-          fi
+          input_dir="${RUNNER_TEMP:?}/oidf-openid4vci-inputs"
+          result_dir="${RUNNER_TEMP:?}/openid4vci-certification"
+          for sensitive_dir in "${input_dir}" "${result_dir}"; do
+            if [[ -d "${sensitive_dir}" ]] && command -v shred >/dev/null 2>&1; then
+              find "${sensitive_dir}" -type f \
+                -exec shred --force --remove --zero {} + 2>/dev/null || true
+            fi
+          done
+          rm -rf -- "${input_dir}" "${result_dir}"
+          for checkout in identity-conformance openid4vci openid4vp wallet ssi identity cose; do
+            rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"
+          done

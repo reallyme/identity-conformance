@@ -153,10 +153,6 @@
       "reason": "no authoritative remote release is available"
     },
     {
-      "id": "wallet",
-      "reason": "no authoritative remote release is available"
-    },
-    {
       "id": "identity-taxonomy",
       "reason": "the pinned inventory is not present on the published default branch"
     },

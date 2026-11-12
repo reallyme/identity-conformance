@@ -329,7 +329,7 @@ class EudiAdapterTests(unittest.TestCase):
 
     def test_public_evidence_omits_private_repository_metadata(self) -> None:
         framework_manifest = PUBLIC_EVIDENCE.framework_release.build_manifest(
-            "1.0.0", "a" * 40
+            "a" * 40
         )
         evidence = PUBLIC_EVIDENCE.build_evidence(
             valid_execution_result(),
