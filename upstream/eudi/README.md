@@ -1,12 +1,11 @@
 # EUDI upstream references
 
-This directory records the exact public EU revisions selected for ReallyMe's
-wallet and eIDAS 2.0 work. It is a curated inventory, not a mirror of every
-repository in the EU Digital Identity Wallet organization. A source is included
-when it governs wallet behavior, provides an official test asset, or is useful
-as a concrete interoperability target.
+These locks select the public EU sources used for ReallyMe Wallet and eIDAS 2.0
+work: governing material, test assets, and interoperability targets. They cover
+the sources relevant to this framework rather than the full EU Digital Identity
+Wallet organization.
 
-`sources.lock.json` covers six distinct kinds of material:
+`sources.lock.json` covers:
 
 - the released ARF, draft FCAF, technical-specification catalog, attestation
   rulebooks, and Age Verification specification, including its ZKP profile;
@@ -19,28 +18,29 @@ as a concrete interoperability target.
   reference stack; and
 - the source of the official documentation portal.
 
-Each Git source is pinned to both a ref and its resolved commit. The weekly pin
-monitor checks releases, tags, or default-branch heads according to the source's
-declared update strategy. Local checkouts belong under
+Each Git source records a ref and its resolved commit. The weekly check compares
+it with the latest release, tag, or default branch, as specified by the source's
+update policy. Local checkouts belong under
 `upstream/eudi/checkouts/`, which is ignored.
 
-The inventory is deliberately honest about maturity. FCAF remains a pre-1.0
-assessment baseline. The issuer wallet tester targets OpenID4VCI draft 13 and is
-therefore retained only for legacy compatibility; it is not evidence of
-OpenID4VCI Final conformance. The documentation portal is monitored for drift
-but does not govern a conformance result.
+FCAF remains a pre-1.0 assessment baseline. The issuer Wallet tester targets
+OpenID4VCI draft 13 and is kept only for legacy compatibility. The documentation
+portal is monitored for changes but does not determine a result.
 
 ## Pinning and execution
 
-A pin says which upstream material was reviewed. It does not say that the
-upstream software or test suite ran successfully. The machine-validated matrix
-in `plans/eudi/upstream-coverage.json` records that distinction for every source.
+A pin identifies the reviewed source revision.
+`plans/eudi/upstream-coverage.json` records whether its software or tests ran.
 
 The current relying-party lane runs ReallyMe-owned TS5/TS6 controls and verifies
 the selected EU checkouts. The current Wallet lane runs the wallet component
-package and binds its attestation to the complete EU source lock. Neither lane
-currently runs the official mobile UI suite, ITB, FCAF cases, Age Verification
-profile, or RQES wallet-driven tester directly.
+package and binds its attestation to the complete EU source lock. A separate
+upstream-assets lane verifies the exact Wallet UI feature inventory, ITB suite
+and case references, FCAF Wallet methodology files, Age Verification profile
+and ZKP annex, and RQES tester service structure.
+
+The upstream-assets lane validates those source inventories. It does not run
+their cases against a Wallet.
 
 Those external suites need real deployment inputs:
 
@@ -51,26 +51,23 @@ Those external suites need real deployment inputs:
   and
 - Age Verification needs a deployed profile and a dedicated adapter.
 
-Until those adapters and environments exist, the sources remain pinned and
-freshness-monitored, and the coverage plan fails closed against any claim that
-the official suites were executed.
+Until those adapters and environments exist, the coverage plan rejects any
+claim that the external suites ran. The RQES tester's Python requirements are
+not installed because they need a separate security review.
 
 ## Publications and law
 
-`references/eudi-publications.lock.json` independently pins the wallet-relevant
-RFC, W3C, and ETSI publications that are publicly downloadable. These are bound
-by SHA-256 and byte length. It delegates the already reviewed OpenID Final and
-ETSI 119472/119612 bindings to their existing locks instead of duplicating
-them.
+`references/eudi-publications.lock.json` records the downloadable RFC, W3C, and
+ETSI publications used by the Wallet work, together with their SHA-256 and byte
+length. OpenID Final and ETSI 119472/119612 remain in their existing locks.
 
 ISO/IEC 18013-5, 18013-6, 18013-7, and 23220-2 are copyright-restricted. They
 are pinned by exact standard number, edition, publication date, and official
 catalog URL; their full text is not copied here. The Digital Credentials API is
 recorded as a dated Working Draft and cannot support a certification claim.
 
-`legal-sources.lock.json` separately records the immutable ELI and CELEX
-identifiers for the governing eIDAS regulation, the European Digital Identity
-Framework amendment, the wallet implementing regulations, the qualified and
-public-sector EAA regulation, and the 2026 amendments. Binding legislation and
-adopted implementing acts take precedence over every engineering reference and
-reference implementation in this directory.
+`legal-sources.lock.json` records the ELI and CELEX identifiers for the eIDAS
+regulation, the European Digital Identity Framework amendment, Wallet
+implementing regulations, qualified and public-sector EAA rules, and the 2026
+amendments. Law and adopted implementing acts take priority over the engineering
+references in this directory.

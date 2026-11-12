@@ -64,7 +64,14 @@ jobs:
             printf '%s=%s\n' "${component}" "${latest_commit}" >> "${GITHUB_OUTPUT}"
             printf '%s_release_ref=%s\n' "${component}" "${latest_ref}" >> "${GITHUB_OUTPUT}"
           done
-          for source_id in eudi-arf eudi-fcaf eudi-technical-specifications; do
+          for source_id in \
+            eudi-arf \
+            eudi-fcaf \
+            eudi-technical-specifications \
+            eudi-functional-tests \
+            eudi-itb \
+            eudi-age-verification-specification \
+            eudi-rqes-wallet-driven-tester; do
             revision="$(
               jq -er --arg source_id "${source_id}" '
                 [.sources[] | select(.source_id == $source_id)]
@@ -127,6 +134,35 @@ jobs:
           ref: ${{ steps.component-revisions.outputs.eudi_technical_specifications }}
           path: eudi-technical-specifications
           persist-credentials: false
+      - name: Checkout pinned Wallet UI tests
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-doc-testing-application
+          ref: ${{ steps.component-revisions.outputs.eudi_functional_tests }}
+          path: eudi-wallet-ui-tests
+          persist-credentials: false
+          lfs: false
+      - name: Checkout pinned interoperability testbed
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-itb
+          ref: ${{ steps.component-revisions.outputs.eudi_itb }}
+          path: eudi-itb
+          persist-credentials: false
+      - name: Checkout pinned Age Verification specification
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/av-doc-technical-specification
+          ref: ${{ steps.component-revisions.outputs.eudi_age_verification_specification }}
+          path: eudi-age-verification
+          persist-credentials: false
+      - name: Checkout pinned RQES Wallet tester
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: eu-digital-identity-wallet/eudi-app-web-walletdriven-tester-py
+          ref: ${{ steps.component-revisions.outputs.eudi_rqes_wallet_driven_tester }}
+          path: eudi-rqes-wallet-tester
+          persist-credentials: false
       - name: Install Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -152,6 +188,15 @@ jobs:
           git clone --depth 1 --branch "${pinned_ref}" -- "${repository}" "${suite_dir}"
           test "$(git -C "${suite_dir}" rev-parse HEAD)" = "${expected_commit}"
           python3 scripts/verify_oidf_normative_ledger.py --suite-repository "${suite_dir}"
+      - name: Verify EU upstream test assets
+        working-directory: identity-conformance
+        run: |
+          python3 scripts/verify_eudi_upstream_assets.py \
+            --fcaf ../eudi-fcaf \
+            --functional-tests ../eudi-wallet-ui-tests \
+            --itb ../eudi-itb \
+            --age-verification ../eudi-age-verification \
+            --rqes ../eudi-rqes-wallet-tester
       - name: Run repository tests
         working-directory: identity-conformance
         run: python3 -m unittest discover -s tests -p 'test_*.py'

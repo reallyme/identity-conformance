@@ -48,7 +48,11 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             )
         ]
         with (
-            patch.object(BUILDER.freshness, "run_checks", return_value=(checks, [])),
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=(checks, [], []),
+            ),
             patch.object(
                 BUILDER.oidf,
                 "build_proposal",
@@ -69,7 +73,11 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
 
     def test_current_baseline_does_not_invent_a_release(self) -> None:
         with (
-            patch.object(BUILDER.freshness, "run_checks", return_value=([], [])),
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=([], [], []),
+            ),
             patch.object(BUILDER.oidf, "build_proposal", return_value={}),
         ):
             proposal = BUILDER.build_proposal()
@@ -87,7 +95,11 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
             )
         ]
         with (
-            patch.object(BUILDER.freshness, "run_checks", return_value=(checks, [])),
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=(checks, [], []),
+            ),
             patch.object(BUILDER.oidf, "build_proposal", return_value={}),
         ):
             proposal = BUILDER.build_proposal()
@@ -97,6 +109,57 @@ class ConformanceUpdateProposalTests(unittest.TestCase):
         self.assertEqual(
             proposal["change_groups"]["branch_snapshot_reviews"],
             [BUILDER.asdict(checks[0])],
+        )
+
+    def test_unavailable_source_is_retained_without_inventing_a_change(self) -> None:
+        unavailable = BUILDER.freshness.UnavailableCheck(
+            check_id="eudi_sources",
+            reason="authoritative source unavailable",
+        )
+        with (
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=([], [], [unavailable]),
+            ),
+            patch.object(BUILDER.oidf, "build_proposal", return_value={}),
+        ):
+            proposal = BUILDER.build_proposal()
+        self.assertEqual(proposal["freshness_status"], "unavailable")
+        self.assertFalse(proposal["update_available"])
+        self.assertFalse(proposal["version_candidate_available"])
+        self.assertIsNone(proposal["proposed_framework_version"])
+        self.assertEqual(
+            proposal["unavailable_checks"],
+            [BUILDER.asdict(unavailable)],
+        )
+
+    def test_unavailable_oidf_proposal_is_retained_for_review(self) -> None:
+        with (
+            patch.object(
+                BUILDER.freshness,
+                "run_checks",
+                return_value=([], [], []),
+            ),
+            patch.object(
+                BUILDER.oidf,
+                "build_proposal",
+                side_effect=BUILDER.oidf.ProposalError(
+                    "upstream_metadata_unavailable"
+                ),
+            ),
+        ):
+            proposal = BUILDER.build_proposal()
+        self.assertEqual(proposal["freshness_status"], "unavailable")
+        self.assertIsNone(proposal["oidf_candidate"])
+        self.assertEqual(
+            proposal["unavailable_checks"],
+            [
+                {
+                    "check_id": "oidf_update_proposal",
+                    "reason": "upstream_metadata_unavailable",
+                }
+            ],
         )
 
     def test_patch_version_bump_is_deterministic(self) -> None:

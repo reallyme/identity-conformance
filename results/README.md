@@ -1,8 +1,8 @@
 # Raw conformance results
 
-The OIDF runner writes raw exports beneath `local/`. These files may contain
-tokens, endpoints, identifiers, request bodies, and other sensitive material.
-The directory is ignored by Git and must not be used as certification evidence.
+Runners write raw output under `local/`. It may contain tokens, endpoints,
+identifiers, request bodies, and other sensitive data. Git ignores this
+directory. Raw output is not public or certification evidence.
 
-After a complete run, review and redact the output, hash every retained
-artifact, and create a schema-valid disclosure record under `../evidence/`.
+After a complete run, redact the output, hash each retained artifact, and create
+a schema-valid public record under `../evidence/`.

@@ -1,11 +1,10 @@
 # OpenID4VP adapter lane
 
-This lane describes conformance orchestration for the OpenID4VP verifier role.
-The wire protocol, DCQL behavior, state machine, HAIP policy, and protocol-local
-adapter remain in `reallyme/openid4vp`. The deployable verifier harness composes
-those boundaries with product providers in `reallyme/identity`; this repository
-owns only the plan-to-product binding and retained evidence.
+This lane connects the OpenID4VP verifier plan to the released product. The
+wire protocol, DCQL behavior, state machine, HAIP policy, and protocol adapter
+stay in `reallyme/openid4vp`. The deployable verifier in `reallyme/identity`
+connects those parts to the product. This repository owns the shared plan and
+evidence rules.
 
-Wallet-side presentation is composed through the product wallet lane so that
-consent, credential selection, key access, and protocol behavior are tested as
-the released product exposes them.
+Wallet presentation uses the product Wallet lane so the run covers consent,
+credential selection, key access, and protocol behavior together.

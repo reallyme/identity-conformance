@@ -45,6 +45,7 @@ const pythonWorkflows = [
   ".github/workflows/eu-arf-normative.yml",
   ".github/workflows/eu-fcaf-normative.yml",
   ".github/workflows/eu-technical-specifications-normative.yml",
+  ".github/workflows/eu-upstream-assets.yml",
   ".github/workflows/oidf-normative-ledger.yml",
   ".github/workflows/oidf-openid4vci-certification.yml",
   ".github/workflows/oidf-openid4vp-certification.yml",
@@ -108,6 +109,7 @@ for (const path of loadTrackedFiles()) {
     path !== "plans/eudi/relying-party-control-plane.json" &&
     path !== "plans/eudi/wallet.json" &&
     path !== "plans/eudi/upstream-coverage.json" &&
+    path !== "plans/eudi/upstream-assets.json" &&
     !/^plans\/eudi\/normative\/[A-Za-z0-9_.-]+\.json$/u.test(path) &&
     path !== "plans/zk/presentation-proofs.json"
   ) {
@@ -134,8 +136,9 @@ assertContains(
 assertContains("LICENSE-MIT", "Copyright (c) 2026 ReallyMe Technologies Limited");
 assertContains("LICENSE-APACHE", "Apache License");
 assertContains("results/.gitignore", "/*");
-assertContains("README.md", `Current framework baseline: **v${frameworkVersion}**`);
-assertContains("README.md", "## Conformance enforced by this release");
+assertContains("README.md", `Framework version: **v${frameworkVersion}**`);
+assertContains("README.md", "## Standards baseline");
+assertContains("docs/STANDARDS_BASELINE.md", "# Standards baseline");
 assertContains("scripts/render_conformance_catalog.py", "Baseline updated");
 assertContains("evidence/README.md", "pass both redaction and public-disclosure review");
 assertContains("upstream/oidf/LICENSE.txt", "Copyright (c) 2019-2020 OpenID Foundation");
@@ -183,6 +186,13 @@ assertContains(".github/workflows/eu-technical-specifications-normative.yml", "-
 assertContains(".github/workflows/oidf-normative-ledger.yml", "upstream/oidf/conformance-suite.lock.json");
 assertContains("plans/eudi/upstream-coverage.json", '"official_ui_suite_executed": false');
 assertContains("plans/eudi/upstream-coverage.json", '"execution_state": "external_runner_required"');
+assertContains("plans/eudi/upstream-assets.json", '"product_execution_claim": false');
+assertContains("plans/eudi/upstream-assets.json", '"feature_file_count": 64');
+assertContains("plans/eudi/upstream-assets.json", '"dependency_installation": "prohibited"');
+assertContains(".github/workflows/eu-upstream-assets.yml", "Verify exact upstream asset inventories");
+assertContains(".github/workflows/eu-upstream-assets.yml", "126 feature files, 798 scenarios");
+assertContains(".github/workflows/eu-upstream-assets.yml", "5 suites, 39 test cases");
+assertContains(".github/workflows/eu-upstream-assets.yml", "runs-on: ubuntu-26.04");
 assertContains("adapters/eudi-wallet/adapter.json", '"adapter_id": "eudi_wallet_engineering"');
 assertContains("adapters/eudi-wallet/adapter.json", '"reallyme-wallet-conformance"');
 assertContains("scripts/run_eudi_wallet_conformance.py", "execute_package");
@@ -541,6 +551,10 @@ for (const candidateNeedle of [
   "Checkout pinned EU FCAF source",
   "Checkout pinned EU technical specifications",
   "Verify normative ledgers against exact upstream sources",
+  "Verify EU upstream test assets",
+  "eudi_functional_tests",
+  "eudi_age_verification_specification",
+  "eudi_rqes_wallet_driven_tester",
   "verify_oidf_normative_ledger.py",
   "Scan complete Git history",
   `GITLEAKS_VERSION: ${gitleaksVersion}`,
@@ -593,6 +607,9 @@ for (const pythonWorkflow of pythonWorkflows) {
   assertContains(pythonWorkflow, 'python-version: "3.15.2"');
 }
 assertContains("references/pin-policy.json", '"id": "actions-setup-python"');
+assertContains("references/pin-policy.json", '"id": "actions-setup-node"');
+assertContains(releaseCandidateWorkflow, 'node-version: "26"');
+assertContains(workflow, 'node-version: "26"');
 assertContains(
   "references/upstream-update-policy.json",
   '"default_branch": "branch_snapshot_review"',
@@ -621,6 +638,7 @@ run("python3", ["scripts/audit_etsi_eaa_pid_trace.py", "--check"]);
 run("python3", ["scripts/verify_eudi_relying_party_plan.py"]);
 run("python3", ["scripts/verify_eudi_legal_sources.py"]);
 run("python3", ["scripts/verify_eudi_upstream_coverage.py"]);
+run("python3", ["scripts/verify_eudi_upstream_assets.py", "--plan-only"]);
 run("python3", ["scripts/verify_eu_normative_ledgers.py"]);
 run("python3", ["scripts/verify_oidf_normative_ledger.py"]);
 run("python3", ["scripts/render_conformance_catalog.py", "--check"]);

@@ -1,9 +1,8 @@
 # Third-party notices
 
-The files under `snapshots/` are generated from the OpenID Foundation
-conformance suite's plan and module metadata at the revision recorded in
-`conformance-suite.lock.json`. They are retained to make ReallyMe's plan
-selection reviewable without committing the upstream source checkout.
+The files under `snapshots/` come from the OpenID Foundation conformance suite
+revision recorded in `conformance-suite.lock.json`. They allow review of
+ReallyMe's plan selection without committing the upstream checkout.
 
 The upstream conformance suite is distributed under the MIT License. Its
 copyright notice and license terms are reproduced in `LICENSE.txt`. ReallyMe's

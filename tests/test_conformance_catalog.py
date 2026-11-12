@@ -34,17 +34,34 @@ CATALOG = load_script()
 
 class ConformanceCatalogTests(unittest.TestCase):
     def test_checked_in_catalog_matches_release_inputs(self) -> None:
-        current = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
-        expected = CATALOG.replace_catalog(current, CATALOG.render_catalog())
-        self.assertEqual(current, expected)
+        current_readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+        expected_readme = CATALOG.replace_generated_section(
+            current_readme,
+            CATALOG.SUMMARY_START_MARKER,
+            CATALOG.SUMMARY_END_MARKER,
+            CATALOG.render_summary(),
+        )
+        self.assertEqual(current_readme, expected_readme)
+
+        current_baseline = (REPOSITORY_ROOT / "docs/STANDARDS_BASELINE.md").read_text(
+            encoding="utf-8"
+        )
+        expected_baseline = CATALOG.replace_generated_section(
+            current_baseline,
+            CATALOG.CATALOG_START_MARKER,
+            CATALOG.CATALOG_END_MARKER,
+            CATALOG.render_catalog(),
+        )
+        self.assertEqual(current_baseline, expected_baseline)
 
     def test_catalog_contains_exact_release_and_source_bindings(self) -> None:
         catalog = CATALOG.render_catalog()
         version = CATALOG.read_version()
-        self.assertIn(f"Current framework baseline: **v{version}**", catalog)
+        self.assertIn(f"Framework version: **v{version}**", catalog)
         self.assertIn(
-            f"EU%20ARF%20v{version.replace('.', '%2E')}", catalog
+            "label=EU%20ARF&message=v3.0.0%20included", catalog
         )
+        self.assertIn("Inclusion does not imply product conformance.", catalog)
         self.assertIn(
             "blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/", catalog
         )
@@ -52,6 +69,19 @@ class ConformanceCatalogTests(unittest.TestCase):
             "-/tree/23353b36957d6466010de767c812d2c91ed37638", catalog
         )
         self.assertIn("wallet.wia.technical_validity_seconds < 86,400", catalog)
+        self.assertIn("Verifies `126` feature files and `798` scenarios", catalog)
+        self.assertIn("Verifies `5` suites and `39` test cases", catalog)
+        self.assertIn("Upstream dependencies are excluded from CI", catalog)
+
+    def test_readme_summary_contains_current_release_inventory(self) -> None:
+        summary = CATALOG.render_summary()
+        self.assertIn("EU Architecture and Reference Framework", summary)
+        self.assertIn("OpenID Conformance Suite", summary)
+        self.assertIn("`126` feature files and `798` scenarios", summary)
+        self.assertIn("`5` suites and `39` test cases", summary)
+        self.assertIn("`main @ cfc383e4`", summary)
+        self.assertIn("`main @ b0e22243`", summary)
+        self.assertIn("docs/STANDARDS_BASELINE.md", summary)
 
     def test_inconsistent_ledger_commit_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

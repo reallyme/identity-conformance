@@ -2,7 +2,7 @@
   "schema_version": 2,
   "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
   "license": "MIT OR Apache-2.0",
-  "observed_at": "2026-11-11",
+  "observed_at": "2026-11-12",
   "purpose": "eudi-wallet-conformance-and-interoperability-source-pins",
   "sources": [
     {
@@ -87,7 +87,7 @@
     },
     {
       "source_id": "eudi-ios-wallet-kit", "role": "released_mobile_wallet_core_interoperability_target", "coverage_class": "interoperability_target",
-      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit", "ref": "v0.61.1", "update_strategy": "latest_release", "commit": "b210513db57df08ae284594aa230a091281ea43b", "license": "Apache-2.0", "certification_claim": false,
+      "repository": "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit", "ref": "v0.62.0", "update_strategy": "latest_release", "commit": "661299eda0b0b8a6993e128147760fb36c915e73", "license": "Apache-2.0", "certification_claim": false,
       "local_checkout": "upstream/eudi/checkouts/eudi-lib-ios-wallet-kit"
     },
     {

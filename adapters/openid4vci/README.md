@@ -1,8 +1,8 @@
 # OpenID4VCI adapter lane
 
-This lane describes conformance orchestration for the OpenID4VCI issuer role.
-The wire protocol, state machine, HAIP policy, and executable adapter remain in
-`reallyme/openid4vci`; this repository owns only the plan-to-product binding.
+This lane connects the OpenID4VCI issuer plan to the released product. The wire
+protocol, state machine, HAIP policy, and executable adapter stay in
+`reallyme/openid4vci`.
 
-Wallet-side issuance is composed through the product wallet lane because OIDF
-must exercise the deployable product rather than an isolated protocol engine.
+Wallet issuance uses the product Wallet lane so OIDF tests the deployable
+product, not an isolated protocol engine.

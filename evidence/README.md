@@ -1,35 +1,34 @@
 # Public conformance evidence
 
-This directory is reserved for reviewed, disclosure-safe evidence. Raw runner
-output, suite exports, screenshots, logs, deployment records, and internal
-attestations belong in ignored `results/local/` storage or an approved private
-evidence store.
+Only evidence approved for public release belongs here. Keep raw output, suite
+exports, screenshots, logs, deployment records, and internal attestations in
+ignored `results/local/` storage or an approved restricted evidence store.
 
 A public bundle must:
 
-- conform to the applicable schema in `../schemas/`;
+- match the applicable schema in `../schemas/`;
 - identify the framework release, plan, and upstream source revisions, and
-  either name a publicly disclosable product release or bind the reviewed
-  private release through opaque digests defined by the applicable schema;
+  either name a public product release or identify a non-public release through
+  the opaque digests allowed by the schema;
 - bind every retained artifact by SHA-256;
-- contain only the minimum information needed to substantiate its claim;
+- contain only what is needed to support the claim;
 - pass both redaction and public-disclosure review; and
 - pass the repository publication and secret-scanning gates.
 
-Component attestations are supporting evidence. They do not replace the
-composed execution result. For OIDF certification, the authoritative technical
-result is the official hosted-suite result for the exact submitted deployment.
+Component attestations support a result but do not replace the integration run.
+For OIDF certification, the official hosted-suite result for the submitted
+deployment is the technical result that matters.
 
-EUDI relying-party public evidence must conform to
+EUDI relying-party public evidence must match
 `../schemas/eudi-public-evidence.schema.json`. The private execution result and
-component attestation remain outside this repository. The public commitment may
-contain framework, source-lock, artifact, attestation, and private-result
-digests plus assertion outcomes and completed reviews. It must not disclose
-private repository identities, commits, test inventories, endpoints,
-credentials, transaction content, customer identifiers, or key material.
+component attestation remain outside this repository. The public record may
+contain framework, source-lock, artifact, attestation, and result digests, plus
+assertion outcomes and completed reviews. It must not disclose non-public
+repository names, commits, test inventories, endpoints, credentials,
+transaction content, customer identifiers, or key material.
 
-EUDI Wallet and ZK results are internal engineering records. They require a
-separately reviewed public-evidence schema before promotion into this tree.
+EUDI Wallet and ZK results remain internal until a public-evidence schema has
+been reviewed for them.
 
-The presence of a plan, reference mapping, passing component test, or this
-directory does not establish certification or product conformity.
+Certification and product-conformity claims require the complete evidence set,
+not an individual plan, reference map, component test, or file.

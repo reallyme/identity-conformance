@@ -384,7 +384,7 @@ def check_github_release(
     results = [status_result(f"{check_id}.release", expected_tag, observed_tag)]
     if expected_commit is not None:
         observed_commit = resolve_github_ref(
-            repository, f"tags/{expected_tag}", fetcher
+            repository, f"tags/{observed_tag}", fetcher
         )
         results.append(
             status_result(f"{check_id}.commit", expected_commit, observed_commit)

@@ -373,6 +373,34 @@ class PinFreshnessTests(unittest.TestCase):
         )
         self.assertEqual(results[0].status, "stale")
 
+    def test_release_check_resolves_the_observed_release_commit(self) -> None:
+        observed_commit = "b" * 40
+
+        def fetcher(url: str) -> object:
+            if url.endswith("/releases/latest"):
+                return {"tag_name": "v1.1.0"}
+            if url.endswith("/git/ref/tags/v1.1.0"):
+                return {
+                    "object": {
+                        "type": "commit",
+                        "sha": observed_commit,
+                    }
+                }
+            raise AssertionError("unexpected metadata request")
+
+        results = FRESHNESS.check_github_release(
+            "example",
+            "reallyme/example",
+            "v1.0.0",
+            "a" * 40,
+            fetcher,
+        )
+
+        self.assertEqual(results[0].observed, "v1.1.0")
+        self.assertEqual(results[0].status, "stale")
+        self.assertEqual(results[1].observed, observed_commit)
+        self.assertEqual(results[1].status, "stale")
+
     def test_reallyme_trace_sources_follow_latest_releases(self) -> None:
         commit = "a" * 40
         lock = {

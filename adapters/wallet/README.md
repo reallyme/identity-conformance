@@ -1,99 +1,78 @@
-# Product wallet adapter lane
+# Product Wallet adapter
 
-This lane composes `reallyme/wallet`, `reallyme/ssi`, `reallyme/identity`, and the relevant
-`reallyme/openid4vci` or `reallyme/openid4vp` protocol engine for OIDF wallet
-profiles. It must drive the same deployable product boundary intended for
-release; recorder-only or protocol-engine-only harnesses are not acceptable
-certification targets.
+This lane runs OIDF Wallet profiles against the released product. It combines
+`reallyme/wallet`, `reallyme/ssi`, `reallyme/identity`, and the applicable
+`reallyme/openid4vci` or `reallyme/openid4vp` engine.
 
-The protocol repositories own their wallet-role engines and narrow harness
-traits. `reallyme/wallet` owns reusable consent, inventory, storage, and
-lifecycle state transitions. `reallyme/identity` owns the concrete composed
-VCI and VP drivers that connect those boundaries to keys, attestation, network,
-clock, and encrypted-storage providers. This repository owns the executable
-deployment, complete matrix orchestration, and retained evidence; it must not
-reimplement any of those layers.
+The test target must be the same product boundary intended for release. A
+recorder or isolated protocol engine is not an acceptable certification target.
 
-The composed OpenID4VCI lane must cover both immediate and deferred
-offer-to-storage flows through the deployed Identity wallet host and the pinned
-OpenID4VCI component. These checks replace mock issuer and in-process HTTP
-adapter composition tests in `reallyme/wallet`; Wallet's own suite stops at its
-injected transport boundaries and resumable lifecycle invariants.
+## Responsibilities
 
-## Shared requirements and retained results
+- `reallyme/openid4vci` and `reallyme/openid4vp` own the Wallet-side protocol
+  engines and their narrow harness interfaces.
+- `reallyme/wallet` owns consent, credential inventory, storage, and lifecycle
+  state.
+- `reallyme/identity` connects those parts to keys, attestation, network,
+  clock, and encrypted storage.
+- `identity-conformance` owns the deployment contract, test matrix, upstream
+  pins, result rules, and evidence requirements.
+- The caller owns the exact candidate BOM and release artifacts.
 
-[Identity Taxonomy](https://github.com/reallyme/identity-taxonomy) owns shared
-requirement vocabulary and federated coverage. Each implementation repository
-supplies its scoped producer evidence and behavioral tests. Wallet retains its
-Rust domain tests, capability contracts, and source-local fixtures.
+OpenID4VCI runs cover immediate and deferred issuance through the deployed
+Identity Wallet host. Wallet's own tests stop at its injected transport
+boundaries; this lane covers the assembled product.
 
-Identity Conformance owns the composed run plans, external suite and standards
-pins, deployment provenance, and retained cross-repository results. Product
-callers own the candidate component BOM. Raw engineering
-runs stay ignored under `results/local/`. A disclosure-safe record may enter
-`evidence/` only after an applicable public schema exists and the record passes
-the redaction and public-disclosure reviews. Consumer repositories may
-materialize pinned, hash-verified copies for local validation.
+## Candidate and results
 
-The caller-supplied product component BOM and the suite pin in
-`upstream/oidf/conformance-suite.lock.json` must both match the intended release
-candidate before a qualifying run. The framework provides no fallback product
-baseline. Local development probes may identify
-integration failures, but dirty working-tree hashes and selected-module runs
-cannot satisfy the complete pinned certification matrix. Promotion requires
-the exact deployed artifacts, every applicable module, redacted exports, and
-the evidence reviews defined in `evidence/README.md`.
+The caller-supplied BOM and the suite pin in
+`upstream/oidf/conformance-suite.lock.json` must match the intended release.
+The framework does not supply a fallback product version.
 
-## Issuance qualification prerequisites
+Local runs may help find integration failures, but a dirty checkout or partial
+module run cannot satisfy the certification matrix. A certification run needs:
 
-Wallet retains authenticated issuer-nonce observations in its issuance session,
-canonical request and durable snapshot. The proof verifier binds the verified
-nonce digest and signed issue time; first submission checks trusted freshness,
-and restoration validates the original session and proof binding. Identity's
-nonce provider checks the configured endpoint against authenticated session
-metadata before network I/O. Missing, substituted, expired and wrong-session
-observations fail closed in Wallet's behavioral tests.
+- immutable release artifacts and source commits;
+- the full applicable module matrix;
+- the expected product outcome for each profile;
+- redacted suite exports; and
+- the reviews required by `evidence/README.md`.
 
-SSI provides an explicit draft-07 attestation PoP signing profile whose
-`iss` is the configured OAuth client identifier. Identity's pinned OIDF harness
-selects that profile for PAR and token authentication. SSI's existing default
-claim set is preserved. Profile selection must remain explicit; an HTTP
-success cannot waive a failed suite condition.
+Raw local results belong in the ignored `results/local/` directory. Public
+evidence may enter `evidence/` only after schema validation, redaction review,
+and disclosure review.
 
-Wallet and OpenID4VP bind their resolved SSI dependencies through their own
-locked builds and caller-supplied component revisions. Wallet also verifies the
-SSI protobuf archive checksum, release commit, and exact imported schema bytes.
-ZK artifacts remain separately attested inputs to the ZK and
-composed-presentation plans.
+## Issuance requirements
 
-Local engineering runs are retained under `results/local/`. Each completed
-profile records the exact module inventory returned by the pinned suite and
-requires both a passing suite result and the expected composed host outcome.
-Issuance success means authenticated receipt validation and encrypted atomic
-storage completed; a suite result alone cannot establish that outcome.
+Wallet stores the authenticated issuer nonce in its issuance session and
+durable snapshot. The proof verifier checks the nonce digest and issue time.
+Restored sessions must retain the original nonce and proof binding. Missing,
+substituted, expired, and wrong-session values must fail.
 
-Presentation rehearsals must keep each provisioning issuer and its signed
-status resources available for the entire presentation plan. A completed local
-issuer module may stop serving those resources. Use the suite's bounded
-additional-request grace period for provisioning; do not replace failed live
-status checks with issuance-time evidence. Provisioning modules held for this
-purpose are setup dependencies, not completed certification modules.
+SSI provides the draft-07 attestation proof-of-possession profile used for PAR
+and token authentication. Its `iss` claim is the configured OAuth client ID.
+Profile selection must be explicit; an HTTP success does not override a failed
+suite condition.
 
-The local suite uses a TLS proxy that reports the actual negotiated protocol
-and cipher. Identity's status adapter samples its explicitly injected trusted
-clock after response retrieval, rejects rollback, and retains future/expired
-JWT rejection. This permits an issuer to mint status evidence while answering
-a request without treating that evidence as future-dated relative to an older
-pre-request timestamp. SSI is unchanged by this adapter fix.
+Each completed issuance profile must record the module inventory returned by
+the pinned suite and the composed host result. Issuance succeeds only after the
+host authenticates the response and completes encrypted atomic storage.
 
-OpenID4VP owns the current ZK `artifact_identity` schema. Wallet's imported
-snapshot and Identity's generated bindings follow that canonical source.
-Current wire vectors verify that manifest and artifact-set identities remain
-distinct, with identical fixture bytes consumed by Rust, TypeScript, Swift and
-JVM bindings. No schema migration layer is used in this composition.
+## Presentation requirements
 
-A qualifying run still requires the complete applicable module matrix,
-reviewed release/deployment provenance, supported device providers, and the
-normal evidence review. SSI's ETSI runtime policy crate remains owned and
-published by SSI; shared requirement vocabulary belongs in Identity Taxonomy,
-and composed execution evidence belongs here.
+Provisioning issuers and signed status resources must remain available for the
+whole presentation plan. A completed issuer module may stop serving those
+resources, so provisioning may use the suite's bounded additional-request
+grace period. Setup modules are dependencies, not completed certification
+modules.
+
+The local suite uses a TLS proxy that records the negotiated protocol and
+cipher. Identity checks status evidence against its injected trusted clock
+after the response arrives and rejects rollback, future, and expired values.
+
+OpenID4VP owns the ZK `artifact_identity` schema. Wallet snapshots and Identity
+bindings follow that source. Shared fixtures must keep manifest identity and
+artifact-set identity separate across Rust, TypeScript, Swift, and JVM.
+
+Identity Taxonomy supplies advisory requirement vocabulary. It is not yet a
+mandatory input to this lane.

@@ -3,42 +3,44 @@
 SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
 SPDX-License-Identifier: MIT OR Apache-2.0
 
-This adapter executes the committed `reallyme-wallet-conformance` package against an exact wallet source revision and exact conformance-input digests. It also binds the tested wallet release bundle to the component's release attestation.
+This adapter runs the committed `reallyme-wallet-conformance` package against
+an exact Wallet source revision. It also checks that the release bundle and
+component attestation describe that same revision.
 
-The caller selects the Wallet candidate in the deployment manifest. The runner
-requires the checked-out source, release artifact, and component attestation to
-identify that same commit. The framework never substitutes a reference Wallet
-revision when the caller omits or changes the candidate.
+The deployment manifest selects the Wallet candidate. The source checkout,
+release artifact, and attestation must all name that commit. A missing or
+different candidate is an error; the framework does not substitute a reference
+Wallet version.
 
-The lane is engineering evidence. It does not claim EU certification, EUDI Wallet certification, or successful interoperability with an external testbed. Such claims require separately reviewed external evidence.
+The result is engineering evidence. EU certification and external
+interoperability require separate external evidence.
 
 The framework's broader EU inventory is defined in
-`plans/eudi/upstream-coverage.json`. The official mobile UI suite, ITB, Age
-Verification profile, RQES tester, and public reference implementations are not
-silently folded into this adapter. They remain explicit gated or
-interoperability-only targets until a dedicated runner validates their complete
-native result formats against a deployed wallet release.
+`plans/eudi/upstream-coverage.json`. The mobile UI suite, ITB, Age Verification
+profile, RQES tester, and reference implementations are separate targets. They
+do not count as executed until a dedicated runner checks their full results
+against a deployed Wallet.
 
-The reusable workflow must be called from `reallyme/wallet`. Raw command output, credential payloads, private key material, and deployment secrets are not retained by this repository.
+Only `reallyme/wallet` may call the reusable workflow. This repository does not
+retain raw command output, credential payloads, private keys, or deployment
+secrets.
 
 ## GitHub-hosted execution
 
-The reusable workflow runs on GitHub's `ubuntu-26.04` runner. The caller supplies
-`framework_commit` and `candidate_artifact_name`; the named Actions artifact
-must come from the same workflow run and contain `deployment.json`,
-`wallet-release`, and `wallet-attestation.json`. The framework validates these
-inputs, checks out the exact manifest-selected Wallet commit, executes its plan,
-and validates the result before uploading it. It requires no self-hosted runner,
-preinstalled absolute paths, deployment secret, or publishing credential.
+The workflow runs on GitHub's `ubuntu-26.04` runner. The caller supplies
+`framework_commit` and `candidate_artifact_name`. That artifact must come from
+the same workflow run and contain `deployment.json`, `wallet-release`, and
+`wallet-attestation.json`. The framework checks the inputs, checks out the
+selected Wallet commit, runs the plan, and checks the result. It does not need a
+self-hosted runner, preinstalled files, or publishing credentials.
 
-Wallet owns preparation of its public release inputs and verification of their
-signed release provenance. The framework validates the supplied component
-identity, artifact and attestation digests, framework locks, and execution
-result. A caller must not turn unverified metadata into a release attestation.
+Wallet prepares its release inputs and verifies their signed provenance. The
+framework checks the component identity, digests, framework locks, and result.
+Unverified metadata must not be used to create an attestation.
 
-The caller must upload the three files in a preceding job and make the reusable
-workflow job depend on that job. Use the same immutable framework commit in the
-workflow reference and `framework_commit` input:
+Upload the three files in an earlier job and make the reusable workflow depend
+on that job. Use the same framework commit in the workflow reference and the
+`framework_commit` input:
 
 ```yaml
 permissions:
@@ -69,6 +71,6 @@ jobs:
       candidate_artifact_name: eudi-wallet-candidate-${{ github.sha }}
 ```
 
-`FRAMEWORK_COMMIT` is a documentation placeholder and must be replaced in both
-locations with the same full 40-character identity-conformance commit. GitHub
-does not permit expressions in a reusable workflow's `uses` value.
+Replace `FRAMEWORK_COMMIT` in both places with the same full
+identity-conformance commit. GitHub does not allow an expression in a reusable
+workflow's `uses` value.

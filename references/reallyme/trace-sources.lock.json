@@ -8,9 +8,9 @@
       "component_id": "openid4vci",
       "repository": "https://github.com/reallyme/openid4vci",
       "local_checkout": "../openid4vci",
-      "release_ref": "reallyme-openid4vci-v0.3.0",
+      "release_ref": "reallyme-openid4vci-v0.3.1",
       "update_strategy": "latest_release",
-      "commit": "5c42fa25d2ab8f4487019a7689c6416b7be25cbe"
+      "commit": "aecc9dbc7e6c0ee9cf5815ff81c380db0825e28b"
     },
     {
       "component_id": "openid4vp",

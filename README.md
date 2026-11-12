@@ -1,262 +1,206 @@
-# ReallyMe identity conformance
+<div align="center">
 
-<!-- BEGIN GENERATED CONFORMANCE CATALOG -->
-Current framework baseline: **v0.2.0**
+# ReallyMe Identity Conformance
 
-[![EU ARF v0.2.0](https://img.shields.io/github/actions/workflow/status/reallyme/identity-conformance/eu-arf-normative.yml?branch=main&label=EU%20ARF%20v0%2E2%2E0)](https://github.com/reallyme/identity-conformance/actions/workflows/eu-arf-normative.yml)
-[![EU technical specifications v0.2.0](https://img.shields.io/github/actions/workflow/status/reallyme/identity-conformance/eu-technical-specifications-normative.yml?branch=main&label=EU%20technical%20specifications%20v0%2E2%2E0)](https://github.com/reallyme/identity-conformance/actions/workflows/eu-technical-specifications-normative.yml)
-[![EU FCAF v0.2.0](https://img.shields.io/github/actions/workflow/status/reallyme/identity-conformance/eu-fcaf-normative.yml?branch=main&label=EU%20FCAF%20v0%2E2%2E0)](https://github.com/reallyme/identity-conformance/actions/workflows/eu-fcaf-normative.yml)
-[![OIDF v0.2.0](https://img.shields.io/github/actions/workflow/status/reallyme/identity-conformance/oidf-normative-ledger.yml?branch=main&label=OIDF%20v0%2E2%2E0)](https://github.com/reallyme/identity-conformance/actions/workflows/oidf-normative-ledger.yml)
+**Conformance testing for identity protocols and digital wallets**
 
-## Conformance enforced by this release
+[Identity](https://github.com/reallyme/identity) · [SSI](https://github.com/reallyme/ssi) · [OpenID4VCI](https://github.com/reallyme/openid4vci) · [OpenID4VP](https://github.com/reallyme/openid4vp) · [Wallet](https://github.com/reallyme/wallet) · [ZK](https://github.com/reallyme/zk) · **Conformance**
 
-This catalog is generated from the same immutable locks and normative ledgers
-that are digest-bound into framework release manifests. “Baseline updated” is
-the date this repository adopted or verified the pin, not an inferred publication date.
+</div>
 
-### European Union
+## Overview
 
-| Source | Description | Current enforced value | Version | Baseline updated |
-| --- | --- | --- | --- | --- |
-| [Architecture and Reference Framework — WUA_33](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md) | Wallet requirements and normative implementation boundaries. | `wallet.wia.technical_validity_seconds < 86,400` | `v3.0.0` | 2026-11-11 |
-| [Architecture and Reference Framework — EW-DM-44-027](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.03-high-level-requirements-by-category.md) | Wallet requirements and normative implementation boundaries. | `wallet.presentation.unregistered_attribute_policy` = `warn_and_allow_all`, `registered_only`, `reject_request` | `v3.0.0` | 2026-11-11 |
-| [Technical Specification 3 — Wallet Unit Attestation — 2.2.1.1](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md) | Wallet Unit Attestation lifetime boundary. | `wallet.wia.technical_validity_seconds < 86,400` | `main` | 2026-11-11 |
-| [Functional Conformance Assessment Framework](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md) | Wallet Solution assessment methodology; not an executable certification suite. | `methodology_only`; `0` executable Wallet cases | `v0.0.10` | 2026-11-11 |
+The ReallyMe conformance framework validates identity protocols, Wallet
+requirements, and interoperability across ReallyMe components.
 
-### OpenID Foundation
+It pins upstream specifications and test suites, executes versioned checks, and
+records evidence against specific source commits and deployments.
 
-| Source | Description | Current enforced value | Version | Baseline updated |
-| --- | --- | --- | --- | --- |
-| [OpenID for Verifiable Credential Issuance](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Issuer and Wallet HAIP certification-plan variants. | SHA-256 `f123c3178cacd27688b15b762098a045e9eb35eccfe2f5f18a357c3815e06ba7` | `1.0 Final` | 2026-11-11 |
-| [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Verifier and Wallet HAIP certification-plan variants. | SHA-256 `e4f0abc689afd0a4f6c41b83954d7f970c5263a26143ad861216aea9918993bb` | `1.0 Final` | 2026-11-11 |
-| [OpenID4VC High Assurance Interoperability Profile](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0-final.html) | High-assurance profile applied to OID4VCI and OID4VP plans. | SHA-256 `3996e0479d06b72d6d68668b8ae3cd39fddfc29ae9220c0c3fead7dc060ec4fb` | `1.0 Final` | 2026-11-11 |
-| [OpenID Conformance Suite](https://gitlab.com/openid/conformance-suite/-/tree/23353b36957d6466010de767c812d2c91ed37638) | Executable certification-suite source used to derive and validate plan values. | Commit `23353b36957d6466010de767c812d2c91ed37638` | `release-v5.3.4` | 2026-10-26 |
+## Conformance coverage
 
-<!-- END GENERATED CONFORMANCE CATALOG -->
+The framework covers OpenID certification profiles, EU Wallet requirements,
+upstream test assets, and ReallyMe component integrations.
 
-This repository versions and executes ReallyMe's cross-repository identity
-conformance framework. It owns the test plans, adapter contracts, runners,
-result schemas, and disclosure-safe evidence formats. It does not own the
-protocol implementations and it does not treat a component's self-reported
-test result as proof that the assembled product conforms.
-
-The current lanes are:
-
-- OpenID Foundation OpenID4VCI and OpenID4VP certification profiles;
-- EUDI Wallet engineering conformance;
-- EUDI relying-party control-plane engineering conformance; and
-- zero-knowledge presentation-proof conformance.
-
-EU and OIDF use separate normative ledgers, source validators, workflows, and
-status badges. EU conformance is an umbrella with independently reported
-sub-lanes:
-
-- ARF requirement identifiers and boundary values;
-- technical-specification boundary values;
-- FCAF assessment classes and, when published, executable cases; and
-- official executable test assets, each with its own result contract.
-
-A green ledger workflow means that the reviewed rules still match the exact
-pinned source. It does not mean that an external certification suite ran. The
-FCAF badge currently validates the published Wallet Solution assessment
-methodology only because FCAF v0.0.10 contains no executable Wallet test cases.
-
-Passing an engineering lane is not an external certification. OIDF
-certification evidence is authoritative only when it comes from the approved
-hosted suite, is bound to the exact deployment and framework revisions, and
-passes the evidence review described in `evidence/`.
-
-## Ownership model
-
-Product repositories build production artifacts and issue component
-attestations. An attestation identifies the source commit, dependency lock,
-toolchain, artifact digests, and passed component checks. This repository then
-verifies those inputs and evaluates the composed plan.
-
-Continuous latest-release runs use the closed repository inventory in
-`references/reallyme/release-sources.json`: `ssi`, `identity`, `zk`, `wallet`,
-`openid4vci`, and `openid4vp`. A latest-release run resolves the current GitHub
-release tag and its exact commit; it never substitutes a default branch. A
-caller may still select an older release for historical or release-candidate
-verification, but that is an explicit exact-BOM run and is labelled separately.
-
-The component relationships are summarized below.
-
-| Repository | Conformance responsibility |
+| Area | Validation |
 | --- | --- |
-| `openid4vci` | Issuer and wallet-side issuance protocol behavior |
-| `openid4vp` | Verifier and wallet-side presentation protocol behavior |
-| `wallet` | Wallet state, consent, storage, and EUDI Wallet component tests |
-| `ssi` | Credential formats, trust, status, and revocation |
-| `zk` | Proof APIs, provider artifacts, vectors, and rejection tests |
-| `platform` | Deployment composition and service lifecycle |
-| `identity` | Deployable composed VCI and VP drivers |
-| `identity-taxonomy` | Optional coverage metadata; not yet a release prerequisite |
+| OpenID4VCI / OpenID4VP | Runs pinned OIDF conformance profiles against a supplied deployment. |
+| EU ARF / technical specifications | Validates Wallet configuration boundaries against reviewed EU requirements. |
+| EU FCAF | Verifies the assessment structure and requirement ledger. |
+| EU test assets | Checks pinned Wallet UI, ITB, Age Verification, and RQES test inventories. |
+| Wallet / relying party | Validates adapters, attestations, deployment inputs, and supported EU requirements. |
+| Zero-knowledge proofs | Validates the public proof adapter and supplied component attestation. |
 
-Private implementations use the same public adapter and evidence contracts.
-Their source layout, package names, detailed test inventory, secrets, raw
-results, and logs remain in the caller repository. The public framework accepts
-only opaque assertion identifiers, immutable digests, and reviewed attestations.
+## Results and certification
 
-See [`docs/CONFORMANCE_MODEL.md`](docs/CONFORMANCE_MODEL.md) for the governing
-rules.
+Passing framework checks does not establish product conformance.
 
-## Repository layout
+EU ledger checks verify that reviewed requirements still match pinned upstream
+sources. FCAF checks validate the published assessment structure; FCAF v0.0.10
+contains no executable Wallet test cases.
 
-- `upstream/oidf/` — OIDF suite and specification locks, notices, and generated
-  source snapshots. The suite checkout is ignored.
-- `upstream/eudi/` — EU architecture, assessment, technical, test, reference,
-  and legal-source locks. Local checkouts are ignored.
-- `plans/` — ReallyMe-owned certification and engineering matrices.
-- `adapters/` — public contracts between the framework and product components.
-- `results/` — raw local output; ignored by default.
-- `evidence/` — redacted, reviewed evidence and submission controls.
-- `schemas/` — closed validation contracts for manifests, results, and evidence.
-- `references/` — pinned normative-source metadata and reviewed mappings.
-- `scripts/` — runners, validators, release tooling, and readiness checks.
+Product repositories run the applicable workflows against their own commits,
+deployments, and attestations. Results and pass/fail badges are published beside
+the evaluated code.
 
-Third-party source remains separate from ReallyMe-owned plans and adapters.
-Copyrighted standards documents and raw certification output must not be added
-to the repository.
+OIDF certification requires evidence from the approved hosted suite, an
+identified deployment and framework revision, and completion of the required
+evidence review. EU and ZK checks currently produce engineering evidence, not
+external certification.
 
-## Upstream pins
+See [the conformance model](docs/CONFORMANCE_MODEL.md) for evidence requirements
+and result handling.
 
-OIDF certification uses the exact suite release in
-`upstream/oidf/conformance-suite.lock.json`. Engineering comparison uses the
-separate master lock. `specifications.lock.json` binds the published OpenID4VCI,
-OpenID4VP, and HAIP final documents by canonical URL, byte length, SHA-256, and
-source tag where one exists.
+## Validation model
 
-The EU source lock covers the released ARF and FCAF, the technical-specification
-and rulebook catalogs, Age Verification and ZKP material, official test assets,
-mobile reference wallets, trust and status components, the RQES reference
-stack, and selected issuance and presentation targets. The official
-documentation portal is monitored as a non-governing source. This is a curated
-wallet/eIDAS inventory, not a mirror of the entire EU organization.
+EU requirements are maintained as reviewed, machine-readable ledgers. Each
+rule identifies its upstream requirement, source statement, operator, and
+expected value.
 
-`references/eudi-publications.lock.json` byte-pins selected public RFC, W3C, and
-ETSI publications and records exact editions for copyright-restricted ISO
-standards. Existing OIDF Final and ETSI 119472/119612 content bindings are
-referenced from their authoritative locks. `legal-sources.lock.json` separately
-records the governing eIDAS acts and amendments by CELEX and ELI, including the
-current consolidated editions. Copyrighted standards and legal text are not
-vendored.
+CI verifies these mappings against pinned source commits. Product runners
+evaluate the corresponding implementation values.
 
-Two weekly workflows support maintenance:
+Upstream test assets are tracked separately. An asset is considered executed
+only when a runner and result validator exist and the test has completed.
 
-- `pin-freshness.yml` compares every machine-checkable pin with authoritative
-  upstream metadata and fails when a reviewed baseline is stale. Temporary
-  publisher unavailability produces a warning and a retained unavailable
-  report rather than misreporting the baseline as stale.
-- `upstream-update-proposal.yml` produces a versioned, review-only proposal that
-  groups tagged releases, untagged branch snapshots, publication-integrity
-  changes, maintenance updates, and monitor-only changes. Tagged releases may
-  seed the next patch candidate. Default-branch movement never does so without
-  an explicit snapshot review.
+Source validation establishes traceability. Product execution establishes test
+results. The two are not interchangeable.
 
-The scheduled workflows do not change the active baseline. An accepted proposal
-is applied as a complete candidate change: update `VERSION`, locks, affected
-normative ledgers and runners, generated catalog, and source snapshots. The
-candidate must pass every affected EU and OIDF lane plus release readiness.
-Mechanical candidate preparation may be automated; interpreting a changed
-normative requirement remains a required review step.
+## Using the framework
 
-`release-candidate.yml` accepts no caller-selected version. It reads `VERSION`,
-executes the release gates, and emits a deterministic manifest for that exact
-commit. `release-promotion.yml` then requires the successful candidate run, the
-reviewed main commit, and approval through the protected `framework-release`
-environment before it can create `v<VERSION>` and publish the manifest. Existing
-framework releases are never changed, and downstream repositories remain on
-their pinned framework release until they deliberately upgrade.
+Product repositories call a reusable workflow at an exact framework commit.
+The workflow reference and `framework_commit` input must match. The caller also
+supplies the deployment manifest, candidate artifacts, component revisions, and
+attestations required by the selected plan.
 
-Framework release construction does not contact external standards publishers.
-It validates and digest-binds the reviewed locks so a release is reproducible
-and cannot fail solely because an ISO, ETSI, IETF, W3C, or OpenID endpoint is
-temporarily unavailable. Pin freshness remains a separate maintenance gate and
-must be reviewed before a baseline is promoted.
+For example, a Wallet workflow invokes the shared Wallet plan with a same-run
+candidate artifact:
 
-```sh
-python3 scripts/check_pin_freshness.py
-scripts/fetch_oidf_conformance_suite.sh
-scripts/export_oidf_certification_modules.sh
-scripts/export_oidf_certification_modules.sh \
-  upstream/oidf/openid-conformance-suite \
-  plans/oidf/engineering.json \
-  upstream/oidf/snapshots/engineering-modules.json
+```yaml
+jobs:
+  eudi-wallet-conformance:
+    uses: reallyme/identity-conformance/.github/workflows/eudi-wallet-conformance.yml@FRAMEWORK_COMMIT
+    with:
+      framework_commit: FRAMEWORK_COMMIT
+      candidate_artifact_name: eudi-wallet-candidate-${{ github.sha }}
 ```
 
-## Public and private execution
+The candidate artifact contains `deployment.json`, `wallet-release`, and
+`wallet-attestation.json`. See the [adapter contracts](adapters/README.md) for
+the inputs required by each workflow.
 
-Reusable workflows run in the caller repository's context. The caller pins an
-exact framework commit and supplies an immutable deployment manifest,
-production artifacts, and component attestations. Private callers retain their
-checkout credentials, source, logs, and raw results under their own access
-controls.
+<!-- BEGIN GENERATED CONFORMANCE SUMMARY -->
+## Standards baseline
 
-Public evidence is a separate artifact. It may cross into this repository only
-after both redaction and public-disclosure review. A digest commitment alone
-does not prove that the underlying run passed; it proves which reviewed private
-result the public record refers to.
+Framework version: **v0.2.0**
 
-The EUDI lanes bind both `sources.lock.json` and `legal-sources.lock.json` into
-their deployment manifests and results. The relying-party lane additionally
-checks the selected ARF, FCAF, technical-specification, and official reference
-service revisions and verifies the candidate's assertion-level attestation.
-The Wallet lane verifies its component attestation and then independently
-evaluates claimed implementation boundaries against the framework-owned ARF
-and technical-specification ledgers. Candidate-authored tests and manifests do
-not define the expected normative value. Its current machine-observable
-boundary inventory covers the WIA technical-validity limit and the
-unregistered-attribute policy outcomes; ReallyMe-only resource and freshness
-limits are explicitly classified as product policy. Adding an implemented EU
-numeric or enumerated boundary requires adding a pinned-source ledger rule and
-an independent source observation before the adapter can pass. FCAF remains a
-separate assessment ledger because the pinned v0.0.10 Wallet Solution material
-defines test classes but does not yet publish executable Wallet test cases.
-These lanes create internal engineering evidence only.
+| Source | Pinned version | Coverage |
+| --- | --- | --- |
+| [EU Architecture and Reference Framework](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md) | `v3.0.0` | Wallet requirements |
+| [EU technical specifications](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md) | `main @ cfc383e4` | Wallet Unit Attestation |
+| [EU Functional Conformance Assessment Framework](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md) | `v0.0.10` | Assessment methodology |
+| [OpenID Conformance Suite](https://gitlab.com/openid/conformance-suite/-/tree/23353b36957d6466010de767c812d2c91ed37638) | `release-v5.3.4` | OpenID4VCI / OpenID4VP |
+| [EUDI Wallet testing application](https://github.com/eu-digital-identity-wallet/eudi-doc-testing-application/tree/62c4ba73007ea25440e6ba24a651937bc692629b/src/test/resources/features) | `2026.Q1` | `126` feature files and `798` scenarios |
+| [EUDI Interoperability Test Bed](https://github.com/eu-digital-identity-wallet/eudi-itb/tree/b0e222435401242e2a2a62181500bc2403e6e0dd/tests) | `main @ b0e22243` | `5` suites and `39` test cases |
 
-Pinning an official test asset is not a claim that it ran. The validated
-`plans/eudi/upstream-coverage.json` inventory states which sources are execution
-inputs, attestation-bound references, interoperability targets, legacy material,
-or monitor-only material. It also records the device-farm and deployed-service
-prerequisites for the official UI, ITB, Age Verification, and RQES suites. The
-current claims remain false until dedicated runners execute those suites and
-their result validators accept complete outputs.
+See [Standards baseline](docs/STANDARDS_BASELINE.md) for exact source
+revisions, requirement mappings, content digests, and validation status.
 
-The ZK lane follows the same component-attestation pattern. Updating this
-framework does not require writing into the ZK repository.
+<!-- END GENERATED CONFORMANCE SUMMARY -->
+
+## EU sources and test coverage
+
+EU conformance spans multiple specifications, assessment frameworks, test
+applications, and interoperability services.
+
+The framework tracks these sources through
+[`upstream/eudi/sources.lock.json`](upstream/eudi/sources.lock.json). Each source
+is pinned to a reviewed revision.
+
+| Source type | Included material | Current status |
+| --- | --- | --- |
+| Normative and assessment sources | [ARF](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework), [FCAF](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment), [technical specifications](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications), [attestation rulebooks](https://github.com/eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog), and the [Age Verification specification](https://github.com/eu-digital-identity-wallet/av-doc-technical-specification) | ARF and Technical Specification 3 ledgers run in CI. FCAF structure and the Age Verification profile/ZKP inventory are verified. Age Verification and rulebook boundary tests still require dedicated runners. |
+| Executable test assets | [Wallet testing application](https://github.com/eu-digital-identity-wallet/eudi-doc-testing-application), [ITB](https://github.com/eu-digital-identity-wallet/eudi-itb), [issuer Wallet tester](https://github.com/eu-digital-identity-wallet/eudi-app-web-wallet-tester-py), and [RQES Wallet-driven tester](https://github.com/eu-digital-identity-wallet/eudi-app-web-walletdriven-tester-py) | CI verifies 126 Wallet UI feature files, 798 scenarios, five ITB suites, 39 ITB test cases, and the RQES service inventory. Product execution requires deployed services and device infrastructure. |
+| Reference wallets | [Android Wallet UI](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui), [Android Wallet core](https://github.com/eu-digital-identity-wallet/eudi-lib-android-wallet-core), [iOS Wallet UI](https://github.com/eu-digital-identity-wallet/eudi-app-ios-wallet-ui), and [iOS Wallet Kit](https://github.com/eu-digital-identity-wallet/eudi-lib-ios-wallet-kit) | Pinned interoperability peers. No runner executes them yet. They do not define normative requirements. |
+| Reference services | PID issuer, verifier, Wallet provider, relying-party registration, trust, status, trusted-list, and RQES services | Pinned interoperability peers. Deployed-service runners are still required. |
+
+### Upstream test assets
+
+The `EU conformance - upstream test assets` workflow validates pinned commits,
+required files, test definitions, suite references, and service structure.
+
+Product execution requires deployed services, credentials, and mobile devices
+where applicable. RQES upstream Python dependencies are excluded from CI
+pending a separate security review.
+
+The source lock also covers mobile reference wallets, trust and status
+components, the RQES reference stack, selected issuance and presentation
+targets, and the official documentation portal. The portal is monitored but
+does not govern results.
+
+## OpenID Foundation
+
+The framework pins the OpenID Conformance Suite release in
+[`conformance-suite.lock.json`](upstream/oidf/conformance-suite.lock.json).
+
+Final OpenID4VCI, OpenID4VP, and HAIP specifications are pinned by URL, content
+length, and SHA-256 in
+[`specifications.lock.json`](upstream/oidf/specifications.lock.json).
+
+Reusable workflows execute the profiles selected by each product's bill of
+materials (BOM). Component revisions and deployment targets must be supplied
+explicitly.
+
+See [OIDF certification](docs/OIDF_CERTIFICATION.md) and the
+[submission checklist](docs/OIDF_SUBMISSION_CHECKLIST.md).
+
+## Standards that are not stored here
+
+Certain ISO/IEC standards cannot be redistributed in this public repository.
+Licensed copies used for review are kept outside the repository. The framework
+records the exact edition and official ISO catalog URL:
+
+- [ISO/IEC 18013-5:2021 — Mobile driving licence application](https://www.iso.org/standard/69084.html)
+- [ISO/IEC TS 18013-6:2025 — mDL test methods](https://www.iso.org/standard/91153.html)
+- [ISO/IEC TS 18013-7:2025 — mDL add-on functions](https://www.iso.org/standard/91154.html)
+- [ISO/IEC TS 23220-2:2026 — Data objects and encoding rules for generic eID systems](https://www.iso.org/standard/91155.html)
+
+Publicly downloadable IETF, W3C, ETSI, and OpenID publications are pinned by
+URL and content digest. The governing eIDAS legislation is identified by its
+official ELI and CELEX references.
+
+## Releases
+
+Upstream specifications and test suites are checked weekly. Changes are
+reported for review; active pins are never updated automatically.
+
+Baseline changes require a pull request updating `VERSION` and all affected
+locks, ledgers, runners, and generated files. Relevant conformance and release
+checks must pass before merge.
+
+Release candidates are built from an exact `main` commit with a deterministic
+manifest. Promotion verifies the candidate commit and manifest, then publishes
+`v<VERSION>` through the protected `framework-release` environment.
+
+Promotion refuses an existing tag or release. Product repositories upgrade
+framework versions explicitly.
+
+Release builds use pinned sources and do not depend on upstream availability.
+Freshness checks run separately.
 
 ## Validation
 
-Run the local, network-independent checks from the repository root:
+### Tests and workflow lint
+
+Run the repository tests and validate GitHub Actions workflows:
 
 ```sh
-python3 scripts/verify_oidf_manifests.py
-python3 scripts/verify_normative_sources.py
-python3 scripts/verify_eudi_publications.py
-python3 scripts/verify_eudi_legal_sources.py
-python3 scripts/verify_eudi_upstream_coverage.py
-python3 scripts/verify_eu_normative_ledgers.py
-python3 scripts/verify_oidf_normative_ledger.py
-python3 scripts/verify_eudi_relying_party_plan.py
-python3 scripts/verify_eudi_adapter.py
-python3 scripts/verify_eudi_wallet_adapter.py
-python3 scripts/verify_zk_adapter.py
 python3 -m unittest discover -s tests -p 'test_*.py'
+scripts/run_actionlint.sh
 ```
 
-Caller-owned OIDF product BOMs are validated separately because the framework
-does not contain a default product candidate:
+### Release readiness
 
-```sh
-python3 scripts/verify_product_component_bom.py \
-  --bom /protected-inputs/product-component-bom.json \
-  --require-release-refs
-```
-
-The CI release gate uses Node.js 26 and
-[`reallyme/release-readiness`](https://github.com/reallyme/release-readiness)
-v0.7.0 at its reviewed immutable commit:
+Run the shared readiness checks used by CI:
 
 ```sh
 npm exec --yes --allow-remote=root \
@@ -264,33 +208,32 @@ npm exec --yes --allow-remote=root \
   -- reallyme-release-readiness
 ```
 
-Before a public release, run the publication gate with the pinned Gitleaks
-8.30.1 binary:
+### Upstream freshness
+
+Check whether pinned upstream sources have changed:
+
+```sh
+python3 scripts/check_pin_freshness.py
+```
+
+### Publication readiness
+
+Run the publication checks with the pinned Gitleaks 8.30.1 binary:
 
 ```sh
 GITLEAKS_BIN=/trusted/path/to/gitleaks \
   scripts/check_publication_readiness.sh
 ```
 
-The release workflow emits a deterministic framework manifest containing the
-framework version, repository commit, and SHA-256 of every plan, schema, lock,
-adapter, workflow, snapshot, and runner input. Candidate construction has
-read-only repository permissions. Promotion is a separate, protected operation;
-it rebuilds the manifest, compares it byte-for-byte with the reviewed candidate,
-creates a draft first, and publishes only after the manifest is uploaded.
-
-OIDF execution details and the complete profile matrix are in
-[`docs/OIDF_CERTIFICATION.md`](docs/OIDF_CERTIFICATION.md). Complete
-[`docs/OIDF_SUBMISSION_CHECKLIST.md`](docs/OIDF_SUBMISSION_CHECKLIST.md) before
-any certification submission.
-
 ## Security
 
-Raw results can contain sensitive operational data. Keep them in the ignored
-`results/` tree or protected private storage. Do not retain credentials,
-private-key material, transaction content, presentation payloads, or customer
-identifiers in results or public evidence. Report vulnerabilities through the
-private process in [`SECURITY.md`](SECURITY.md).
+Conformance results may contain sensitive operational data.
+
+Store raw results in the ignored `results/` directory or protected private
+storage. Never include credentials, private keys, transaction data,
+presentation payloads, or customer identifiers in results or public evidence.
+
+Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -1,0 +1,210 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema": "reallyme.identity.eudi_upstream_assets.v1",
+  "source_lock_path": "upstream/eudi/sources.lock.json",
+  "product_execution_claim": false,
+  "assets": [
+    {
+      "asset_id": "fcaf-wallet-methodology",
+      "source_id": "eudi-fcaf",
+      "validation_kind": "fcaf_methodology",
+      "validation_scope": "source_structure_and_methodology_inventory",
+      "execution_state": "not_executable",
+      "conformance_claim": false,
+      "expected": {
+        "markdown_document_count": 10,
+        "wallet_sut_documents": [
+          "docs/fcaf/suts/wallet_solution/attestation_provider/ws_ap.md",
+          "docs/fcaf/suts/wallet_solution/index.md",
+          "docs/fcaf/suts/wallet_solution/infrastructure/ws_inf.md",
+          "docs/fcaf/suts/wallet_solution/pid_provider/ws_pp.md",
+          "docs/fcaf/suts/wallet_solution/relying_party/ws_rp.md",
+          "docs/fcaf/suts/wallet_solution/ui/ws_ui.md"
+        ]
+      }
+    },
+    {
+      "asset_id": "wallet-ui-tests",
+      "source_id": "eudi-functional-tests",
+      "validation_kind": "gherkin_inventory",
+      "validation_scope": "source_structure_and_test_inventory",
+      "execution_state": "external_environment_required",
+      "conformance_claim": false,
+      "expected": {
+        "required_files": [
+          "pom.xml",
+          "serenity.properties",
+          "src/test/resources/cucumber.properties"
+        ],
+        "platforms": [
+          {
+            "name": "android",
+            "root": "src/test/resources/features/android",
+            "feature_file_count": 64,
+            "scenario_count": 404
+          },
+          {
+            "name": "ios",
+            "root": "src/test/resources/features/ios",
+            "feature_file_count": 62,
+            "scenario_count": 394
+          }
+        ]
+      }
+    },
+    {
+      "asset_id": "interoperability-testbed",
+      "source_id": "eudi-itb",
+      "validation_kind": "gitb_inventory",
+      "validation_scope": "source_structure_and_test_inventory",
+      "execution_state": "external_environment_required",
+      "conformance_claim": false,
+      "expected": {
+        "required_files": [
+          "docker/docker-compose.yml",
+          "custom-handlers/verifier-testbed/pom.xml"
+        ],
+        "suites": [
+          {
+            "path": "tests/issuer-test-suite/testSuite1.xml",
+            "suite_id": "testSuite1",
+            "test_case_ids": [
+              "testCase1_credentialOffer_pid_sdjwt",
+              "testCase2_credentialOffer_pid_mdoc",
+              "testCase3_credentialOffer_mDL_mDoc"
+            ]
+          },
+          {
+            "path": "tests/issuer-test-suite-2026/testSuite1.xml",
+            "suite_id": "issuanceTestSuite",
+            "test_case_ids": [
+              "issue_pid_sdjwt_credentialoffer",
+              "issue_pid_mdoc_credentialoffer",
+              "issue_mdl_mdoc_credentialoffer",
+              "issue_pid_sdjwt_mdoc_credentialoffer",
+              "issue_pid_sdjwt_credentialoffer_untrusted_certificate",
+              "issue_pid_mdoc_credentialoffer_untrusted_certificate",
+              "issue_pid_sdjwt_credentialoffer_invalid_credential",
+              "issue_pid_mdoc_credentialoffer_invalid_credential",
+              "issue_pid_sdjwt_credentialoffer_untrusted_access_certificate",
+              "issue_pid_mdoc_credentialoffer_untrusted_access_certificate",
+              "issue_pid_sdjwt_credentialoffer_revocation",
+              "issue_pid_mdoc_credentialoffer_revocation",
+              "issue_pid_sdjwt_credentialoffer_invalid_metadata",
+              "issue_pid_mdoc_credentialoffer_invalid_metadata",
+              "issue_mdl_mdoc_credentialoffer_revocation"
+            ]
+          },
+          {
+            "path": "tests/rqes-test-suite/testSuite1.xml",
+            "suite_id": "testSuite1",
+            "test_case_ids": [
+              "testCase1_documentRetrieval"
+            ]
+          },
+          {
+            "path": "tests/verifier-test-suite/testSuite1.xml",
+            "suite_id": "verificationTest",
+            "test_case_ids": [
+              "verify_pid_qr_from_verifier",
+              "verify_pid_qr_from_verifier_mso_mdoc",
+              "verify_mdl_qr_from_verifier_mso_mdoc",
+              "verify_mdl_and_pid_from_verifier_mso_mdoc",
+              "verify_pid_mdoc_no_trusted_iaca_cert",
+              "verify_pid_sdjwt_remote_presentation_status_list"
+            ]
+          },
+          {
+            "path": "tests/verifier-test-suite-2026/testSuite1.xml",
+            "suite_id": "verificationTestSuite",
+            "test_case_ids": [
+              "verify_pid_qr_from_verifier",
+              "verify_dc_api_pid_presentation",
+              "verify_pid_mdoc_qr_from_verifier",
+              "verify_dc_api_pid_mdoc_presentation",
+              "verify_mdl_qr_from_verifier",
+              "verify_dc_api_mdoc_presentation",
+              "verify_pid_qr_from_verifier_invalid_access_certificate",
+              "verify_dc_api_pid_verifier_invalid_access_certificate",
+              "verify_pid_qr_from_verifier_untrusted_verifier_registration_cert",
+              "verify_dc_api_pid_presentation_untrusted_registration_certificate",
+              "verify_pid_qr_from_verifier_missmatched_verifier_access_reg_cert",
+              "verify_dc_api_pid_from_verifier_missmatched_verifier_access_reg_cert",
+              "verify_pid_qr_from_verifier_with_over_asking_certificate",
+              "verify_pid_dc_api_from_verifier_with_over_asking_certificate"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "asset_id": "age-verification-profile",
+      "source_id": "eudi-age-verification-specification",
+      "validation_kind": "age_verification_documents",
+      "validation_scope": "source_structure_and_normative_document_inventory",
+      "execution_state": "not_executable",
+      "conformance_claim": false,
+      "expected": {
+        "heading_count": 109,
+        "documents": [
+          "docs/architecture-and-technical-specifications.md",
+          "docs/annexes/annex-A/annex-A-av-profile.md",
+          "docs/annexes/annex-B/annex-B-zkp.md"
+        ]
+      }
+    },
+    {
+      "asset_id": "rqes-wallet-driven-tester",
+      "source_id": "eudi-rqes-wallet-driven-tester",
+      "validation_kind": "python_service_inventory",
+      "validation_scope": "source_structure_and_deployable_service_inventory",
+      "execution_state": "external_environment_required",
+      "conformance_claim": false,
+      "expected": {
+        "dependency_installation": "prohibited",
+        "python_file_count": 23,
+        "route_count": 22,
+        "required_files": [
+          ".env.sample",
+          "requirements.txt",
+          "app/app.py"
+        ],
+        "required_environment_keys": [
+          "AS_URL",
+          "DOCUMENTS_UPLOAD_FOLDER",
+          "OAUTH_CLIENT_ID",
+          "OAUTH_CLIENT_SECRET",
+          "OAUTH_CODE_CHALLENGE_METHOD",
+          "OAUTH_CROSS_DEVICE_FLOW_CLIENT_ID",
+          "OAUTH_CROSS_DEVICE_FLOW_CLIENT_SECRET",
+          "OAUTH_CROSS_DEVICE_FLOW_REDIRECT_URL",
+          "OAUTH_REDIRECT_URL",
+          "OAUTH_TEST_FORM_CLIENT_ID",
+          "OAUTH_TEST_FORM_CLIENT_SECRET",
+          "OAUTH_TEST_FORM_REDIRECT_URL",
+          "OAUTH_USERNAME",
+          "OAUTH_PASSWORD",
+          "RP_URL",
+          "RS_URL",
+          "SCA_URL",
+          "SECRET_KEY",
+          "SERVICE_URL"
+        ],
+        "requirements_entries": [
+          "flask==2.3.3",
+          "Flask-Cors==4.0.1",
+          "Flask-Session==0.6.0",
+          "cbor2==5.4.6",
+          "cryptography==3.4.8",
+          "pycose==1.1.0",
+          "requests==2.32.3",
+          "segno==1.6.1",
+          "werkzeug==2.3.7",
+          "PyJWT==2.3.0",
+          "python-dotenv==1.1.1",
+          "APScheduler"
+        ]
+      }
+    }
+  ]
+}
