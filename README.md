@@ -17,8 +17,6 @@
 [![OIDF suite](https://img.shields.io/static/v1?label=OIDF%20suite&message=release-v5.3.4%20included&color=1d4ed8)](https://gitlab.com/openid/conformance-suite/-/tree/23353b36957d6466010de767c812d2c91ed37638)
 <!-- END GENERATED CONFORMANCE BADGES -->
 
-[Identity](https://github.com/reallyme/identity) · [SSI](https://github.com/reallyme/ssi) · [OpenID4VCI](https://github.com/reallyme/openid4vci) · [OpenID4VP](https://github.com/reallyme/openid4vp) · [Wallet](https://github.com/reallyme/wallet) · [ZK](https://github.com/reallyme/zk) · **Conformance**
-
 </div>
 
 ## Overview
