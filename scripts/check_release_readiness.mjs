@@ -110,8 +110,8 @@ for (const path of loadTrackedFiles()) {
 }
 
 assertContains(".gitignore", "/upstream/oidf/openid-conformance-suite/");
+assertContains(".github/actionlint.yaml", "- ubuntu-26.04");
 assertContains(".github/actionlint.yaml", "- oidf-certification");
-assertContains(".github/actionlint.yaml", "- eudi-wallet-conformance");
 assertContains(".github/actionlint.yaml", "- zk-conformance");
 assertContains("scripts/run_actionlint.sh", 'readonly actionlint_version="1.7.12"');
 assertContains(
@@ -161,7 +161,26 @@ assertContains("adapters/eudi-wallet/adapter.json", '"reallyme-wallet-conformanc
 assertContains("scripts/run_eudi_wallet_conformance.py", "execute_package");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "repository: reallyme/wallet");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "scripts/run_eudi_wallet_conformance.py");
-assertContains(".github/workflows/eudi-wallet-conformance.yml", "release_artifact_path:");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "candidate_artifact_name:");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "runs-on: ubuntu-26.04");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "actions/download-artifact@");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "digest-mismatch: error");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "test \"${#entries[@]}\" -eq 3");
+assertContains(".github/workflows/eudi-wallet-conformance.yml", "git -C components/wallet rev-parse HEAD");
+const eudiWalletWorkflowText = readFileSync(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "utf8",
+);
+for (const forbiddenBoundary of [
+  "self-hosted",
+  "release_artifact_path",
+  "component_attestation_path",
+  "EUDI_WALLET_DEPLOYMENT_MANIFEST_B64",
+]) {
+  if (eudiWalletWorkflowText.includes(forbiddenBoundary)) {
+    fail(`EUDI Wallet workflow requires obsolete runner state: ${forbiddenBoundary}`);
+  }
+}
 assertContains("plans/zk/presentation-proofs.json", '"certification_claim": false');
 assertContains("adapters/zk/adapter.json", '"adapter_id": "zk_presentation_proofs"');
 assertContains("adapters/zk/adapter.json", '"reallyme-zk-conformance"');

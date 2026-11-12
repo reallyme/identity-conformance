@@ -113,6 +113,13 @@ conformance package. Its result establishes only the selected internal
 engineering contract; an external testbed or conformity-assessment result must
 be retained as separate evidence.
 
+The Wallet caller uploads its manifest, release bundle, and attestation as an
+immutable same-run Actions artifact. The reusable framework workflow downloads
+and validates that closed three-file input on a clean GitHub-hosted runner,
+checks out the exact manifest-selected Wallet commit, and runs the shared plan.
+No preinstalled candidate files or persistent runner state form part of the
+execution contract.
+
 The EUDI upstream inventory also pins the Age Verification profile, official
 wallet UI and RQES testers, Android and iOS reference wallets, trust and status
 components, the RQES reference stack, and the documentation portal. These pins
