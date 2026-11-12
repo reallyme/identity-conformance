@@ -24,9 +24,9 @@
       "component_id": "ssi",
       "repository": "https://github.com/reallyme/ssi",
       "local_checkout": "../ssi",
-      "release_ref": "reallyme-ssi-v0.6.1",
+      "release_ref": "reallyme-ssi-v0.6.2",
       "update_strategy": "latest_release",
-      "commit": "43dddafe1c9be46260c01334bcf3d9e34f5c066a"
+      "commit": "78752d5dcd0184d4c8917308354ce5b932d55d4e"
     }
   ]
 }
