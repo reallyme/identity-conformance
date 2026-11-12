@@ -43,7 +43,7 @@ def valid_deployment() -> dict[str, object]:
         "component": {
             "component_id": requirement["component_id"],
             "repository": requirement["repository"],
-            "release_ref": "v1.0.0",
+            "release_ref": "reallyme-zk-v1.0.0",
             "commit": "1" * 40,
         },
         "release_artifact": {

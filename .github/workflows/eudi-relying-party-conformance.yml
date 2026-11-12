@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: EUDI Relying-Party Conformance
+name: Product · EUDI relying party
 run-name: EUDI relying-party conformance @ ${{ github.sha }}
 
 on:
@@ -97,15 +97,14 @@ jobs:
         with:
           python-version: "3.15.2"
 
-      - name: Verify the selected framework revision
-        run: |
-          test "$(git -C identity-conformance rev-parse HEAD)" = "${FRAMEWORK_COMMIT}"
-          framework_version="$(tr -d '\n' < identity-conformance/VERSION)"
-          [[ "${framework_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          printf '## EU relying party · Identity Conformance v%s\n\nFramework commit: %s\n' \
-            "${framework_version}" "${FRAMEWORK_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Verify the selected published framework release
+        id: framework-release
         env:
           FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity-conformance/scripts/prepare_published_framework_release.sh \
+            identity-conformance "${FRAMEWORK_COMMIT}"
 
       - name: Materialize and validate the protected deployment manifest
         env:
@@ -332,6 +331,7 @@ jobs:
           rm -rf -- \
             "${input_dir}" \
             "${result_dir}" \
+            "${RUNNER_TEMP:?}/identity-conformance-framework-release" \
             "${GITHUB_WORKSPACE:?}/identity-conformance" \
             "${GITHUB_WORKSPACE:?}/components" \
             "${GITHUB_WORKSPACE:?}/upstream/eudi"

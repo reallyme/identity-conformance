@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -107,6 +108,7 @@ IDENTIFIER = re.compile(r"^[^\x00-\x1f\x7f]{1,512}$")
 SYMBOL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+TRACE_SOURCE_ROOT_ENVIRONMENT = "IDENTITY_CONFORMANCE_TRACE_SOURCE_ROOT"
 
 
 class Component(NamedTuple):
@@ -143,6 +145,22 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def trace_source_root() -> Path | None:
+    raw_root = os.environ.get(TRACE_SOURCE_ROOT_ENVIRONMENT)
+    if raw_root is None:
+        return None
+    root = Path(raw_root)
+    if not root.is_absolute() or root.is_symlink():
+        raise AuditError("trace source root is invalid")
+    try:
+        resolved = root.resolve(strict=True)
+    except OSError as error:
+        raise AuditError("trace source root is unavailable") from error
+    if not resolved.is_dir():
+        raise AuditError("trace source root is invalid")
+    return resolved
+
+
 def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]:
     try:
         value = strict_json.loads(read_regular_file(path).decode("utf-8"))
@@ -156,6 +174,7 @@ def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]
     ):
         raise AuditError("trace source lock has an invalid source inventory")
 
+    component_root = trace_source_root()
     components: dict[str, Component] = {}
     for raw in value["sources"]:
         if not isinstance(raw, dict):
@@ -176,7 +195,19 @@ def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]
             or component_id in components
         ):
             raise AuditError("trace source lock entry is invalid")
-        checkout = (REPOSITORY_ROOT / relative_checkout).resolve()
+        if component_root is None:
+            checkout = (REPOSITORY_ROOT / relative_checkout).resolve()
+        else:
+            checkout_candidate = component_root / component_id
+            if checkout_candidate.is_symlink():
+                raise AuditError("trace source checkout is invalid")
+            try:
+                checkout = checkout_candidate.resolve(strict=True)
+                checkout.relative_to(component_root)
+            except (OSError, ValueError) as error:
+                raise AuditError("trace source checkout is unavailable") from error
+            if not checkout.is_dir():
+                raise AuditError("trace source checkout is invalid")
         components[component_id] = Component(
             component_id, checkout, release_ref, commit
         )

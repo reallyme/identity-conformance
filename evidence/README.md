@@ -30,5 +30,11 @@ transaction content, customer identifiers, or key material.
 EUDI Wallet and ZK results remain internal until a public-evidence schema has
 been reviewed for them.
 
+`product-conformance-statement.schema.json` defines the small public statement
+that may accompany a product badge after disclosure review. It names the exact
+product and framework releases and binds their commits, the framework baseline,
+the candidate, and the retained result by digest. It does not contain raw test
+output and it does not make a certification claim.
+
 Certification and product-conformity claims require the complete evidence set,
 not an individual plan, reference map, component test, or file.

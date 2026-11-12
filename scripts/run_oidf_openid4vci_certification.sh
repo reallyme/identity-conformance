@@ -194,6 +194,19 @@ require_file "${suite_contract}" "OpenID4VCI suite contract is unavailable"
 require_file "${module_inventory}" "OpenID4VCI module inventory is unavailable"
 [[ -x "${issuer_runner}" ]] || fail "issuer certification runner is unavailable"
 [[ -x "${wallet_runner}" ]] || fail "wallet certification runner is unavailable"
+expected_suite_revision="$(jq -er '.commit' \
+  "${repository_root}/upstream/oidf/conformance-suite.lock.json")" || \
+  fail "framework suite revision is unavailable"
+component_suite_revision="$(jq -er '.commit' "${suite_contract}")" || \
+  fail "OpenID4VCI suite revision is unavailable"
+checked_suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)" || \
+  fail "suite checkout revision is unavailable"
+readonly expected_suite_revision component_suite_revision checked_suite_revision
+[[ "${component_suite_revision}" == "${expected_suite_revision}" ]] || \
+  fail "OpenID4VCI suite revision disagrees with the framework release"
+[[ "${checked_suite_revision}" == "${expected_suite_revision}" ]] || \
+  fail "suite checkout disagrees with the framework release"
+python3 scripts/verify_oidf_wallet_plan.py --suite-checkout "${suite_dir}"
 issuer_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${issuer_config}")"
 wallet_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${wallet_config}")"
 plan_fingerprint="$(python3 scripts/hash_oidf_input.py "${certification_plan}")"
@@ -249,7 +262,7 @@ readonly issuer_deployment_artifact wallet_deployment_artifact
 readonly issuer_deployment_artifact_fingerprint wallet_deployment_artifact_fingerprint
 readonly wallet_source_repository
 
-suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)"
+suite_revision="${checked_suite_revision}"
 readonly suite_revision
 mkdir -p "${result_root}/issuer" "${result_root}/wallet"
 cp "${deployment_manifest}" "${result_root}/deployment-manifest.json"

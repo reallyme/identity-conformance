@@ -7,11 +7,13 @@ from __future__ import annotations
 import copy
 import hashlib
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
+from unittest import mock
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +52,7 @@ def valid_deployment() -> dict[str, object]:
         "component": {
             "component_id": requirement["component_id"],
             "repository": requirement["repository"],
+            "release_ref": "reallyme-wallet-v1.0.0",
             "commit": "1" * 40,
         },
         "release_artifact": {
@@ -72,7 +75,7 @@ def valid_result() -> dict[str, object]:
     kinds = RESULT.expected_check_kinds(adapter)
     deployment = valid_deployment()
     result = {
-        "schema": "reallyme.identity.eudi_wallet_execution_result.v1",
+        "schema": "reallyme.identity.eudi_wallet_execution_result.v2",
         "plan_id": "eudi-wallet-engineering-v1",
         "result": "passed",
         "created_at": "2026-11-11T12:00:00Z",
@@ -83,12 +86,108 @@ def valid_result() -> dict[str, object]:
         "component": deployment["component"],
         "release_artifact_sha256": "a" * 64,
         "component_attestation_sha256": "b" * 64,
+        "release_evidence": {
+            "preflight_run_id": 41,
+            "preflight_job_id": 42,
+            "fuzz_run_id": 31,
+            "protobuf_ci_run_id": 32,
+            "rust_ci_run_id": 33,
+            "crate_count": 17,
+            "crate_inventory_sha256": "6" * 64,
+            "evidence_count": 7,
+            "evidence_inventory_sha256": "7" * 64,
+            "cargo_lock_sha256": "8" * 64,
+        },
         "source_locks": {
             "eudi_sources_sha256": "c" * 64,
             "eudi_legal_sources_sha256": "d" * 64,
             "eudi_publications_sha256": "e" * 64,
         },
         "normative_ledgers": RUNNER.normative_ledger_digests(),
+        "coverage": {
+            "authority": "internal_engineering",
+            "certification_claim": False,
+            "minimum_requirements": {
+                "total": 14,
+                "status_counts": {
+                    "implemented": 6,
+                    "partial": 5,
+                    "operational_required": 1,
+                    "delegated": 1,
+                    "fixture_seeded": 1,
+                },
+                "incomplete": [
+                    {
+                        "minimum_id": f"minimum.incomplete-{index}",
+                        "status": status,
+                        "limitations": ["Not complete in this candidate."],
+                    }
+                    for index, status in enumerate(
+                        [
+                            "partial",
+                            "partial",
+                            "partial",
+                            "partial",
+                            "partial",
+                            "operational_required",
+                            "delegated",
+                            "fixture_seeded",
+                        ],
+                        1,
+                    )
+                ],
+            },
+            "declared_cases": {
+                "total": 18,
+                "executable": 10,
+                "non_executable": 8,
+                "status_counts": {
+                    "unit_covered": 9,
+                    "implemented": 1,
+                    "fixture_available": 2,
+                    "fixture_seeded": 6,
+                },
+                "non_executable_cases": [
+                    {
+                        "case_id": f"wallet-core.fixture-{index}",
+                        "status": "fixture_available" if index <= 2 else "fixture_seeded",
+                    }
+                    for index in range(1, 9)
+                ],
+            },
+            "normative_boundaries": {"implemented": 2, "checks": 3},
+        },
+        "test_execution": {
+            "command_id": RUNNER.TEST_COMMAND_ID,
+            "discovered_test_count": 752,
+            "test_inventory_sha256": "4" * 64,
+            "executed_test_count": 752,
+            "passed_test_count": 752,
+            "failed_test_count": 0,
+            "ignored_test_count": 0,
+            "measured_test_count": 0,
+            "filtered_test_count": 0,
+            "declared_executable_case_count": 10,
+            "declared_test_functions_sha256": "5" * 64,
+            "result": "passed",
+        },
+        "framework_probes": [
+            {
+                "probe_id": probe["probe_id"],
+                "command_id": probe["command_id"],
+                "source_sha256": RUNNER.hash_regular_file(
+                    REPOSITORY_ROOT / probe["source_path"]
+                ),
+                "executed_test_count": probe["expected_test_count"],
+                "passed_test_count": probe["expected_test_count"],
+                "failed_test_count": 0,
+                "ignored_test_count": 0,
+                "measured_test_count": 0,
+                "filtered_test_count": 0,
+                "result": "passed",
+            }
+            for probe in adapter["framework_probes"]
+        ],
         "checks": [
             {"check_id": check_id, "kind": kind, "result": "passed"}
             for check_id, kind in sorted(kinds.items())
@@ -117,6 +216,80 @@ def valid_result() -> dict[str, object]:
 
 
 class EudiWalletConformanceTests(unittest.TestCase):
+    def test_publishable_workspace_packages_are_discovered_from_cargo_metadata(
+        self,
+    ) -> None:
+        metadata = {
+            "workspace_members": ["public", "restricted", "private"],
+            "packages": [
+                {
+                    "id": "public",
+                    "name": "reallyme-wallet",
+                    "version": "1.0.0",
+                    "publish": None,
+                },
+                {
+                    "id": "restricted",
+                    "name": "reallyme-wallet-types",
+                    "version": "1.0.0",
+                    "publish": ["crates-io"],
+                },
+                {
+                    "id": "private",
+                    "name": "wallet-private-tests",
+                    "version": "1.0.0",
+                    "publish": [],
+                },
+            ],
+        }
+        output = RUNNER.CommandOutput(0, json.dumps(metadata).encode("utf-8"))
+        with mock.patch.object(RUNNER, "capture_command_output", return_value=output):
+            self.assertEqual(
+                RUNNER.publishable_workspace_packages(Path("/unused")),
+                {
+                    "reallyme-wallet": "1.0.0",
+                    "reallyme-wallet-types": "1.0.0",
+                },
+            )
+
+    def test_publishable_workspace_discovery_rejects_missing_member_metadata(
+        self,
+    ) -> None:
+        metadata = {
+            "workspace_members": ["present", "missing"],
+            "packages": [
+                {
+                    "id": "present",
+                    "name": "reallyme-wallet",
+                    "version": "1.0.0",
+                    "publish": None,
+                }
+            ],
+        }
+        output = RUNNER.CommandOutput(0, json.dumps(metadata).encode("utf-8"))
+        with mock.patch.object(RUNNER, "capture_command_output", return_value=output):
+            with self.assertRaises(RUNNER.EudiWalletRunnerError):
+                RUNNER.publishable_workspace_packages(Path("/unused"))
+
+    def test_publishable_workspace_discovery_rejects_unrelated_public_package(
+        self,
+    ) -> None:
+        metadata = {
+            "workspace_members": ["unrelated"],
+            "packages": [
+                {
+                    "id": "unrelated",
+                    "name": "unrelated-package",
+                    "version": "1.0.0",
+                    "publish": None,
+                }
+            ],
+        }
+        output = RUNNER.CommandOutput(0, json.dumps(metadata).encode("utf-8"))
+        with mock.patch.object(RUNNER, "capture_command_output", return_value=output):
+            with self.assertRaises(RUNNER.EudiWalletRunnerError):
+                RUNNER.publishable_workspace_packages(Path("/unused"))
+
     def test_checked_plan_and_adapter_are_valid(self) -> None:
         plan, adapter = ADAPTER.load_contract()
         self.assertEqual(
@@ -208,11 +381,111 @@ class EudiWalletConformanceTests(unittest.TestCase):
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
 
+    def test_result_rejects_incomplete_release_evidence(self) -> None:
+        changed = valid_result()
+        changed["release_evidence"]["evidence_count"] = 6
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_coverage_that_hides_non_executable_cases(self) -> None:
+        changed = valid_result()
+        changed["coverage"]["declared_cases"]["non_executable"] = 0
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_coverage_promoted_to_certification(self) -> None:
+        changed = valid_result()
+        changed["coverage"]["certification_claim"] = True
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_coverage_that_omits_an_incomplete_minimum(self) -> None:
+        changed = valid_result()
+        changed["coverage"]["minimum_requirements"]["incomplete"].pop()
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
     def test_failed_check_is_rejected(self) -> None:
         changed = valid_result()
         changed["checks"][0]["result"] = "failed"
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
+
+    def test_result_rejects_missing_workspace_test_inventory(self) -> None:
+        changed = valid_result()
+        changed["test_execution"]["discovered_test_count"] = 0
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_partially_executed_workspace_inventory(self) -> None:
+        changed = valid_result()
+        changed["test_execution"]["executed_test_count"] = 751
+        changed["test_execution"]["passed_test_count"] = 751
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_missing_framework_probe_execution(self) -> None:
+        changed = valid_result()
+        changed["framework_probes"][0]["passed_test_count"] = 0
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_omitted_framework_probe(self) -> None:
+        changed = valid_result()
+        changed["framework_probes"].pop()
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_result_rejects_substituted_framework_probe_source(self) -> None:
+        changed = valid_result()
+        changed["framework_probes"][1]["source_sha256"] = "f" * 64
+        with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
+            RESULT.verify_result(changed)
+
+    def test_discovered_tests_rejects_empty_inventory(self) -> None:
+        with self.assertRaises(RUNNER.EudiWalletRunnerError):
+            RUNNER.discovered_tests(Path("/"), b"0 tests, 0 benchmarks\n", {}, {})
+
+    def test_discovered_tests_extracts_complete_inventory(self) -> None:
+        executable = Path("/bin/sh").resolve(strict=True)
+        identity = "reallyme-wallet@1.0.0|test|wallet_tests"
+        self.assertEqual(
+            RUNNER.discovered_tests(
+                Path("/"),
+                (
+                    f"     Running tests/wallet.rs ({executable})\n"
+                    "issuance::accepts_valid_offer: test\n"
+                    "presentation::rejects_bad_nonce: test\n"
+                    "2 tests, 0 benchmarks\n"
+                ).encode("utf-8"),
+                {executable: identity},
+                {},
+            ),
+            [
+                f"{identity}|issuance::accepts_valid_offer",
+                f"{identity}|presentation::rejects_bad_nonce",
+            ],
+        )
+
+    def test_execution_counts_require_real_test_summaries(self) -> None:
+        self.assertEqual(
+            RUNNER.test_execution_counts(
+                b"test result: ok. 4 passed; 0 failed; 0 ignored; "
+                b"0 measured; 0 filtered out; finished in 0.01s\n"
+                b"test result: ok. 3 passed; 0 failed; 0 ignored; "
+                b"0 measured; 0 filtered out; finished in 0.01s\n"
+            ),
+            (7, 0, 0, 0, 0),
+        )
+
+    def test_command_capture_stops_oversized_output(self) -> None:
+        command = (
+            sys.executable,
+            "-c",
+            "import os\nwhile True: os.write(1, b'x' * 4096)",
+        )
+        with mock.patch.object(RUNNER, "MAX_COMMAND_OUTPUT_BYTES", 128):
+            self.assertIsNone(RUNNER.capture_command_output(Path("/"), command))
 
     def test_assertion_cannot_drop_required_check(self) -> None:
         changed = valid_result()

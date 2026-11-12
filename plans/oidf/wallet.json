@@ -1,0 +1,98 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "plan_id": "oidf-wallet-certification-v1",
+  "execution_status": "external_runner_required",
+  "certification_claim": false,
+  "subject": {
+    "component_id": "wallet",
+    "repository": "https://github.com/reallyme/wallet",
+    "implementation_scope": "cross_platform_wallet_core",
+    "app_targets": [],
+    "non_applicable_targets": [
+      "android_application",
+      "ios_application"
+    ]
+  },
+  "source_bindings": {
+    "certification_plan": "plans/oidf/certification.json",
+    "suite_lock": "upstream/oidf/conformance-suite.lock.json",
+    "module_snapshot": "upstream/oidf/snapshots/certification-modules.json",
+    "suite_repository": "https://gitlab.com/openid/conformance-suite.git",
+    "suite_ref": "release-v5.3.4",
+    "suite_commit": "23353b36957d6466010de767c812d2c91ed37638"
+  },
+  "execution_owner": {
+    "repository": "https://github.com/reallyme/identity",
+    "workflow_path": ".github/workflows/identity-product-conformance.yml",
+    "candidate_component": "wallet",
+    "candidate_selected_by": "product_component_bom"
+  },
+  "required_components": [
+    {
+      "component_id": "openid4vci",
+      "repository": "https://github.com/reallyme/openid4vci"
+    },
+    {
+      "component_id": "openid4vp",
+      "repository": "https://github.com/reallyme/openid4vp"
+    },
+    {
+      "component_id": "wallet",
+      "repository": "https://github.com/reallyme/wallet"
+    },
+    {
+      "component_id": "ssi",
+      "repository": "https://github.com/reallyme/ssi"
+    },
+    {
+      "component_id": "identity",
+      "repository": "https://github.com/reallyme/identity"
+    },
+    {
+      "component_id": "cose",
+      "repository": "https://github.com/reallyme/cose"
+    }
+  ],
+  "required_wallet_roles": [
+    {
+      "protocol": "openid4vci",
+      "role": "wallet",
+      "plan_id": "oid4vci-1_0-wallet-haip-test-plan",
+      "profile_count": 6,
+      "module_execution_count": 138,
+      "required_result_policy": "openid4vci"
+    },
+    {
+      "protocol": "openid4vp",
+      "role": "wallet",
+      "plan_id": "oid4vp-1final-wallet-haip-test-plan",
+      "profile_count": 4,
+      "module_execution_count": 140,
+      "required_result_policy": "openid4vp_default_with_source_bound_review"
+    }
+  ],
+  "profile_count": 10,
+  "module_execution_count": 278,
+  "execution_policy": {
+    "official_hosted_suite_required": true,
+    "complete_product_deployment_required": true,
+    "module_selectors_allowed": false,
+    "skips_allowed": false,
+    "expected_failures_allowed": false,
+    "partial_reruns_allowed": false,
+    "component_test_substitution_allowed": false,
+    "mobile_app_required": false,
+    "result_must_bind_framework_release": true,
+    "result_must_bind_product_bom": true,
+    "result_must_bind_deployment": true,
+    "result_must_bind_module_inventory": true
+  },
+  "claim_policy": {
+    "framework_inventory_check_is_product_execution": false,
+    "wallet_core_engineering_result_is_oidf_result": false,
+    "local_rehearsal_is_certification_evidence": false,
+    "product_statement_requires_complete_execution": true,
+    "external_certification_requires_oidf_submission": true
+  }
+}

@@ -185,6 +185,58 @@ def retained_product_bom_digest(
     return retained
 
 
+def product_identity(product_bom: Path) -> dict[str, str]:
+    value = product_bom_validator.load_bom(product_bom)
+    components = product_bom_validator.validate_bom(
+        value, require_release_refs=True
+    )
+    identity = components.get("identity")
+    product_id = value.get("product_id")
+    product_version = value.get("product_version")
+    product_release_ref = value.get("product_release_ref")
+    if (
+        identity is None
+        or identity.release_ref is None
+        or not isinstance(product_id, str)
+        or not isinstance(product_version, str)
+        or not isinstance(product_release_ref, str)
+        or identity.release_ref != product_release_ref
+    ):
+        fail("product_identity_invalid")
+    return {
+        "product_id": product_id,
+        "product_version": product_version,
+        "release_ref": product_release_ref,
+        "repository": identity.repository,
+        "commit": identity.commit,
+    }
+
+
+def product_components(product_bom: Path) -> list[dict[str, object]]:
+    value = product_bom_validator.load_bom(product_bom)
+    components = product_bom_validator.validate_bom(
+        value, require_release_refs=True
+    )
+    result: list[dict[str, object]] = []
+    for component_id, component in sorted(components.items()):
+        if component.release_ref is None:
+            fail("product_component_release_ref_missing")
+        result.append(
+            {
+                "component_id": component_id,
+                "repository": component.repository,
+                "commit": component.commit,
+                "release_ref": component.release_ref,
+                "release_artifact_sha256": component.release_artifact_sha256,
+                "component_attestation_sha256": (
+                    component.component_attestation_sha256
+                ),
+                "roles": sorted(component.roles),
+            }
+        )
+    return result
+
+
 def deployment_endpoint(value: str) -> str:
     if (
         not value.isascii()
@@ -266,11 +318,13 @@ def write_index(
         result_root, product_bom, artifacts
     )
     value = {
-        "schema_version": 2,
+        "schema_version": 3,
         "protocol": "openid4vp",
         "framework_revision": framework_revision,
         "workflow_revision": workflow_revision,
         "suite_revision": suite_revision,
+        "product": product_identity(product_bom),
+        "components": product_components(product_bom),
         "inputs": {
             "product_component_bom": product_bom_digest,
             "deployment_manifest": deployment_digest,

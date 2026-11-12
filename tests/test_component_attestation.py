@@ -45,7 +45,7 @@ def valid_attestation() -> dict[str, object]:
             {"artifact_id": "reallyme-ssi-core", "kind": "package", "sha256": "b" * 64}
         ],
         "dependency_lock": {"kind": "cargo", "sha256": "c" * 64},
-        "toolchain": {"identifier": "rust", "version": "1.99.1"},
+        "toolchain": {"identifier": "rust", "version": "1.100.0"},
         "checks": [
             {
                 "check_id": "cargo-clippy",

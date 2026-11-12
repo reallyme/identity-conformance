@@ -74,6 +74,10 @@ class ConformanceCatalogTests(unittest.TestCase):
         self.assertIn(
             "-/tree/23353b36957d6466010de767c812d2c91ed37638", catalog
         )
+        self.assertIn(
+            "Wallet subset contains `10` configurations and `278` module executions",
+            catalog,
+        )
         self.assertIn("wallet.wia.technical_validity_seconds < 86,400", catalog)
         self.assertIn("Verifies `126` feature files and `798` scenarios", catalog)
         self.assertIn("Verifies `5` suites and `39` test cases", catalog)
@@ -94,7 +98,11 @@ class ConformanceCatalogTests(unittest.TestCase):
         version = CATALOG.read_version()
         self.assertIn("release-readiness.yml/badge.svg", badges)
         self.assertIn("secret-scan.yml/badge.svg", badges)
+        self.assertIn("pin-freshness.yml/badge.svg", badges)
         self.assertIn(f"label=Framework&message=v{version}", badges)
+        self.assertIn(
+            f"identity-conformance/releases/tag/v{version}", badges
+        )
         self.assertIn("label=EU%20ARF&message=v3.0.0%20included", badges)
         self.assertIn(
             "label=OIDF%20suite&message=release-v5.3.4%20included",

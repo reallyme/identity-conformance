@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
@@ -33,6 +35,22 @@ AUDITOR = load_script()
 
 
 class EtsiEaaPidTraceTests(unittest.TestCase):
+    def test_isolated_trace_source_root_selects_each_exact_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for component_id in ("ssi", "openid4vci", "openid4vp"):
+                (root / component_id).mkdir()
+            with patch.dict(
+                os.environ,
+                {AUDITOR.TRACE_SOURCE_ROOT_ENVIRONMENT: str(root)},
+                clear=False,
+            ):
+                components = AUDITOR.load_components()
+            self.assertEqual(
+                {component.checkout for component in components.values()},
+                {(root / component_id).resolve() for component_id in components},
+            )
+
     def test_current_trace_is_complete_and_keeps_claim_boundary_explicit(self) -> None:
         artifact = AUDITOR.build_artifact(
             AUDITOR.load_components(), verify_component_revision=False

@@ -417,16 +417,32 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
         )
 
     suite = read_object(root / "upstream/oidf/conformance-suite.lock.json")
+    wallet_plan = read_object(root / "plans/oidf/wallet.json")
     suite_repository = required_string(suite.get("repository")).removesuffix(".git")
     suite_commit = required_string(suite.get("commit"))
     suite_ref = required_string(suite.get("pinned_ref"))
-    if COMMIT.fullmatch(suite_commit) is None or SAFE_REF.fullmatch(suite_ref) is None:
+    wallet_profile_count = required_integer(wallet_plan.get("profile_count"))
+    wallet_module_count = required_integer(wallet_plan.get("module_execution_count"))
+    wallet_bindings = wallet_plan.get("source_bindings")
+    if (
+        COMMIT.fullmatch(suite_commit) is None
+        or SAFE_REF.fullmatch(suite_ref) is None
+        or wallet_profile_count != 10
+        or wallet_module_count != 278
+        or not isinstance(wallet_bindings, dict)
+        or wallet_bindings.get("suite_ref") != suite_ref
+        or wallet_bindings.get("suite_commit") != suite_commit
+    ):
         raise CatalogError(CatalogErrorReason.INVALID_INPUT)
     oidf_rows.append(
         CatalogRow(
             name="OpenID Conformance Suite",
             url=f"{suite_repository}/-/tree/{suite_commit}",
-            description="Executable certification suite for the plan matrix.",
+            description=(
+                "Executable certification suite. The Wallet subset contains "
+                f"`{wallet_profile_count}` configurations and "
+                f"`{wallet_module_count}` module executions."
+            ),
             enforced_value=f"Commit `{suite_commit}`",
             version=suite_ref,
             baseline_updated=required_string(suite.get("released_at")),
@@ -477,10 +493,16 @@ def render_badges(root: Path = REPOSITORY_ROOT) -> str:
             BADGES_START_MARKER,
             "[![Release readiness](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml)",
             "[![Secret scan](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml)",
+            "[![Upstream monitoring](https://github.com/reallyme/identity-conformance/actions/workflows/pin-freshness.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/pin-freshness.yml)",
             "[![Security Policy](https://img.shields.io/badge/security-policy-0f766e)](SECURITY.md)",
             "[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)",
             "",
-            badge("Framework", f"v{version}", "475569", "VERSION"),
+            badge(
+                "Framework",
+                f"v{version}",
+                "475569",
+                f"https://github.com/reallyme/identity-conformance/releases/tag/v{version}",
+            ),
             badge("EU ARF", f"{arf.version} included", "0f766e", arf.url),
             badge(
                 "EU technical specifications",

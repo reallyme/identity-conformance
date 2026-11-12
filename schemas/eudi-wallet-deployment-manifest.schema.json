@@ -12,10 +12,11 @@
     "component": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["component_id", "repository", "commit"],
+      "required": ["component_id", "repository", "release_ref", "commit"],
       "properties": {
         "component_id": {"const": "wallet"},
         "repository": {"const": "https://github.com/reallyme/wallet"},
+        "release_ref": {"type": "string", "pattern": "^reallyme-wallet-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"},
         "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
       }
     },

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: EU conformance - ARF normative ledger
+name: Framework · EU · ARF ledger
 
 on:
   pull_request:

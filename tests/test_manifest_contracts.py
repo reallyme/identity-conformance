@@ -76,12 +76,13 @@ INPUT_FINGERPRINT = load_script(
 def valid_product_bom() -> dict[str, object]:
     components: list[dict[str, object]] = []
     for index, (component_id, policy) in enumerate(PRODUCT_BOM.COMPONENTS.items(), 1):
+        release_version = "1.0.0-rc.1" if component_id == "identity" else "1.0.0"
         components.append(
             {
                 "component_id": component_id,
                 "repository": policy.repository,
                 "commit": f"{index:x}" * 40,
-                "release_ref": f"{policy.release_prefix}1.0.0",
+                "release_ref": f"{policy.release_prefix}{release_version}",
                 "release_artifact_sha256": f"{index:x}" * 64,
                 "component_attestation_sha256": f"{index + 6:x}" * 64,
                 "roles": sorted(policy.roles),
@@ -92,6 +93,7 @@ def valid_product_bom() -> dict[str, object]:
         "purpose": "reallyme-product-conformance-bom",
         "product_id": "identity",
         "product_version": "1.0.0-rc.1",
+        "product_release_ref": "reallyme-identity-v1.0.0-rc.1",
         "components": components,
     }
 
@@ -358,6 +360,16 @@ class ManifestContractTests(unittest.TestCase):
     def test_product_bom_digest_is_independent_of_json_whitespace(self) -> None:
         first = PRODUCT_BOM.canonical_digest(self.product_bom)
         reordered = json.loads(json.dumps(self.product_bom, sort_keys=True))
+        self.assertEqual(first, PRODUCT_BOM.canonical_digest(reordered))
+
+    def test_product_bom_digest_is_independent_of_component_and_role_order(
+        self,
+    ) -> None:
+        first = PRODUCT_BOM.canonical_digest(self.product_bom)
+        reordered = copy.deepcopy(self.product_bom)
+        reordered["components"].reverse()
+        for component in reordered["components"]:
+            component["roles"].reverse()
         self.assertEqual(first, PRODUCT_BOM.canonical_digest(reordered))
 
     def test_product_checkout_rejects_release_ref_commit_mismatch(self) -> None:
@@ -957,7 +969,22 @@ class ManifestContractTests(unittest.TestCase):
             index = json.loads(
                 (results / EVIDENCE_INDEX.INDEX_FILENAME).read_text(encoding="utf-8")
             )
+            self.assertEqual(index["schema_version"], 3)
             self.assertEqual(index["protocol"], "openid4vp")
+            self.assertEqual(index["product"]["product_id"], "identity")
+            self.assertEqual(index["product"]["product_version"], "1.0.0-rc.1")
+            self.assertEqual(len(index["components"]), 6)
+            self.assertEqual(
+                next(
+                    component["release_ref"]
+                    for component in index["components"]
+                    if component["component_id"] == "wallet"
+                ),
+                "reallyme-wallet-v1.0.0",
+            )
+            self.assertEqual(
+                index["product"]["release_ref"], "reallyme-identity-v1.0.0-rc.1"
+            )
             self.assertEqual(
                 {artifact["path"] for artifact in index["artifacts"]},
                 {"product-component-bom.json", "deployment-manifest.json", "profile.json"},
@@ -1137,7 +1164,10 @@ class ManifestContractTests(unittest.TestCase):
             index = json.loads(
                 (results / EVIDENCE_INDEX.INDEX_FILENAME).read_text(encoding="utf-8")
             )
+            self.assertEqual(index["schema_version"], 3)
             self.assertEqual(index["protocol"], "openid4vci")
+            self.assertEqual(index["product"]["product_id"], "identity")
+            self.assertEqual(len(index["components"]), 6)
             self.assertEqual(len(index["inputs"]["issuer_binary"]["sha256"]), 64)
             self.assertEqual(len(index["inputs"]["wallet_binary"]["sha256"]), 64)
             self.assertEqual(

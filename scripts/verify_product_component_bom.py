@@ -168,13 +168,21 @@ def required_string(value: object, context: str) -> str:
 def validate_bom(
     value: dict[str, object], *, require_release_refs: bool = False
 ) -> dict[str, Component]:
-    if set(value) != {
+    allowed_top_level_fields = {
         "schema_version",
         "purpose",
         "product_id",
         "product_version",
+        "product_release_ref",
         "components",
-    }:
+    }
+    required_top_level_fields = allowed_top_level_fields.difference(
+        {"product_release_ref"}
+    )
+    if (
+        not required_top_level_fields.issubset(value)
+        or not set(value).issubset(allowed_top_level_fields)
+    ):
         fail("product component BOM has an invalid field set")
     if value.get("schema_version") != 1:
         fail("product component BOM has an unsupported schema version")
@@ -185,6 +193,16 @@ def validate_bom(
     product_version = required_string(value.get("product_version"), "product_version")
     if PRODUCT_VERSION.fullmatch(product_version) is None:
         fail("product_version is invalid")
+    raw_product_release_ref = value.get("product_release_ref")
+    product_release_ref: str | None = None
+    if raw_product_release_ref is not None:
+        product_release_ref = required_string(
+            raw_product_release_ref, "product_release_ref"
+        )
+        if product_release_ref != f"reallyme-identity-v{product_version}":
+            fail("product_release_ref does not match product_version")
+    elif require_release_refs:
+        fail("product_release_ref is required for a release BOM")
     raw_components = value.get("components")
     if not isinstance(raw_components, list) or len(raw_components) != len(COMPONENTS):
         fail("product component BOM must contain the complete component set")
@@ -265,14 +283,50 @@ def validate_bom(
         )
     if set(observed) != set(COMPONENTS):
         fail("product component BOM does not cover the approved component set")
+    identity = observed.get("identity")
+    if (
+        require_release_refs
+        and (
+            identity is None
+            or identity.release_ref is None
+            or identity.release_ref != product_release_ref
+        )
+    ):
+        fail("Identity component release does not match the product release")
     return observed
 
 
 def canonical_digest(value: dict[str, object]) -> str:
-    """Return the digest of the validated, whitespace-independent BOM encoding."""
-    validate_bom(value)
+    """Return the digest of the validated, order-independent BOM encoding."""
+    components = validate_bom(value)
+    normalized: dict[str, object] = {
+        "schema_version": value["schema_version"],
+        "purpose": value["purpose"],
+        "product_id": value["product_id"],
+        "product_version": value["product_version"],
+        "components": [
+            {
+                "component_id": component.component_id,
+                "repository": component.repository,
+                "commit": component.commit,
+                **(
+                    {"release_ref": component.release_ref}
+                    if component.release_ref is not None
+                    else {}
+                ),
+                "release_artifact_sha256": component.release_artifact_sha256,
+                "component_attestation_sha256": (
+                    component.component_attestation_sha256
+                ),
+                "roles": sorted(component.roles),
+            }
+            for component in sorted(components.values(), key=lambda item: item.component_id)
+        ],
+    }
+    if "product_release_ref" in value:
+        normalized["product_release_ref"] = value["product_release_ref"]
     encoded = json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 

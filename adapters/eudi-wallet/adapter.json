@@ -12,9 +12,56 @@
     {"artifact_id": "wallet-sources-lock", "path": "conformance/sources.lock"},
     {"artifact_id": "reference-implementation-lock", "path": "conformance/eudi/reference-implementation.lock"},
     {"artifact_id": "upstream-tests", "path": "conformance/eudi/upstream-tests.json"},
-    {"artifact_id": "eudi-wallet-minimums", "path": "conformance/requirements/eudi-wallet-minimums.json"}
+    {"artifact_id": "eudi-wallet-minimums", "path": "conformance/requirements/eudi-wallet-minimums.json"},
+    {"artifact_id": "eudi-test-cases", "path": "conformance/eudi/test-cases.json"}
   ],
-  "cargo_packages": ["reallyme-wallet-conformance"],
+  "test_execution": {
+    "check_id": "cargo.wallet-workspace-all-features",
+    "command_id": "cargo-test-workspace-all-features-v1",
+    "declared_cases_path": "conformance/eudi/test-cases.json"
+  },
+  "framework_probes": [
+    {
+      "probe_id": "wallet-provider-key-storage-boundaries",
+      "check_id": "probe.wallet-provider-key-storage-boundaries",
+      "command_id": "cargo-test-framework-key-storage-probe-v1",
+      "source_path": "adapters/eudi-wallet/probes/key_storage_boundaries_tests.rs",
+      "target_path": "crates/provider/tests/identity_conformance_key_storage_boundaries.rs",
+      "expected_test_count": 1
+    },
+    {
+      "probe_id": "wallet-key-custody-codec-boundaries",
+      "check_id": "probe.wallet-key-custody-codec-boundaries",
+      "command_id": "cargo-test-framework-key-custody-codec-v1",
+      "source_path": "adapters/eudi-wallet/probes/key_custody_codec_tests.rs",
+      "target_path": "crates/proto-codec/tests/identity_conformance_key_custody_codec.rs",
+      "expected_test_count": 4
+    },
+    {
+      "probe_id": "wallet-consent-policy-context-binding",
+      "check_id": "probe.wallet-consent-policy-context-binding",
+      "command_id": "cargo-test-framework-consent-policy-context-v1",
+      "source_path": "adapters/eudi-wallet/probes/consent_policy_context_tests.rs",
+      "target_path": "conformance/tests/identity_conformance_consent_policy_context.rs",
+      "expected_test_count": 4
+    },
+    {
+      "probe_id": "wallet-flow-resume-boundaries",
+      "check_id": "probe.wallet-flow-resume-boundaries",
+      "command_id": "cargo-test-framework-flow-resume-probe-v1",
+      "source_path": "adapters/eudi-wallet/probes/flow_resume_boundaries_tests.rs",
+      "target_path": "conformance/tests/identity_conformance_flow_resume_boundaries.rs",
+      "expected_test_count": 4
+    },
+    {
+      "probe_id": "wallet-lifecycle-boundaries",
+      "check_id": "probe.wallet-lifecycle-boundaries",
+      "command_id": "cargo-test-framework-lifecycle-probe-v1",
+      "source_path": "adapters/eudi-wallet/probes/lifecycle_boundaries_tests.rs",
+      "target_path": "conformance/tests/identity_conformance_lifecycle_boundaries.rs",
+      "expected_test_count": 3
+    }
+  ],
   "required_attestation_categories": ["format", "lint", "unit", "integration", "vector", "security", "build"],
   "evidence_policy": {
     "contains_sensitive_data": false,

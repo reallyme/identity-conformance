@@ -17,6 +17,7 @@ const {
   assertNodeWorkflowJobsPinNode,
   assertPathsAbsent,
   assertReallyMeReleasePackagePolicy,
+  assertRustSourcePolicy,
   assertSpdxHeaders,
   assertWorkflowActionsPinned,
   assertWorkflowRunStep,
@@ -38,6 +39,15 @@ const openid4vciCertificationWorkflow =
   ".github/workflows/oidf-openid4vci-certification.yml";
 const openid4vpCertificationWorkflow =
   ".github/workflows/oidf-openid4vp-certification.yml";
+const identityProductWorkflow =
+  ".github/workflows/identity-product-conformance.yml";
+const productWorkflows = [
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  ".github/workflows/eudi-wallet-conformance.yml",
+  openid4vciCertificationWorkflow,
+  openid4vpCertificationWorkflow,
+  ".github/workflows/zk-conformance.yml",
+];
 const pythonWorkflows = [
   ".github/workflows/conformance-catalog.yml",
   ".github/workflows/eudi-relying-party-conformance.yml",
@@ -77,6 +87,7 @@ assertSpdxHeaders({
   copyright: "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited",
   license: "SPDX-License-Identifier: MIT OR Apache-2.0",
 });
+assertRustSourcePolicy({ roots: ["adapters/eudi-wallet/probes"] });
 
 // The top-level boundary keeps third-party and ReallyMe ownership unambiguous.
 assertPathsAbsent(["oidf", "reallyme", "OIDF_CERTIFICATION_READINESS.md", "LICENSE"]);
@@ -159,6 +170,11 @@ assertContains("references/eudi-publications.lock.json", '"kind": "official_edit
 assertContains("plans/oidf/certification.json", '"lock_file": "upstream/oidf/conformance-suite.lock.json"');
 assertContains("plans/oidf/certification.json", '"license": "MIT OR Apache-2.0"');
 assertContains("plans/oidf/engineering.json", '"certification_baseline": "plans/oidf/certification.json"');
+assertContains("plans/oidf/wallet.json", '"plan_id": "oidf-wallet-certification-v1"');
+assertContains("plans/oidf/wallet.json", '"profile_count": 10');
+assertContains("plans/oidf/wallet.json", '"module_execution_count": 278');
+assertContains("plans/oidf/wallet.json", '"component_test_substitution_allowed": false');
+assertContains("plans/oidf/wallet.json", '"mobile_app_required": false');
 assertContains("plans/eudi/relying-party-control-plane.json", '"certification_claim": false');
 assertContains("plans/eudi/relying-party-control-plane.json", '"execution_status": "executable"');
 assertContains("plans/eudi/relying-party-control-plane.json", '"transaction_content_non_retention"');
@@ -194,8 +210,39 @@ assertContains(".github/workflows/eu-upstream-assets.yml", "126 feature files, 7
 assertContains(".github/workflows/eu-upstream-assets.yml", "5 suites, 39 test cases");
 assertContains(".github/workflows/eu-upstream-assets.yml", "runs-on: ubuntu-26.04");
 assertContains("adapters/eudi-wallet/adapter.json", '"adapter_id": "eudi_wallet_engineering"');
-assertContains("adapters/eudi-wallet/adapter.json", '"reallyme-wallet-conformance"');
-assertContains("scripts/run_eudi_wallet_conformance.py", "execute_package");
+assertContains("adapters/eudi-wallet/adapter.json", '"cargo.wallet-workspace-all-features"');
+assertContains("adapters/eudi-wallet/adapter.json", '"cargo-test-workspace-all-features-v1"');
+assertContains("scripts/run_eudi_wallet_conformance.py", "execute_wallet_tests");
+assertContains("scripts/run_eudi_wallet_conformance.py", "publishable_workspace_packages");
+assertContains("scripts/run_eudi_wallet_conformance.py", "wallet_release_bundle.verify_bundle");
+assertContains("scripts/run_eudi_wallet_conformance.py", "coverage_summary");
+assertContains("scripts/run_eudi_wallet_conformance.py", '"--workspace"');
+assertContains("scripts/run_eudi_wallet_conformance.py", '"--include-ignored"');
+assertContains("scripts/run_eudi_wallet_conformance.py", "execute_framework_probe");
+assertContains(
+  "adapters/eudi-wallet/probes/key_storage_boundaries_tests.rs",
+  "invalid_storage_identities_never_reach_the_provider",
+);
+assertContains(
+  "adapters/eudi-wallet/probes/key_custody_codec_tests.rs",
+  "portable_material_cannot_claim_hardware_custody",
+);
+assertContains(
+  "adapters/eudi-wallet/probes/consent_policy_context_tests.rs",
+  "consent_policy_digest_matches_the_independent_golden_transcript",
+);
+assertContains(
+  "adapters/eudi-wallet/probes/flow_resume_boundaries_tests.rs",
+  "reserved_delivery_never_becomes_safe_to_repeat",
+);
+assertContains(
+  "adapters/eudi-wallet/probes/lifecycle_boundaries_tests.rs",
+  "inactive_and_terminal_states_block_regulated_operations",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  'test "${framework_probes}" -eq 5',
+);
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "repository: reallyme/wallet");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "scripts/run_eudi_wallet_conformance.py");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "candidate_artifact_name:");
@@ -204,6 +251,54 @@ assertContains(".github/workflows/eudi-wallet-conformance.yml", "actions/downloa
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "digest-mismatch: error");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "test \"${#entries[@]}\" -eq 3");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "git -C components/wallet rev-parse HEAD");
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "Revalidate the Wallet release preflight independently",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "scripts/verify_wallet_release_preflight.py",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "Verify GitHub provenance for every Wallet release subject",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "gh attestation verify",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  "--deny-self-hosted-runners",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  ".release_evidence.fuzz_run_id",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  ".release_evidence.protobuf_ci_run_id",
+);
+assertContains(
+  ".github/workflows/eudi-wallet-conformance.yml",
+  ".release_evidence.rust_ci_run_id",
+);
+assertContains(
+  "scripts/verify_wallet_release_preflight.py",
+  '"workflow_dispatch"',
+);
+assertContains(
+  "scripts/verify_wallet_release_preflight.py",
+  '"scheduled fuzz (wallet_state_machine)"',
+);
+assertContains(
+  "scripts/verify_wallet_release_bundle.py",
+  '"Security advisory audit"',
+);
+assertContains(
+  "scripts/verify_wallet_release_bundle.py",
+  '"Inspect normalized crate tarballs and dry-run publication"',
+);
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "repos/reallyme/wallet/releases/latest");
 assertContains(".github/workflows/eudi-wallet-conformance.yml", "steps.source.outputs.release_ref");
 const eudiWalletWorkflowText = readFileSync(
@@ -211,7 +306,8 @@ const eudiWalletWorkflowText = readFileSync(
   "utf8",
 );
 for (const forbiddenBoundary of [
-  "self-hosted",
+  "runs-on: [self-hosted",
+  "runs-on: self-hosted",
   "release_artifact_path",
   "component_attestation_path",
   "EUDI_WALLET_DEPLOYMENT_MANIFEST_B64",
@@ -244,6 +340,8 @@ assertContains("scripts/verify_component_attestation.py", "raw_process_output_re
 assertContains("docs/OIDF_SUBMISSION_CHECKLIST.md", "Publish for certification");
 assertContains("docs/OIDF_SUBMISSION_CHECKLIST.md", "legally binding attestation");
 assertContains("docs/OIDF_CERTIFICATION.md", "Every module returned for a selected plan must run");
+assertContains("docs/WALLET_ASSURANCE.md", "All 278 module executions must complete");
+assertContains("docs/WALLET_ASSURANCE.md", "must not say “certified”");
 assertContains("adapters/registry.json", '"contract_path": "adapters/wallet"');
 assertContains(
   "references/reallyme/trace-sources.lock.json",
@@ -265,13 +363,83 @@ assertContains(
   "schemas/product-component-bom.schema.json",
   '"purpose": { "const": "reallyme-product-conformance-bom" }',
 );
+assertContains(
+  "schemas/product-component-bom.schema.json",
+  '"product_release_ref"',
+);
+assertContains(
+  "schemas/product-conformance-statement.schema.json",
+  '"certification_claim": {"const": false}',
+);
+assertContains(
+  "schemas/product-conformance-statement.schema.json",
+  '"authority": {"const": "openid_foundation_hosted_suite"}',
+);
+assertContains(
+  "schemas/product-conformance-statement.schema.json",
+  '"then": {"required": ["composition"]}',
+);
+assertContains(
+  "schemas/product-conformance-statement.schema.json",
+  '"then": {"required": ["release_evidence"]}',
+);
+assertContains(
+  "scripts/verify_wallet_release_bundle.py",
+  "verify_crate_source_binding",
+);
+assertContains(
+  "scripts/materialize_wallet_attestation_subjects.py",
+  "materialize_attestation_subjects",
+);
+assertContains(
+  "scripts/verify_wallet_release_preflight.py",
+  "PREREQUISITE_POLICIES",
+);
+assertContains(
+  "scripts/verify_published_framework_release.py",
+  "reallyme.identity.published_framework_selection.v1",
+);
+assertContains(
+  "scripts/build_product_conformance_statement.py",
+  "reallyme.identity.product_conformance_statement.v1",
+);
+assertContains(
+  "scripts/build_product_conformance_statement.py",
+  "oidf_coverage",
+);
+assertContains(
+  "scripts/build_product_conformance_statement.py",
+  "oidf_composition",
+);
+assertContains(
+  "scripts/build_oidf_evidence_index.py",
+  '"components": product_components(product_bom)',
+);
 assertContains("scripts/strict_json.py", "json_duplicate_member");
+assertContains(identityProductWorkflow, "name: Product · Identity · OIDF");
+assertContains(
+  identityProductWorkflow,
+  "uses: ./.github/workflows/oidf-openid4vci-certification.yml",
+);
+assertContains(
+  identityProductWorkflow,
+  "uses: ./.github/workflows/oidf-openid4vp-certification.yml",
+);
+for (const productWorkflow of productWorkflows) {
+  assertContains(
+    productWorkflow,
+    "scripts/prepare_published_framework_release.sh",
+  );
+}
 assertContains("scripts/strict_json.py", "json_non_finite_number");
 assertContains("scripts/strict_json.py", "json_depth_limit_exceeded");
 assertContains("scripts/verify_product_component_bom.py", "strict_json.loads");
 assertContains("scripts/run_oidf_openid4vci_certification.sh", "--require-release-refs --verify-checkouts");
 assertContains("scripts/run_oidf_openid4vp_certification.sh", "--require-release-refs --verify-checkouts");
+assertContains("scripts/run_oidf_openid4vci_certification.sh", "OpenID4VCI suite revision disagrees with the framework release");
+assertContains("scripts/run_oidf_openid4vp_certification.sh", "OpenID4VP suite revision disagrees with the framework release");
 assertContains("scripts/audit_etsi_eaa_pid_trace.py", "external_evidence_still_required");
+assertContains("scripts/audit_etsi_eaa_pid_trace.py", "IDENTITY_CONFORMANCE_TRACE_SOURCE_ROOT");
 assertContains("scripts/verify_oidf_deployment_manifest.py", "strict_json.loads");
 assertContains("scripts/hash_oidf_input.py", "evidence.hash_file");
 assertContains("scripts/run_oidf_openid4vp_certification.sh", "changed during execution");
@@ -281,7 +449,7 @@ assertContains(
 );
 assertContains(
   openid4vciCertificationWorkflow,
-  "name: OIDF OpenID4VCI Certification",
+  "name: Internal · Identity · OpenID4VCI lane",
 );
 assertContains(openid4vciCertificationWorkflow, "workflow_call:");
 assertContains(openid4vciCertificationWorkflow, '[[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]');
@@ -307,7 +475,19 @@ assertContains(
   openid4vciCertificationWorkflow,
   "Execute all OpenID4VCI certification profiles",
 );
+assertContains(
+  openid4vciCertificationWorkflow,
+  "Verify complete official OIDF Wallet scope",
+);
 assertContains(openid4vciCertificationWorkflow, "releases/latest");
+assertContains(
+  openid4vciCertificationWorkflow,
+  "Verify the selected published framework release",
+);
+assertContains(
+  openid4vciCertificationWorkflow,
+  "build_product_conformance_statement.py",
+);
 assertContains(
   openid4vciCertificationWorkflow,
   '[[ "${revision}" =~ ^[0-9a-f]{40}$ ]]',
@@ -355,7 +535,7 @@ assertContains(
 );
 assertContains(
   openid4vpCertificationWorkflow,
-  "name: OIDF OpenID4VP Certification",
+  "name: Internal · Identity · OpenID4VP lane",
 );
 assertContains(openid4vpCertificationWorkflow, "releases/latest");
 assertContains(openid4vpCertificationWorkflow, "workflow_call:");
@@ -369,6 +549,14 @@ assertContains(
 );
 assertContains(
   openid4vpCertificationWorkflow,
+  "Verify the selected published framework release",
+);
+assertContains(
+  openid4vpCertificationWorkflow,
+  "build_product_conformance_statement.py",
+);
+assertContains(
+  openid4vpCertificationWorkflow,
   "scripts/run_oidf_openid4vp_certification.sh",
 );
 assertContains(
@@ -378,6 +566,10 @@ assertContains(
 assertContains(
   openid4vpCertificationWorkflow,
   "Execute all OpenID4VP certification profiles",
+);
+assertContains(
+  openid4vpCertificationWorkflow,
+  "Verify complete official OIDF Wallet scope",
 );
 assertContains(
   openid4vpCertificationWorkflow,
@@ -631,6 +823,7 @@ assertWorkflowRunStep(
 );
 
 run("python3", ["scripts/verify_oidf_manifests.py"]);
+run("python3", ["scripts/verify_oidf_wallet_plan.py"]);
 run("python3", ["scripts/verify_reallyme_release_sources.py"]);
 run("python3", ["scripts/verify_normative_sources.py"]);
 run("python3", ["scripts/verify_eudi_publications.py"]);
@@ -656,5 +849,6 @@ run("bash", [
   "scripts/run_oidf_openid4vp_certification.sh",
   "scripts/run_oidf_openid4vp_local_rehearsal.sh",
   "scripts/create_oidf_loopback_tls.sh",
+  "scripts/prepare_published_framework_release.sh",
   "scripts/scan_oidf_maven_image.sh",
 ]);

@@ -1,0 +1,214 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/product-conformance-statement-v1.json",
+  "title": "ReallyMe product conformance statement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$comment",
+    "schema",
+    "result",
+    "certification_claim",
+    "plan_id",
+    "coverage",
+    "product",
+    "framework",
+    "execution"
+  ],
+  "properties": {
+    "$comment": {"type": "string"},
+    "schema": {"const": "reallyme.identity.product_conformance_statement.v1"},
+    "result": {"const": "passed"},
+    "certification_claim": {"const": false},
+    "plan_id": {"$ref": "#/$defs/identifier"},
+    "coverage": {
+      "oneOf": [
+        {"$ref": "#/$defs/euWalletCoverage"},
+        {"$ref": "#/$defs/oidfCoverage"}
+      ]
+    },
+    "composition": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "allOf": [
+          {"$ref": "product-component-bom.schema.json#/$defs/component"},
+          {"required": ["release_ref"]}
+        ]
+      }
+    },
+    "release_evidence": {
+      "$ref": "eudi-wallet-execution-result.schema.json#/properties/release_evidence"
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "release_version",
+        "release_ref",
+        "repository",
+        "commit",
+        "candidate_sha256"
+      ],
+      "properties": {
+        "product_id": {"$ref": "#/$defs/identifier"},
+        "release_version": {"$ref": "#/$defs/releaseVersion"},
+        "release_ref": {"$ref": "#/$defs/releaseRef"},
+        "repository": {
+          "type": "string",
+          "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9_.-]+$"
+        },
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "candidate_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_version",
+        "release_tag",
+        "release_url",
+        "repository_commit",
+        "manifest_sha256",
+        "input_set_sha256"
+      ],
+      "properties": {
+        "release_version": {"$ref": "#/$defs/releaseVersion"},
+        "release_tag": {
+          "type": "string",
+          "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "release_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/reallyme/identity-conformance/releases/tag/v[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "repository_commit": {"$ref": "#/$defs/gitCommit"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "input_set_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_repository",
+        "workflow_revision",
+        "run_id",
+        "run_attempt",
+        "result_sha256"
+      ],
+      "properties": {
+        "workflow_repository": {
+          "type": "string",
+          "pattern": "^reallyme/[A-Za-z0-9_.-]+$"
+        },
+        "workflow_revision": {"$ref": "#/$defs/gitCommit"},
+        "run_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "run_attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "result_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "authority": {"const": "openid_foundation_hosted_suite"}
+            },
+            "required": ["authority"]
+          }
+        }
+      },
+      "then": {"required": ["composition"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "authority": {"const": "internal_engineering"}
+            },
+            "required": ["authority"]
+          }
+        }
+      },
+      "then": {"required": ["release_evidence"]}
+    }
+  ],
+  "$defs": {
+    "euWalletCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "certification_claim", "minimum_requirements", "declared_cases", "normative_boundaries"],
+      "properties": {
+        "authority": {"const": "internal_engineering"},
+        "certification_claim": {"const": false},
+        "minimum_requirements": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/minimum_requirements"},
+        "declared_cases": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/declared_cases"},
+        "normative_boundaries": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/normative_boundaries"}
+      }
+    },
+    "oidfCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "protocol", "suite_revision", "profile_count", "module_execution_count", "roles", "certification_claim"],
+      "properties": {
+        "authority": {"const": "openid_foundation_hosted_suite"},
+        "protocol": {"enum": ["openid4vci", "openid4vp"]},
+        "suite_revision": {"$ref": "#/$defs/gitCommit"},
+        "profile_count": {"type": "integer", "minimum": 1, "maximum": 64},
+        "module_execution_count": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "roles": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "profile_count", "module_execution_count"],
+            "properties": {
+              "role": {"enum": ["issuer", "wallet", "verifier"]},
+              "profile_count": {"type": "integer", "minimum": 1, "maximum": 32},
+              "module_execution_count": {"type": "integer", "minimum": 1, "maximum": 10000}
+            }
+          }
+        },
+        "certification_claim": {"const": false}
+      }
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+    },
+    "releaseVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "releaseRef": {
+      "type": "string",
+      "pattern": "^reallyme-[a-z0-9-]+-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "gitCommit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

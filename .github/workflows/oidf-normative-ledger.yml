@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: OIDF conformance - certification-suite ledger
+name: Framework · OIDF · suite ledger
 
 on:
   pull_request:

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-name: EU conformance - technical specifications ledger
+name: Framework · EU · technical specifications
 
 on:
   pull_request:
