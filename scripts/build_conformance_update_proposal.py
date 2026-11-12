@@ -161,11 +161,12 @@ def classify_change(
 def build_proposal() -> dict[str, object]:
     try:
         current_version = catalog.read_version(REPOSITORY_ROOT)
-        checks, manual_sources, unavailable_checks = freshness.run_checks()
+        evaluation = freshness.run_checks()
         policy = update_policy()
         policies = eudi_source_policies(policy)
     except (catalog.CatalogError, freshness.FreshnessError) as error:
         raise ProposalError("authoritative_metadata_unavailable") from error
+    unavailable_checks = list(evaluation.unavailable_checks)
     try:
         oidf_proposal: dict[str, object] | None = oidf.build_proposal()
     except oidf.ProposalError as error:
@@ -176,6 +177,7 @@ def build_proposal() -> dict[str, object]:
                 reason=str(error),
             )
         )
+    checks = list(evaluation.checks)
     stale = [check for check in checks if check.status == "stale"]
     freshness_status = (
         "stale" if stale else "unavailable" if unavailable_checks else "current"
@@ -226,7 +228,10 @@ def build_proposal() -> dict[str, object]:
         "changes": [asdict(check) for check in stale],
         "change_groups": groups,
         "checks": [asdict(check) for check in checks],
-        "manual_sources": manual_sources,
+        "release_sources": [
+            asdict(source) for source in evaluation.release_sources
+        ],
+        "manual_sources": list(evaluation.manual_sources),
         "unavailable_checks": [
             asdict(unavailable) for unavailable in unavailable_checks
         ],

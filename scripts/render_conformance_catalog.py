@@ -30,6 +30,8 @@ README_PATH = REPOSITORY_ROOT / "README.md"
 STANDARDS_BASELINE_PATH = REPOSITORY_ROOT / "docs/STANDARDS_BASELINE.md"
 SUMMARY_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE SUMMARY -->"
 SUMMARY_END_MARKER = "<!-- END GENERATED CONFORMANCE SUMMARY -->"
+BADGES_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE BADGES -->"
+BADGES_END_MARKER = "<!-- END GENERATED CONFORMANCE BADGES -->"
 CATALOG_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE CATALOG -->"
 CATALOG_END_MARKER = "<!-- END GENERATED CONFORMANCE CATALOG -->"
 MAX_INPUT_BYTES = 2 * 1024 * 1024
@@ -453,6 +455,51 @@ def representative_row(rows: list[CatalogRow], name_prefix: str) -> CatalogRow:
     return matches[0]
 
 
+def badge(label: str, message: str, color: str, target: str) -> str:
+    encoded_label = label.replace(" ", "%20")
+    encoded_message = message.replace(" ", "%20")
+    image = (
+        "https://img.shields.io/static/v1?"
+        f"label={encoded_label}&message={encoded_message}&color={color}"
+    )
+    return f"[![{label}]({image})]({target})"
+
+
+def render_badges(root: Path = REPOSITORY_ROOT) -> str:
+    version = read_version(root)
+    eu_rows, oidf_rows = build_rows(root)
+    arf = representative_row(eu_rows, "Architecture")
+    technical = representative_row(eu_rows, "Technical Specification")
+    fcaf = representative_row(eu_rows, "Functional")
+    oidf_suite = representative_row(oidf_rows, "OpenID Conformance Suite")
+    return "\n".join(
+        [
+            BADGES_START_MARKER,
+            "[![Release readiness](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/release-readiness.yml)",
+            "[![Secret scan](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/reallyme/identity-conformance/actions/workflows/secret-scan.yml)",
+            "[![Security Policy](https://img.shields.io/badge/security-policy-0f766e)](SECURITY.md)",
+            "[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)",
+            "",
+            badge("Framework", f"v{version}", "475569", "VERSION"),
+            badge("EU ARF", f"{arf.version} included", "0f766e", arf.url),
+            badge(
+                "EU technical specifications",
+                "included",
+                "0f766e",
+                technical.url,
+            ),
+            badge("EU FCAF", f"{fcaf.version} included", "0f766e", fcaf.url),
+            badge(
+                "OIDF suite",
+                f"{oidf_suite.version} included",
+                "1d4ed8",
+                oidf_suite.url,
+            ),
+            BADGES_END_MARKER,
+        ]
+    )
+
+
 def render_summary(root: Path = REPOSITORY_ROOT) -> str:
     version = read_version(root)
     eu_rows, oidf_rows = build_rows(root)
@@ -513,15 +560,6 @@ def render_catalog(root: Path = REPOSITORY_ROOT) -> str:
     technical = representative_row(eu_rows, "Technical Specification")
     fcaf = representative_row(eu_rows, "Functional")
     oidf_suite = representative_row(oidf_rows, "OpenID Conformance Suite")
-
-    def badge(label: str, message: str, color: str, target: str) -> str:
-        encoded_label = label.replace(" ", "%20")
-        encoded_message = message.replace(" ", "%20")
-        image = (
-            "https://img.shields.io/static/v1?"
-            f"label={encoded_label}&message={encoded_message}&color={color}"
-        )
-        return f"[![{label}]({image})]({target})"
 
     lines = [
         CATALOG_START_MARKER,
@@ -605,8 +643,14 @@ def main() -> int:
     try:
         current_readme = read_regular_text(README_PATH)
         current_baseline = read_regular_text(STANDARDS_BASELINE_PATH)
-        expected_readme = replace_generated_section(
+        expected_readme_with_badges = replace_generated_section(
             current_readme,
+            BADGES_START_MARKER,
+            BADGES_END_MARKER,
+            render_badges(),
+        )
+        expected_readme = replace_generated_section(
+            expected_readme_with_badges,
             SUMMARY_START_MARKER,
             SUMMARY_END_MARKER,
             render_summary(),

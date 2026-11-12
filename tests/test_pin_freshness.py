@@ -68,6 +68,7 @@ class PinFreshnessTests(unittest.TestCase):
             ],
         )
         self.assertEqual(report["checks"], [])
+        self.assertEqual(report["release_sources"], [])
         self.assertEqual(errors.getvalue(), "")
 
     def test_unavailable_group_does_not_hide_completed_or_later_checks(self) -> None:
@@ -110,7 +111,12 @@ class PinFreshnessTests(unittest.TestCase):
             patch.object(
                 FRESHNESS,
                 "run_checks",
-                return_value=([stale], [], [unavailable]),
+                return_value=FRESHNESS.FreshnessEvaluation(
+                    checks=(stale,),
+                    manual_sources=(),
+                    unavailable_checks=(unavailable,),
+                    release_sources=(),
+                ),
             ),
             patch.object(
                 sys,
@@ -442,6 +448,110 @@ class PinFreshnessTests(unittest.TestCase):
             results = FRESHNESS.check_reallyme_trace_releases(fetcher)
         self.assertTrue(results)
         self.assertTrue(all(result.status == "current" for result in results))
+
+    def test_reallyme_release_sources_record_latest_release_commits(self) -> None:
+        components = (
+            "ssi",
+            "identity",
+            "zk",
+            "wallet",
+            "openid4vci",
+            "openid4vp",
+        )
+        inventory = {
+            "$comment": "license",
+            "schema": "reallyme.identity.release_source_inventory.v1",
+            "purpose": "latest-published-release-conformance-inputs",
+            "sources": [
+                {
+                    "component_id": component,
+                    "repository": f"https://github.com/reallyme/{component}",
+                    "release_prefix": f"reallyme-{component}-v",
+                    "update_strategy": "latest_release",
+                }
+                for component in components
+            ],
+        }
+
+        def fetcher(url: str) -> object:
+            if url.endswith("/releases/latest"):
+                component = url.split("/repos/reallyme/", maxsplit=1)[1].split(
+                    "/", maxsplit=1
+                )[0]
+                return {
+                    "tag_name": f"reallyme-{component}-v1.0.0",
+                    "draft": False,
+                    "prerelease": False,
+                }
+            return {"object": {"type": "commit", "sha": "a" * 40}}
+
+        with patch.object(FRESHNESS, "read_object", return_value=inventory):
+            observations, unavailable = (
+                FRESHNESS.observe_reallyme_release_sources(fetcher)
+            )
+
+        self.assertEqual(unavailable, [])
+        self.assertEqual(
+            [observation.component_id for observation in observations],
+            list(components),
+        )
+        self.assertTrue(
+            all(observation.commit == "a" * 40 for observation in observations)
+        )
+
+    def test_reallyme_release_failure_does_not_hide_other_releases(self) -> None:
+        components = (
+            "ssi",
+            "identity",
+            "zk",
+            "wallet",
+            "openid4vci",
+            "openid4vp",
+        )
+        inventory = {
+            "$comment": "license",
+            "schema": "reallyme.identity.release_source_inventory.v1",
+            "purpose": "latest-published-release-conformance-inputs",
+            "sources": [
+                {
+                    "component_id": component,
+                    "repository": f"https://github.com/reallyme/{component}",
+                    "release_prefix": f"reallyme-{component}-v",
+                    "update_strategy": "latest_release",
+                }
+                for component in components
+            ],
+        }
+
+        def fetcher(url: str) -> object:
+            if "/reallyme/identity/releases/latest" in url:
+                raise FRESHNESS.FreshnessError("GitHub release is unavailable")
+            if url.endswith("/releases/latest"):
+                component = url.split("/repos/reallyme/", maxsplit=1)[1].split(
+                    "/", maxsplit=1
+                )[0]
+                return {
+                    "tag_name": f"reallyme-{component}-v1.0.0",
+                    "draft": False,
+                    "prerelease": False,
+                }
+            return {"object": {"type": "commit", "sha": "a" * 40}}
+
+        with patch.object(FRESHNESS, "read_object", return_value=inventory):
+            observations, unavailable = (
+                FRESHNESS.observe_reallyme_release_sources(fetcher)
+            )
+
+        self.assertEqual(len(observations), 5)
+        self.assertEqual(
+            unavailable,
+            [
+                FRESHNESS.UnavailableCheck(
+                    check_id="reallyme.release.identity",
+                    reason="GitHub release is unavailable",
+                )
+            ],
+        )
 
     def test_repository_identifier_rejects_extra_path_segments(self) -> None:
         with self.assertRaises(FRESHNESS.FreshnessError):
