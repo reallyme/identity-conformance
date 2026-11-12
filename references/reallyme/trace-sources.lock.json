@@ -16,9 +16,9 @@
       "component_id": "openid4vp",
       "repository": "https://github.com/reallyme/openid4vp",
       "local_checkout": "../openid4vp",
-      "release_ref": "reallyme-openid4vp-v0.3.0",
+      "release_ref": "reallyme-openid4vp-v0.3.1",
       "update_strategy": "latest_release",
-      "commit": "04b752b611c9431875e6e9979186319e5f366a56"
+      "commit": "bf6582d89b87fdf545ad9bef433af90b81dd7200"
     },
     {
       "component_id": "ssi",
