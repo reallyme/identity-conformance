@@ -161,13 +161,25 @@ def classify_change(
 def build_proposal() -> dict[str, object]:
     try:
         current_version = catalog.read_version(REPOSITORY_ROOT)
-        checks, manual_sources = freshness.run_checks()
-        oidf_proposal = oidf.build_proposal()
+        checks, manual_sources, unavailable_checks = freshness.run_checks()
         policy = update_policy()
         policies = eudi_source_policies(policy)
-    except (catalog.CatalogError, freshness.FreshnessError, oidf.ProposalError) as error:
+    except (catalog.CatalogError, freshness.FreshnessError) as error:
         raise ProposalError("authoritative_metadata_unavailable") from error
+    try:
+        oidf_proposal: dict[str, object] | None = oidf.build_proposal()
+    except oidf.ProposalError as error:
+        oidf_proposal = None
+        unavailable_checks.append(
+            freshness.UnavailableCheck(
+                check_id="oidf_update_proposal",
+                reason=str(error),
+            )
+        )
     stale = [check for check in checks if check.status == "stale"]
+    freshness_status = (
+        "stale" if stale else "unavailable" if unavailable_checks else "current"
+    )
     groups: dict[str, list[dict[str, str]]] = {
         "tagged_release_candidates": [],
         "branch_snapshot_reviews": [],
@@ -210,10 +222,14 @@ def build_proposal() -> dict[str, object]:
         ),
         "update_available": bool(stale),
         "version_candidate_available": version_eligible,
+        "freshness_status": freshness_status,
         "changes": [asdict(check) for check in stale],
         "change_groups": groups,
         "checks": [asdict(check) for check in checks],
         "manual_sources": manual_sources,
+        "unavailable_checks": [
+            asdict(unavailable) for unavailable in unavailable_checks
+        ],
         "oidf_candidate": oidf_proposal,
     }
 
