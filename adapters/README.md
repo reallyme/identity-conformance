@@ -1,11 +1,12 @@
 # Conformance adapter contracts
 
-This directory owns orchestration metadata, not protocol implementations. Each
-entry in `registry.json` maps a versioned plan to the ReallyMe repositories
-that implement the exercised role and to the environment variable containing
-the runner's deployment configuration. OIDF, EUDI Wallet, EUDI relying-party,
-and ZK lanes remain separate because they have different owners, evidence
-classes, and release artifacts.
+Adapter contracts connect a conformance plan to a product. Protocol
+implementations stay in their product repositories.
 
-Configuration files contain deployment-specific endpoints and credentials.
-They must stay outside this repository and must never be copied into evidence.
+Each entry in `registry.json` names the plan, the repositories that implement
+the tested role, and the environment variable that supplies deployment
+configuration. OIDF, EUDI Wallet, EUDI relying-party, and ZK use separate
+contracts because they have different inputs, results, and release artifacts.
+
+Deployment configuration may contain endpoints and credentials. Keep it out of
+this repository and out of public evidence.

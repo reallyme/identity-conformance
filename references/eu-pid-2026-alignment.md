@@ -8,8 +8,8 @@ and
 [Commission Implementing Regulation (EU) 2024/2979](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R2979-20260811),
 including the changes made by
 [Commission Implementing Regulation (EU) 2026/1731](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R1731).
-The consolidation date is part of the implementation contract; later
-amendments require a new delta review.
+The implementation uses this consolidation date. A later amendment requires a
+new review.
 
 ## PID scope and disposition
 
@@ -31,10 +31,9 @@ The reusable policy and tests are in
 formats, PID categories, legal-person limits, and composition boundaries. The
 complete ETSI identifier inventory is in
 `requirements/etsi-ts-119-472.tsv` and is count- and uniqueness-tested.
-The implementation directly validates non-PII profile structure; Boolean facts
-are reserved for cryptographic, trust, raw-claim, status-fetch, and protocol
-properties that must be established by their production owners.
+The implementation validates non-PII profile structure directly. Cryptographic,
+trust, claim, status-fetch, and protocol facts must come from the production
+components that establish them.
 
-This review establishes a versioned implementation and evidence boundary. It
-does not represent certification, designation, or a third-party conformity
-assessment.
+This review records the implementation boundary for the selected legal
+baseline. It is not certification or a third-party assessment.

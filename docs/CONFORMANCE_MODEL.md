@@ -1,212 +1,205 @@
-# Conformance authority and evidence model
+# Conformance model
 
-This repository is an executable cross-repository conformance framework. It is
-not merely a catalog of external specifications, and it is not a passive store
-for test reports produced elsewhere.
+Identity Conformance runs shared EU, OIDF, EUDI Wallet, relying-party, and ZK
+checks across ReallyMe releases. This repository owns the plans, upstream pins,
+runners, result rules, and public evidence formats. Product repositories own
+their implementations.
 
-## Authority order
+## Source priority
 
-The following sources govern in descending order:
+When two sources conflict, use this order:
 
-1. binding legislation and adopted implementing acts;
-2. the exact normative specification publication selected by a plan;
-3. the exact external conformance-suite release selected by the framework;
-4. the versioned ReallyMe plan, adapter contract, result policy, and evidence
-   policy in this repository;
-5. component adapters and product deployments that implement those contracts.
+1. applicable law and adopted implementing acts;
+2. the normative specification selected by the plan;
+3. the external test-suite release selected by the framework;
+4. the plan, adapter contract, result rules, and evidence rules in this
+   repository; and
+5. the component and deployment configuration used for the run.
 
-A ReallyMe plan may select, constrain, and compose external requirements. It
-cannot weaken a normative requirement or reinterpret a failing external result
-as a pass.
+A ReallyMe plan may select or combine requirements. It may not weaken a
+normative requirement or turn a failed external result into a pass.
 
-## Ownership boundaries
+## Responsibilities
 
-| Owner | Required responsibility |
+| Owner | Responsibility |
 | --- | --- |
-| Component repository | Unit, integration, property, fuzz, vector, and component-adapter tests close to the implementation; immutable release artifact and component attestation |
-| `identity-conformance` | External-source pins; executable cross-repository plans; adapter contracts; negative and malicious-input cases; runners; result evaluation; evidence schemas; redaction and disclosure rules |
-| Product release | Exact component BOM, deployment manifest, immutable artifact digests, endpoints, and credentials needed to execute the selected framework release |
-| External authority | Normative publications, official suite behavior, hosted execution results, and certification decision |
+| Component repository | Implementation tests, release artifact, dependency lock, and component attestation |
+| `identity-conformance` | Upstream pins, shared plans, adapter contracts, runners, negative tests, result evaluation, evidence schemas, and disclosure rules |
+| Product release | Exact component BOM, deployment manifest, artifact digests, endpoints, and credentials required by the selected plan |
+| External authority | Standards, official suite behavior, hosted results, and certification decisions |
 
-Component reports are supporting evidence. They are never accepted as proof
-that independently tested components work together. Cross-repository and
-deployment behavior must be exercised and evaluated by a runner controlled by
-the selected `identity-conformance` framework release.
+A component attestation covers that component. An integration claim requires a
+shared framework run against the assembled product.
 
-## Execution flow
+## Run sequence
 
-1. A component release produces an immutable artifact and a component-level
-   attestation bound to its source commit and dependency lock.
-2. A product release candidate selects an immutable conformance-framework
-   release and supplies an exact component BOM and deployment manifest.
-3. The framework validates every release, checkout, artifact digest, adapter,
-   configuration, external-suite revision, and selected profile before it runs.
-4. The framework launches the external suites and ReallyMe-owned composed
-   scenarios against the deployed artifacts. It evaluates complete positive,
-   negative, and policy results itself.
-5. Raw results remain private. A reviewed bundle binds the framework version,
-   component attestations, source and artifact digests, deployment, external
-   suite, result inventory, and redaction decision.
-6. Only the reviewed bundle can substantiate that the named release composition
-   passed the selected test contract. OIDF certification still depends on the
-   official hosted result and the Foundation's certification process.
+1. Each component release publishes an immutable artifact and an attestation
+   tied to its source commit and dependency lock.
+2. The product selects an immutable framework release and supplies the BOM,
+   deployment manifest, artifacts, and attestations required by the plan.
+3. The framework checks every release reference, source checkout, digest,
+   adapter, configuration, upstream pin, and selected profile.
+4. The framework runs the applicable external suite and ReallyMe integration
+   checks against the deployed artifacts.
+5. Raw results stay private. Reviewed evidence records the framework version,
+   candidate BOM, source commits, artifact and attestation digests, deployment,
+   test inventory, and disclosure decision.
+6. A claim applies only to the exact product composition and plan named by that
+   evidence.
 
-Component repositories may trigger this flow, but they do not determine the
-outcome. A trigger is a request to run an immutable framework version, not a
-report that the system is conformant.
+A component repository may trigger the run. The framework produces the result.
 
-## Independent normative oracles
+## EU and OIDF checks
 
-EU and OIDF are different conformance authorities and never share a pass/fail
-bucket. Each authority has its own machine-readable ledger, exact upstream
-pin, source validator, workflow, and badge.
+EU and OpenID Foundation checks are separate. Each has its own upstream pins,
+machine-readable rules, workflows, results, and badges.
 
-EU conformance is further split by source authority. The ARF lane validates
-requirement identifiers and selected implemented boundary values against the
-exact released ARF. The technical-specification lane independently validates
-values that are stated in the pinned TS documents. The FCAF lane validates the
-published assessment structure and must report `methodology_only` while the
-pinned release has no executable Wallet cases. Future official EU test suites
-must receive their own runner and closed result schema; pinning them does not
-make the ARF or FCAF badges execution evidence.
+The EU checks are divided by source:
 
-For Wallet execution, the candidate supplies source and artifacts but never
-the expected EU value. The framework reads the exact candidate source,
-observes the implemented comparison or enumerated boundary, and compares that
-observation with the pinned-source ledger. Missing observations, inclusive
-versus exclusive comparison drift, changed constants, unclassified ledger
-rules, and incomplete enumerations fail closed.
+- the ARF workflow verifies selected requirement identifiers and Wallet
+  boundary values against the pinned ARF release;
+- the technical-specification workflow verifies values taken from the pinned
+  technical specifications;
+- the FCAF workflow verifies the assessment structure and reports
+  `methodology_only` because FCAF v0.0.10 has no executable Wallet cases; and
+- the upstream-assets workflow verifies the exact Wallet UI, ITB, Age
+  Verification, and RQES source inventories.
 
-The OIDF source lane binds every declared certification plan projection to the
-exact conformance-suite release. Its assertions are owned by the certification
-plan and resolved from the pinned GitLab commit, including plan-fixed variants,
-selectable parameter definitions, and suite applicability exclusions. A green
-source lane proves the local matrix still describes that suite release; it is
-not an OIDF execution or certification result.
+The UI and ITB cases require a deployed Wallet and test infrastructure. The
+RQES tester also requires a reviewed dependency set and supporting services.
+Until those runners execute, these workflows report source validation only.
 
-## Release classes
+The Wallet runner reads candidate values from the selected source revision and
+compares them with the EU ledger. The caller cannot supply the expected value.
+A missing value, changed comparison, incomplete enumeration, or unknown rule
+fails the run.
+
+The OIDF source workflow checks every certification plan against the pinned
+conformance-suite release. A pass confirms that the local matrix matches that
+release. Product execution and OIDF certification are separate results.
+
+## Releases and evidence
 
 ### Framework release
 
-A framework release versions plans, runners, schemas, external pins, and result
-policy. It may be released before Wallet or Identity. Its deterministic
-manifest carries `release_kind: framework` and makes no product-conformance or
-certification claim.
+A framework release contains plans, runners, schemas, upstream pins, and result
+rules. It can be released before Wallet or Identity. Its manifest has
+`release_kind: framework` and makes no product claim.
 
 ### Product candidate BOM
 
-The product caller supplies the candidate BOM for each run. The framework has
-no default ReallyMe product candidate and never substitutes a known-compatible
-revision. Each plan declares its required components; missing, repeated, or
-ambiguous entries fail validation. The composed Identity OIDF lanes require the
-complete six-component BOM, while the Wallet and ZK lanes require only their
-respective candidate component.
+The caller supplies the candidate BOM. The framework has no default ReallyMe
+candidate and does not substitute a known-compatible version. Each plan lists
+its required components. Missing, duplicate, and ambiguous entries are errors.
 
-### Integration evidence bundle
+Wallet and ZK plans need their respective component candidates. Composed
+Identity OIDF plans need the complete six-component BOM.
 
-An integration evidence bundle requires immutable release references for every
-participating component, including Wallet and Identity, plus exact deployment
-artifacts. Component test attestations are included by digest. The composed run
-is the authority for the integration result. Its evidence records the framework
-revision, caller workflow revision, canonical candidate BOM digest, source
-commits, artifact hashes, and attestation hashes as separate identities.
+### Integration evidence
 
-### Certification evidence bundle
+Integration evidence records the framework revision, caller workflow revision,
+canonical BOM digest, source commits, artifact hashes, attestation hashes, and
+deployment identity. Every participating component must use an immutable
+release reference.
 
-Certification evidence adds complete hosted OIDF execution, suite exports,
-submission review, redaction review, and public-disclosure review. A local
-rehearsal or EU reference-implementation result cannot be promoted to this
-class.
+The composed run determines the integration result. Component test results do
+not replace it.
 
-## Current executable scope
+### Certification evidence
 
-The OIDF lane is executable: the framework owns fixed certification and
-engineering matrices, validates source-resolved module inventories, drives the
-OpenID4VCI and OpenID4VP product roles, checks complete results, and constructs
-digest-bound evidence indexes.
+OIDF certification evidence also needs complete hosted-suite results, suite
+exports, submission review, redaction review, and public-disclosure review. A
+local rehearsal, EU reference implementation, or ReallyMe integration result
+cannot be promoted to certification evidence.
 
-The EUDI relying-party lane is executable internal conformance engineering.
-Its protected runner validates an exact candidate/Platform/SSI BOM, verifies a
-component attestation for every assertion and upstream binding, checks the
-pinned ARF, FCAF, TS5/TS6, legal-source, and compatibility-reference revisions,
-and exercises bounded production-artifact probes. `live_ts5` mode additionally
-runs the production four-read TS5 operation against an approved
-national-register deployment. The lane remains explicitly non-certifying: EU
-reference-service, ITB, FCAF, or ReallyMe results cannot themselves establish
-an EU conformity-assessment outcome.
+## Current coverage
 
-The EUDI Wallet lane is separate from the relying-party lane. It binds the
-wallet source and release artifact to its component attestation, verifies the
-committed EU source-selection and requirement ledgers, independently evaluates
-the candidate's machine-observable EU boundary values, and executes the wallet
-conformance package. Its result establishes only the selected internal
-engineering contract; an external testbed or conformity-assessment result must
-be retained as separate evidence.
+### OpenID Foundation
 
-The Wallet caller uploads its manifest, release bundle, and attestation as an
-immutable same-run Actions artifact. The reusable framework workflow downloads
-and validates that closed three-file input on a clean GitHub-hosted runner,
-checks out the exact manifest-selected Wallet commit, and runs the shared plan.
-No preinstalled candidate files or persistent runner state form part of the
-execution contract.
+The OIDF runners cover the fixed OpenID4VCI and OpenID4VP certification and
+engineering matrices. They verify the selected module inventory, run the
+applicable product roles, reject incomplete results, and build digest-bound
+evidence indexes.
 
-The EUDI upstream inventory also pins the Age Verification profile, official
-wallet UI and RQES testers, Android and iOS reference wallets, trust and status
-components, the RQES reference stack, and the documentation portal. These pins
-are review and reproducibility inputs. They do not expand the executable scope
-of either EUDI lane. `plans/eudi/upstream-coverage.json` is the authoritative
-machine-readable boundary: it prevents a monitored source, interoperability
-target, component attestation, or gated external test asset from being reported
-as a directly executed official suite.
+### EUDI relying party
 
-Publicly downloadable wallet publications are independently content-pinned in
-`references/eudi-publications.lock.json`. Copyright-restricted ISO standards are
-edition-pinned rather than falsely represented as content-pinned. Dated working
-drafts, including the Digital Credentials API, remain engineering inputs and
-cannot support certification claims.
+The relying-party runner checks an exact candidate, Platform, and SSI BOM. It
+verifies component attestations and pinned EU sources, then runs bounded probes
+against the production artifact. `live_ts5` mode also performs the four-read
+TS5 operation against an approved national-register deployment.
 
-The ZK presentation-proof lane binds the proof provider's source, toolchain,
-artifact manifest, dependency lock, release bundle, and attestation. A product
-composition may claim ZK coverage only when its deployment BOM explicitly
-enables the capability and supplies those exact digests. ZK component results
-remain supporting evidence; wallet and verifier compositions still have to
-exercise the integrated presentation behavior.
+The runner produces internal engineering evidence, not an EU
+conformity-assessment result.
 
-Identity Taxonomy coverage is currently advisory. Its reports can expose gaps
-and naming drift, but taxonomy identifiers and the taxonomy repository revision
-are not mandatory framework-release inputs until the taxonomy is approved as a
-governing contract.
+### EUDI Wallet
 
-## Automation policy
+The Wallet runner ties the source commit, release bundle, and component
+attestation to the same candidate. It checks the EU source selection and
+ledgers, evaluates observable boundary values, and runs the Wallet conformance
+package.
 
-Scheduled automation detects upstream releases, source drift, changed
-publication bytes, dependency versions, and tool updates on a weekly cadence.
-It classifies changes before proposing a framework version:
+The caller uploads `deployment.json`, `wallet-release`, and
+`wallet-attestation.json` as one same-run Actions artifact. The framework
+downloads that artifact on a clean GitHub-hosted runner and checks out the
+manifest-selected Wallet commit. It does not depend on preinstalled files or
+persistent runner state.
 
-- a latest stable release or tag may seed a versioned candidate;
-- an untagged default-branch commit enters snapshot review and cannot advance
-  the baseline by itself;
-- changed bytes for an ostensibly immutable publication are an integrity-review
-  event, not a routine upgrade; and
-- monitor-only sources cannot advance the baseline.
+The result covers the ReallyMe engineering plan. External testbed and
+assessment results use separate evidence.
 
-An accepted candidate updates the repository-controlled `VERSION`, exact locks,
-affected ledgers and runners, generated README catalog, and source snapshots as
-one reviewable change. Mechanical updates can be automated. A changed normative
-statement or value requires semantic review because a pin update cannot safely
-infer the intended conformance rule.
+### EU upstream assets
 
-Candidate construction reads the version from `VERSION`; callers cannot assign
-an unrelated release number. All EU and OIDF gates must pass against the exact
-candidate commit. A separate protected promotion workflow compares the retained
-candidate manifest with a deterministic rebuild before creating `v<VERSION>`.
-Product execution, evidence promotion, and remote publication remain distinct
-operations with separate authorization. Downstream repositories continue to
-use their exact pinned framework revision until they intentionally upgrade.
+The EU inventory includes the Age Verification profile, Wallet UI and RQES
+testers, ITB, mobile reference wallets, trust and status services, the RQES
+reference stack, and the documentation portal.
 
-The ReallyMe latest-release inventory is closed to `ssi`, `identity`, `zk`,
-`wallet`, `openid4vci`, and `openid4vp`. Latest-release regression runs resolve
-published GitHub release tags and verify their exact commits. They do not use a
-repository default branch. Exact-BOM runs remain available for testing an older
-published release or a specifically selected release candidate; their results
-must state that they are not the latest-release lane.
+`plans/eudi/upstream-assets.json` records the test definitions that CI checks.
+`plans/eudi/upstream-coverage.json` records what has and has not run against a
+product. A source pin, reference implementation, or component attestation
+cannot be reported as an executed external suite.
+
+Public EU publications are content-pinned in
+`references/eudi-publications.lock.json`. Copyright-restricted ISO standards
+are pinned by edition and official catalog URL because their full text cannot
+be distributed here. Working drafts, including the Digital Credentials API,
+are engineering inputs and cannot support a certification claim.
+
+### ZK presentation proofs
+
+The ZK runner checks the source, toolchain, provider manifest, Cargo lock,
+artifact bundle, and component attestation. A product may claim ZK coverage
+only when its BOM enables ZK and supplies those exact digests. Wallet and
+verifier integrations must still exercise the composed presentation flow.
+
+### Identity Taxonomy
+
+Identity Taxonomy coverage is advisory. It may identify gaps and naming drift,
+but taxonomy identifiers and the taxonomy repository revision are not required
+framework-release inputs until the taxonomy is approved as a governing
+contract.
+
+## Updates
+
+Weekly automation checks for upstream releases, changed publications,
+dependency updates, and tool updates. It reports a proposed change; it does not
+change the active baseline.
+
+Tagged stable releases may be proposed for the next framework version.
+Untagged default-branch commits require snapshot review. Changed bytes at an
+apparently immutable publication require an integrity review. Monitor-only
+sources cannot advance the baseline.
+
+An approved update changes `VERSION`, the affected locks, ledgers, runners,
+catalog, and snapshots together. Changes to normative text or values require
+human review.
+
+The release-candidate workflow reads `VERSION` and runs every affected EU and
+OIDF gate against the exact candidate commit. The protected promotion workflow
+rebuilds and compares the manifest before creating `v<VERSION>`. Product runs,
+evidence publication, and framework publication remain separate operations.
+
+Latest-release regression runs cover `ssi`, `identity`, `zk`, `wallet`,
+`openid4vci`, and `openid4vp`. They resolve published release tags and verify
+their commits; they do not use default branches. Exact-BOM runs may test an
+older release or a selected release candidate, but the result must say that it
+is not the latest-release lane.

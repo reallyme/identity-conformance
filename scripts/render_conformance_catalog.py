@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-"""Render the release-bound conformance catalog in README.md."""
+"""Render the README summary and detailed standards baseline."""
 
 from __future__ import annotations
 
@@ -27,9 +27,11 @@ import strict_json  # noqa: E402
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = REPOSITORY_ROOT / "README.md"
-VERSION_PATH = REPOSITORY_ROOT / "VERSION"
-START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE CATALOG -->"
-END_MARKER = "<!-- END GENERATED CONFORMANCE CATALOG -->"
+STANDARDS_BASELINE_PATH = REPOSITORY_ROOT / "docs/STANDARDS_BASELINE.md"
+SUMMARY_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE SUMMARY -->"
+SUMMARY_END_MARKER = "<!-- END GENERATED CONFORMANCE SUMMARY -->"
+CATALOG_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE CATALOG -->"
+CATALOG_END_MARKER = "<!-- END GENERATED CONFORMANCE CATALOG -->"
 MAX_INPUT_BYTES = 2 * 1024 * 1024
 SEMANTIC_VERSION = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
@@ -42,8 +44,8 @@ class CatalogErrorReason(Enum):
     INVALID_INPUT = "invalid_input"
     INVALID_VERSION = "invalid_version"
     INCONSISTENT_BASELINE = "inconsistent_baseline"
-    README_MARKERS_INVALID = "readme_markers_invalid"
-    README_STALE = "readme_catalog_stale"
+    GENERATED_MARKERS_INVALID = "generated_markers_invalid"
+    GENERATED_DOCUMENTATION_STALE = "generated_conformance_documentation_stale"
     WRITE_FAILED = "write_failed"
 
 
@@ -141,6 +143,20 @@ def exact_publication(
     return matches[0]
 
 
+def exact_asset(plan: dict[str, object], asset_id: str) -> dict[str, object]:
+    assets = plan.get("assets")
+    if not isinstance(assets, list):
+        raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+    matches = [
+        asset
+        for asset in assets
+        if isinstance(asset, dict) and asset.get("asset_id") == asset_id
+    ]
+    if len(matches) != 1:
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+    return matches[0]
+
+
 def validate_source_binding(
     source: dict[str, object], ledger: dict[str, object]
 ) -> tuple[str, str, str, str]:
@@ -164,7 +180,7 @@ def validate_source_binding(
     return repository, reference, commit, source_path
 
 
-def rule_value(rule: dict[str, object]) -> str:
+def rule_validation(rule: dict[str, object]) -> tuple[str, str]:
     expected = rule.get("expected")
     if not isinstance(expected, dict):
         raise CatalogError(CatalogErrorReason.INVALID_INPUT)
@@ -172,11 +188,15 @@ def rule_value(rule: dict[str, object]) -> str:
     value = expected.get("value")
     boundary_id = required_string(rule.get("boundary_id"))
     if operator == "less_than":
-        return f"`{boundary_id} < {required_integer(value):,}`"
+        return (
+            "Checks the reported Wallet value against",
+            f"`{boundary_id} < {required_integer(value):,}`.",
+        )
     if operator == "one_of" and isinstance(value, list) and value:
         members = [required_string(member) for member in value]
-        return f"`{boundary_id}` = " + ", ".join(
-            f"`{member}`" for member in members
+        return (
+            f"Validates `{boundary_id}` against the permitted values:",
+            ", ".join(f"`{member}`" for member in members) + ".",
         )
     raise CatalogError(CatalogErrorReason.INVALID_INPUT)
 
@@ -189,17 +209,15 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
             "eudi-arf",
             "plans/eudi/normative/arf-wallet.json",
             "Architecture and Reference Framework",
-            "Wallet requirements and normative implementation boundaries.",
         ),
         (
             "eudi-technical-specifications",
             "plans/eudi/normative/technical-specifications-wallet.json",
             "Technical Specification 3 — Wallet Unit Attestation",
-            "Wallet Unit Attestation lifetime boundary.",
         ),
     )
     eu_rows: list[CatalogRow] = []
-    for source_id, ledger_path, name, description in eu_definitions:
+    for source_id, ledger_path, name in eu_definitions:
         source = exact_source(eudi_lock, source_id)
         ledger = read_object(root / ledger_path)
         repository, reference, commit, _source_path = validate_source_binding(
@@ -215,12 +233,13 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
             rule_path = required_string(rule.get("source_path"))
             if rule_path.startswith("/") or ".." in Path(rule_path).parts:
                 raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+            description, enforced_value = rule_validation(rule)
             eu_rows.append(
                 CatalogRow(
                     name=f"{name} — {requirement}",
                     url=f"{repository}/blob/{commit}/{rule_path}",
                     description=description,
-                    enforced_value=rule_value(rule),
+                    enforced_value=enforced_value,
                     version=reference,
                     baseline_updated=eudi_date,
                 )
@@ -236,15 +255,128 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
         raise CatalogError(CatalogErrorReason.INVALID_INPUT)
     execution_state = required_string(assessment.get("execution_state"))
     executable_count = required_integer(assessment.get("executable_test_case_count"))
+    if executable_count == 0:
+        test_case_summary = f"No executable test cases in `{reference}`."
+    else:
+        test_case_summary = (
+            f"`{executable_count}` executable test cases in `{reference}`."
+        )
     eu_rows.append(
         CatalogRow(
             name="Functional Conformance Assessment Framework",
             url=f"{repository}/blob/{commit}/{source_path}",
-            description="Wallet Solution assessment methodology; not an executable certification suite.",
-            enforced_value=(
-                f"`{execution_state}`; `{executable_count}` executable Wallet cases"
-            ),
+            description="Wallet Solution assessment methodology.",
+            enforced_value=f"`{execution_state}`. {test_case_summary}",
             version=reference,
+            baseline_updated=eudi_date,
+        )
+    )
+
+    asset_plan = read_object(root / "plans/eudi/upstream-assets.json")
+    if asset_plan.get("product_execution_claim") is not False:
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+
+    ui_asset = exact_asset(asset_plan, "wallet-ui-tests")
+    ui_expected = ui_asset.get("expected")
+    ui_platforms = ui_expected.get("platforms") if isinstance(ui_expected, dict) else None
+    if not isinstance(ui_platforms, list) or len(ui_platforms) != 2:
+        raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+    feature_count = 0
+    scenario_count = 0
+    for platform in ui_platforms:
+        if not isinstance(platform, dict):
+            raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+        feature_count += required_integer(platform.get("feature_file_count"))
+        scenario_count += required_integer(platform.get("scenario_count"))
+    ui_source = exact_source(eudi_lock, required_string(ui_asset.get("source_id")))
+    ui_repository = required_string(ui_source.get("repository"))
+    ui_commit = required_string(ui_source.get("commit"))
+    eu_rows.append(
+        CatalogRow(
+            name="EUDI Wallet testing application",
+            url=f"{ui_repository}/tree/{ui_commit}/src/test/resources/features",
+            description=(
+                f"Verifies `{feature_count}` feature files and "
+                f"`{scenario_count}` scenarios."
+            ),
+            enforced_value="Device execution is separate.",
+            version=required_string(ui_source.get("ref")),
+            baseline_updated=eudi_date,
+        )
+    )
+
+    itb_asset = exact_asset(asset_plan, "interoperability-testbed")
+    itb_expected = itb_asset.get("expected")
+    itb_suites = itb_expected.get("suites") if isinstance(itb_expected, dict) else None
+    if not isinstance(itb_suites, list) or not itb_suites:
+        raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+    itb_case_count = 0
+    for suite in itb_suites:
+        if not isinstance(suite, dict) or not isinstance(suite.get("test_case_ids"), list):
+            raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+        itb_case_count += len(suite["test_case_ids"])
+    itb_source = exact_source(eudi_lock, required_string(itb_asset.get("source_id")))
+    itb_repository = required_string(itb_source.get("repository"))
+    itb_commit = required_string(itb_source.get("commit"))
+    eu_rows.append(
+        CatalogRow(
+            name="EUDI Interoperability Test Bed",
+            url=f"{itb_repository}/tree/{itb_commit}/tests",
+            description=(
+                f"Verifies `{len(itb_suites)}` suites and "
+                f"`{itb_case_count}` test cases."
+            ),
+            enforced_value="Deployed execution is separate.",
+            version=required_string(itb_source.get("ref")),
+            baseline_updated=eudi_date,
+        )
+    )
+
+    age_asset = exact_asset(asset_plan, "age-verification-profile")
+    age_expected = age_asset.get("expected")
+    age_documents = age_expected.get("documents") if isinstance(age_expected, dict) else None
+    if not isinstance(age_documents, list) or not age_documents:
+        raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+    age_source = exact_source(eudi_lock, required_string(age_asset.get("source_id")))
+    age_repository = required_string(age_source.get("repository"))
+    age_commit = required_string(age_source.get("commit"))
+    eu_rows.append(
+        CatalogRow(
+            name="Age Verification specification and ZKP profile",
+            url=(
+                f"{age_repository}/blob/{age_commit}/"
+                "docs/annexes/annex-B/annex-B-zkp.md"
+            ),
+            description=f"Verifies `{len(age_documents)}` profile and annex documents.",
+            enforced_value=(
+                f"No executable conformance suite in "
+                f"`{required_string(age_source.get('ref'))}`."
+            ),
+            version=required_string(age_source.get("ref")),
+            baseline_updated=eudi_date,
+        )
+    )
+
+    rqes_asset = exact_asset(asset_plan, "rqes-wallet-driven-tester")
+    rqes_expected = rqes_asset.get("expected")
+    if not isinstance(rqes_expected, dict):
+        raise CatalogError(CatalogErrorReason.INVALID_INPUT)
+    rqes_source = exact_source(eudi_lock, required_string(rqes_asset.get("source_id")))
+    rqes_repository = required_string(rqes_source.get("repository"))
+    rqes_commit = required_string(rqes_source.get("commit"))
+    if rqes_expected.get("dependency_installation") != "prohibited":
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+    eu_rows.append(
+        CatalogRow(
+            name="RQES Wallet-driven tester",
+            url=f"{rqes_repository}/tree/{rqes_commit}/app",
+            description=(
+                f"Verifies `{required_integer(rqes_expected.get('python_file_count'))}` "
+                f"Python files and `{required_integer(rqes_expected.get('route_count'))}` "
+                "routes."
+            ),
+            enforced_value="Upstream dependencies are excluded from CI.",
+            version=required_string(rqes_source.get("ref")),
             baseline_updated=eudi_date,
         )
     )
@@ -255,17 +387,17 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
         (
             "openid4vci-1.0-final",
             "OpenID for Verifiable Credential Issuance",
-            "Issuer and Wallet HAIP certification-plan variants.",
+            "Final specification for Issuer and Wallet certification plans.",
         ),
         (
             "openid4vp-1.0-final",
             "OpenID for Verifiable Presentations",
-            "Verifier and Wallet HAIP certification-plan variants.",
+            "Final specification for Verifier and Wallet certification plans.",
         ),
         (
             "openid4vc-haip-1.0-final",
             "OpenID4VC High Assurance Interoperability Profile",
-            "High-assurance profile applied to OID4VCI and OID4VP plans.",
+            "High-assurance profile for OID4VCI and OID4VP plans.",
         ),
     )
     oidf_rows: list[CatalogRow] = []
@@ -292,7 +424,7 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
         CatalogRow(
             name="OpenID Conformance Suite",
             url=f"{suite_repository}/-/tree/{suite_commit}",
-            description="Executable certification-suite source used to derive and validate plan values.",
+            description="Executable certification suite for the plan matrix.",
             enforced_value=f"Commit `{suite_commit}`",
             version=suite_ref,
             baseline_updated=required_string(suite.get("released_at")),
@@ -303,71 +435,147 @@ def build_rows(root: Path = REPOSITORY_ROOT) -> tuple[list[CatalogRow], list[Cat
 
 def render_table(rows: list[CatalogRow]) -> str:
     lines = [
-        "| Source | Description | Current enforced value | Version | Baseline updated |",
-        "| --- | --- | --- | --- | --- |",
+        "| Standard or suite | Version | Validation | Baseline updated |",
+        "| --- | --- | --- | --- |",
     ]
     for row in rows:
         lines.append(
-            f"| [{row.name}]({row.url}) | {row.description} | "
-            f"{row.enforced_value} | `{row.version}` | {row.baseline_updated} |"
+            f"| [{row.name}]({row.url}) | `{row.version}` | "
+            f"{row.description} {row.enforced_value} | {row.baseline_updated} |"
         )
+    return "\n".join(lines)
+
+
+def representative_row(rows: list[CatalogRow], name_prefix: str) -> CatalogRow:
+    matches = [row for row in rows if row.name.startswith(name_prefix)]
+    if not matches or any(row.version != matches[0].version for row in matches):
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+    return matches[0]
+
+
+def render_summary(root: Path = REPOSITORY_ROOT) -> str:
+    version = read_version(root)
+    eu_rows, oidf_rows = build_rows(root)
+    eudi_lock = read_object(root / "upstream/eudi/sources.lock.json")
+    arf = representative_row(eu_rows, "Architecture")
+    technical = representative_row(eu_rows, "Technical Specification")
+    fcaf = representative_row(eu_rows, "Functional")
+    wallet_tests = representative_row(eu_rows, "EUDI Wallet testing application")
+    itb = representative_row(eu_rows, "EUDI Interoperability Test Bed")
+    oidf_suite = representative_row(oidf_rows, "OpenID Conformance Suite")
+    technical_source = exact_source(eudi_lock, "eudi-technical-specifications")
+    technical_commit = required_string(technical_source.get("commit"))
+    itb_source = exact_source(eudi_lock, "eudi-itb")
+    itb_commit = required_string(itb_source.get("commit"))
+    if (
+        COMMIT.fullmatch(technical_commit) is None
+        or COMMIT.fullmatch(itb_commit) is None
+    ):
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+    wallet_test_coverage = wallet_tests.description.removeprefix(
+        "Verifies "
+    ).removesuffix(".")
+    itb_coverage = itb.description.removeprefix("Verifies ").removesuffix(".")
+
+    lines = [
+        SUMMARY_START_MARKER,
+        "## Standards baseline",
+        "",
+        f"Framework version: **v{version}**",
+        "",
+        "| Source | Pinned version | Coverage |",
+        "| --- | --- | --- |",
+        f"| [EU Architecture and Reference Framework]({arf.url}) | "
+        f"`{arf.version}` | Wallet requirements |",
+        f"| [EU technical specifications]({technical.url}) | "
+        f"`{technical.version} @ {technical_commit[:8]}` | Wallet Unit Attestation |",
+        f"| [EU Functional Conformance Assessment Framework]({fcaf.url}) | "
+        f"`{fcaf.version}` | Assessment methodology |",
+        f"| [OpenID Conformance Suite]({oidf_suite.url}) | "
+        f"`{oidf_suite.version}` | OpenID4VCI / OpenID4VP |",
+        f"| [EUDI Wallet testing application]({wallet_tests.url}) | "
+        f"`{wallet_tests.version}` | {wallet_test_coverage} |",
+        f"| [EUDI Interoperability Test Bed]({itb.url}) | "
+        f"`{itb.version} @ {itb_commit[:8]}` | {itb_coverage} |",
+        "",
+        "See [Standards baseline](docs/STANDARDS_BASELINE.md) for exact source",
+        "revisions, requirement mappings, content digests, and validation status.",
+        "",
+        SUMMARY_END_MARKER,
+    ]
     return "\n".join(lines)
 
 
 def render_catalog(root: Path = REPOSITORY_ROOT) -> str:
     version = read_version(root)
     eu_rows, oidf_rows = build_rows(root)
-    encoded_version = version.replace(".", "%2E")
-    badge_base = "https://img.shields.io/github/actions/workflow/status/reallyme/identity-conformance"
-    badges = (
-        ("EU ARF", "eu-arf-normative.yml"),
-        ("EU technical specifications", "eu-technical-specifications-normative.yml"),
-        ("EU FCAF", "eu-fcaf-normative.yml"),
-        ("OIDF", "oidf-normative-ledger.yml"),
-    )
-    lines = [
-        START_MARKER,
-        f"Current framework baseline: **v{version}**",
-        "",
-    ]
-    for label, workflow in badges:
+    arf = representative_row(eu_rows, "Architecture")
+    technical = representative_row(eu_rows, "Technical Specification")
+    fcaf = representative_row(eu_rows, "Functional")
+    oidf_suite = representative_row(oidf_rows, "OpenID Conformance Suite")
+
+    def badge(label: str, message: str, color: str, target: str) -> str:
         encoded_label = label.replace(" ", "%20")
-        lines.append(
-            f"[![{label} v{version}]({badge_base}/{workflow}"
-            f"?branch=main&label={encoded_label}%20v{encoded_version})]"
-            f"(https://github.com/reallyme/identity-conformance/actions/workflows/{workflow})"
+        encoded_message = message.replace(" ", "%20")
+        image = (
+            "https://img.shields.io/static/v1?"
+            f"label={encoded_label}&message={encoded_message}&color={color}"
         )
-    lines.extend(
-        [
-            "",
-            "## Conformance enforced by this release",
-            "",
-            "This catalog is generated from the same immutable locks and normative ledgers",
-            "that are digest-bound into framework release manifests. “Baseline updated” is",
-            "the date this repository adopted or verified the pin, not an inferred publication date.",
-            "",
-            "### European Union",
-            "",
-            render_table(eu_rows),
-            "",
-            "### OpenID Foundation",
-            "",
-            render_table(oidf_rows),
-            "",
-            END_MARKER,
-        ]
-    )
+        return f"[![{label}]({image})]({target})"
+
+    lines = [
+        CATALOG_START_MARKER,
+        "# Standards baseline",
+        "",
+        f"Framework version: **v{version}**",
+        "",
+        "The framework pins the specifications, requirements, and test suites listed",
+        "below. Each entry identifies the upstream version, the implemented validation,",
+        "and when the pin was last reviewed.",
+        "",
+        badge("Framework", f"v{version}", "475569", "../VERSION"),
+        badge("EU ARF", f"{arf.version} included", "0f766e", arf.url),
+        badge(
+            "EU technical specifications",
+            "included",
+            "0f766e",
+            technical.url,
+        ),
+        badge("EU FCAF", f"{fcaf.version} included", "0f766e", fcaf.url),
+        badge(
+            "OIDF suite",
+            f"{oidf_suite.version} included",
+            "1d4ed8",
+            oidf_suite.url,
+        ),
+        "",
+        "Inclusion does not imply product conformance. Results are published by the",
+        "repositories running these checks. Baseline dates record framework adoption or",
+        "review, not upstream publication.",
+        "",
+        "### European Union",
+        "",
+        render_table(eu_rows),
+        "",
+        "### OpenID Foundation",
+        "",
+        render_table(oidf_rows),
+        "",
+        CATALOG_END_MARKER,
+    ]
     return "\n".join(lines)
 
 
-def replace_catalog(readme: str, catalog: str) -> str:
-    if readme.count(START_MARKER) != 1 or readme.count(END_MARKER) != 1:
-        raise CatalogError(CatalogErrorReason.README_MARKERS_INVALID)
-    start = readme.index(START_MARKER)
-    end = readme.index(END_MARKER) + len(END_MARKER)
+def replace_generated_section(
+    document: str, start_marker: str, end_marker: str, replacement: str
+) -> str:
+    if document.count(start_marker) != 1 or document.count(end_marker) != 1:
+        raise CatalogError(CatalogErrorReason.GENERATED_MARKERS_INVALID)
+    start = document.index(start_marker)
+    end = document.index(end_marker) + len(end_marker)
     if start >= end:
-        raise CatalogError(CatalogErrorReason.README_MARKERS_INVALID)
-    return f"{readme[:start]}{catalog}{readme[end:]}"
+        raise CatalogError(CatalogErrorReason.GENERATED_MARKERS_INVALID)
+    return f"{document[:start]}{replacement}{document[end:]}"
 
 
 def write_atomic(path: Path, content: str) -> None:
@@ -395,14 +603,29 @@ def main() -> int:
     mode.add_argument("--write", action="store_true")
     args = parser.parse_args()
     try:
-        current = read_regular_text(README_PATH)
-        expected = replace_catalog(current, render_catalog())
+        current_readme = read_regular_text(README_PATH)
+        current_baseline = read_regular_text(STANDARDS_BASELINE_PATH)
+        expected_readme = replace_generated_section(
+            current_readme,
+            SUMMARY_START_MARKER,
+            SUMMARY_END_MARKER,
+            render_summary(),
+        )
+        expected_baseline = replace_generated_section(
+            current_baseline,
+            CATALOG_START_MARKER,
+            CATALOG_END_MARKER,
+            render_catalog(),
+        )
         if args.check:
-            if current != expected:
-                raise CatalogError(CatalogErrorReason.README_STALE)
+            if current_readme != expected_readme or current_baseline != expected_baseline:
+                raise CatalogError(
+                    CatalogErrorReason.GENERATED_DOCUMENTATION_STALE
+                )
             print("conformance catalog is current")
             return 0
-        write_atomic(README_PATH, expected)
+        write_atomic(README_PATH, expected_readme)
+        write_atomic(STANDARDS_BASELINE_PATH, expected_baseline)
     except CatalogError as error:
         fail(error.reason)
     print("updated release-bound conformance catalog")
