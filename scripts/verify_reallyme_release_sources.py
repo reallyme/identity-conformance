@@ -32,6 +32,7 @@ EXPECTED_COMPONENTS = {
     "openid4vci",
     "openid4vp",
 }
+COMPONENTS_WITH_REQUIRED_RELEASES = EXPECTED_COMPONENTS.difference({"identity"})
 
 
 class ReleaseSourceError(Exception):
@@ -66,6 +67,7 @@ def verify_inventory(value: dict[str, object]) -> None:
             "component_id",
             "repository",
             "release_prefix",
+            "release_required",
             "update_strategy",
         }:
             raise ReleaseSourceError("release source entry has an invalid shape")
@@ -78,6 +80,9 @@ def verify_inventory(value: dict[str, object]) -> None:
             or not isinstance(source["release_prefix"], str)
             or RELEASE_PREFIX.fullmatch(source["release_prefix"]) is None
             or not source["release_prefix"].startswith(f"reallyme-{component_id}-v")
+            or not isinstance(source["release_required"], bool)
+            or source["release_required"]
+            != (component_id in COMPONENTS_WITH_REQUIRED_RELEASES)
             or source["update_strategy"] != "observe_latest_release"
         ):
             raise ReleaseSourceError("release source entry is invalid")

@@ -139,14 +139,14 @@ def require_string_list(value: object, reason: str) -> list[str]:
 def verify_plan(plan: dict[str, object]) -> None:
     exact_keys(
         plan,
-        {"schema_version", "plan_id", "authority", "certification_claim", "execution_status", "taxonomy_program", "system_under_test", "sources", "evidence_policy", "assertion_families"},
+        {"schema_version", "plan_id", "authority", "certification_claim", "execution_status", "taxonomy_program", "system_under_test", "sources", "evidence_policy", "evidence_coverage", "assertion_families"},
         "invalid_plan_shape",
     )
     if plan["schema_version"] != 1 or plan["plan_id"] != "eudi-relying-party-control-plane-v1":
         raise PlanError("invalid_plan_identity")
     if plan["authority"] != "internal_non_certification_evidence" or plan["certification_claim"] is not False:
         raise PlanError("invalid_authority")
-    if plan["execution_status"] != "executable":
+    if plan["execution_status"] != "executable_with_attestation_gaps":
         raise PlanError("invalid_execution_status")
     if plan["taxonomy_program"] != "eudi_relying_party_control_plane":
         raise PlanError("invalid_taxonomy_program")
@@ -206,6 +206,19 @@ def verify_plan(plan: dict[str, object]) -> None:
     )
     if policy["plan_is_evidence"] is not False or any(policy[key] is not True for key in policy if key != "plan_is_evidence"):
         raise PlanError("invalid_evidence_policy")
+
+    coverage = exact_keys(
+        plan["evidence_coverage"],
+        {"assertion_count", "independently_observed_assertion_count", "attestation_only_assertion_count", "badge_eligible"},
+        "invalid_evidence_coverage",
+    )
+    if coverage != {
+        "assertion_count": 19,
+        "independently_observed_assertion_count": 0,
+        "attestation_only_assertion_count": 19,
+        "badge_eligible": False,
+    }:
+        raise PlanError("invalid_evidence_coverage")
 
     families = plan["assertion_families"]
     if not isinstance(families, list) or not families:

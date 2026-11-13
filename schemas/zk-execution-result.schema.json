@@ -1,13 +1,13 @@
 {
   "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://really.me/schemas/identity-conformance/zk-execution-result-v1.json",
+  "$id": "https://really.me/schemas/identity-conformance/zk-execution-result-v2.json",
   "title": "ReallyMe ZK conformance execution result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "plan_id", "result", "created_at", "framework_revision", "workflow_revision", "candidate_sha256", "component", "release_artifact_sha256", "component_attestation_sha256", "checks", "assertions", "evidence_policy"],
+  "required": ["schema", "plan_id", "result", "created_at", "framework_revision", "workflow_revision", "candidate_sha256", "component", "release_artifact_sha256", "component_attestation_sha256", "linked_observation", "coverage", "checks", "assertions", "evidence_policy"],
   "properties": {
-    "schema": {"const": "reallyme.identity.zk_execution_result.v1"},
+    "schema": {"const": "reallyme.identity.zk_execution_result.v2"},
     "plan_id": {"const": "zk-presentation-proofs-v1"},
     "result": {"enum": ["passed", "failed"]},
     "created_at": {"type": "string", "format": "date-time"},
@@ -17,6 +17,13 @@
     "component": {"$ref": "zk-deployment-manifest.schema.json#/properties/component"},
     "release_artifact_sha256": {"$ref": "#/$defs/sha256"},
     "component_attestation_sha256": {"$ref": "#/$defs/sha256"},
+    "linked_observation": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/linked_observation"}
+      ]
+    },
+    "coverage": {"$ref": "#/$defs/coverage"},
     "checks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/check"}},
     "assertions": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/assertion"}},
     "evidence_policy": {"$ref": "zk-conformance-plan.schema.json#/$defs/evidence_policy"}
@@ -30,18 +37,43 @@
       "required": ["check_id", "kind", "result"],
       "properties": {
         "check_id": {"$ref": "#/$defs/identifier"},
-        "kind": {"enum": ["source", "artifact", "cargo", "attestation"]},
+        "kind": {"enum": ["source", "artifact", "cargo", "attestation", "observation"]},
         "result": {"enum": ["passed", "failed"]}
       }
     },
     "assertion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["assertion_id", "check_ids", "result"],
+      "required": ["assertion_id", "check_ids", "evidence_strength", "result"],
       "properties": {
         "assertion_id": {"$ref": "#/$defs/identifier"},
         "check_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "evidence_strength": {"enum": ["candidate_test_inventory", "independently_observed_behavior"]},
         "result": {"enum": ["passed", "failed"]}
+      }
+    },
+    "linked_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_binding", "evidence_sha256", "product_component_bom_sha256", "probe_count", "proof_row_count"],
+      "properties": {
+        "candidate_binding": {"enum": ["working_tree_observation", "immutable_release"]},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "product_component_bom_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "probe_count": {"const": 11},
+        "proof_row_count": {"const": 20}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assertion_count", "independently_observed_assertion_count", "candidate_test_inventory_assertion_count", "immutable_candidate_bound", "release_evidence_eligible"],
+      "properties": {
+        "assertion_count": {"const": 7},
+        "independently_observed_assertion_count": {"enum": [0, 7]},
+        "candidate_test_inventory_assertion_count": {"enum": [0, 7]},
+        "immutable_candidate_bound": {"type": "boolean"},
+        "release_evidence_eligible": {"type": "boolean"}
       }
     }
   }

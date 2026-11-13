@@ -74,11 +74,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["family_id", "assertion_id", "result"],
+        "required": ["family_id", "assertion_id", "result", "evidence_strength"],
         "properties": {
           "family_id": {"$ref": "#/$defs/identifier"},
           "assertion_id": {"$ref": "#/$defs/identifier"},
-          "result": {"const": "passed"}
+          "result": {"const": "passed"},
+          "evidence_strength": {"const": "attestation_only"}
         }
       }
     },

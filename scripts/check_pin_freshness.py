@@ -69,6 +69,10 @@ class FreshnessError(Exception):
     """Raised when authoritative freshness metadata cannot be evaluated safely."""
 
 
+class AuthoritativeNotFoundError(FreshnessError):
+    """Raised when an authoritative endpoint confirms that no object exists."""
+
+
 @dataclass(frozen=True)
 class CheckResult:
     check_id: str
@@ -280,8 +284,12 @@ def fetch_bytes(url: str) -> bytes:
     request = urllib.request.Request(
         url,
         headers={
-            "Accept": "text/html,application/octet-stream;q=0.9",
+            "Accept": (
+                "application/pdf,text/html;q=0.9,"
+                "application/octet-stream;q=0.8,*/*;q=0.7"
+            ),
             "User-Agent": (
+                "curl/8.7.1 "
                 "ReallyMe-Identity-Conformance/1.0 "
                 "(+https://github.com/reallyme/identity-conformance)"
             ),
@@ -312,6 +320,8 @@ def fetch_response_bytes(
         except urllib.error.HTTPError as error:
             status_code = error.code
             error.close()
+            if status_code == 404:
+                raise AuthoritativeNotFoundError(failure_message) from error
             if status_code not in RETRYABLE_HTTP_STATUS_CODES:
                 raise FreshnessError(failure_message) from error
             last_error: Exception = error
@@ -476,6 +486,9 @@ def observe_reallyme_release_sources(
         release_prefix = required_string(
             raw_source.get("release_prefix"), "ReallyMe release prefix"
         )
+        release_required = raw_source.get("release_required")
+        if not isinstance(release_required, bool):
+            raise FreshnessError("ReallyMe release requirement is invalid")
         try:
             value = fetcher(github_api(repository, "releases/latest"))
             if (
@@ -495,6 +508,15 @@ def observe_reallyme_release_sources(
             commit = resolve_github_ref(
                 repository, f"tags/{release_ref}", fetcher
             )
+        except AuthoritativeNotFoundError:
+            if release_required:
+                unavailable.append(
+                    UnavailableCheck(
+                        check_id=f"reallyme.release.{component_id}",
+                        reason="required GitHub release is unavailable",
+                    )
+                )
+            continue
         except FreshnessError as error:
             unavailable.append(
                 UnavailableCheck(

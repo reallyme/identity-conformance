@@ -1,0 +1,275 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "plan_id": "eudi-identity-sdk-v1",
+  "authority": "internal_non_certification_evidence",
+  "certification_claim": false,
+  "execution_status": "executable",
+  "system_under_test": {
+    "component_id": "identity",
+    "repository": "https://github.com/reallyme/identity",
+    "adapter_contract": "candidate-owned-identity-operation-boundary"
+  },
+  "candidate_contract": {
+    "selection": "caller_product_component_bom",
+    "reference_baseline_fallback": false,
+    "dependency_release_ids_required": true,
+    "dependency_release_refs_required": true,
+    "required_components": [
+      {
+        "component_id": "identity",
+        "repository": "https://github.com/reallyme/identity"
+      },
+      {
+        "component_id": "ssi",
+        "repository": "https://github.com/reallyme/ssi"
+      },
+      {
+        "component_id": "openid4vci",
+        "repository": "https://github.com/reallyme/openid4vci"
+      },
+      {
+        "component_id": "openid4vp",
+        "repository": "https://github.com/reallyme/openid4vp"
+      }
+    ]
+  },
+  "ownership": {
+    "identity_responsibility": "product_composition_dispatch_wire_and_sdk_parity",
+    "semantic_component_roles": [
+      "openid4vci",
+      "openid4vp",
+      "ssi"
+    ],
+    "hosted_lifecycle_profile": "eudi-relying-party-control-plane-v1"
+  },
+  "sources": {
+    "legal": [
+      "cir-2024-2977",
+      "cir-2024-2979",
+      "cir-2024-2982",
+      "cir-2026-1731"
+    ],
+    "standards": [
+      "etsi-ts-119-472-1-v1.2.1",
+      "etsi-ts-119-472-2-v1.3.1",
+      "etsi-ts-119-472-3-v1.1.1"
+    ],
+    "technical_specifications": [
+      "eudi-attestation-rulebooks"
+    ]
+  },
+  "requirement_registry": {
+    "etsi_rows": 740,
+    "eu_rows": 229,
+    "code_and_composed_evidence_rows": 898,
+    "external_evidence_rows": 53,
+    "not_applicable_rows": 18,
+    "framework_audit": "scripts/audit_etsi_eaa_pid_trace.py"
+  },
+  "operations": [
+    {
+      "operation_id": "validate_catalogue",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "eudi-attestation-rulebooks"
+      ]
+    },
+    {
+      "operation_id": "validate_requirement_registry",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "etsi-ts-119-472-1-v1.2.1",
+        "etsi-ts-119-472-2-v1.3.1",
+        "etsi-ts-119-472-3-v1.1.1",
+        "cir-2024-2977",
+        "cir-2024-2979",
+        "cir-2024-2982"
+      ]
+    },
+    {
+      "operation_id": "resolve_requirement",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "etsi-ts-119-472-1-v1.2.1",
+        "etsi-ts-119-472-2-v1.3.1",
+        "etsi-ts-119-472-3-v1.1.1",
+        "cir-2024-2977",
+        "cir-2024-2979",
+        "cir-2024-2982"
+      ]
+    },
+    {
+      "operation_id": "validate_natural_person_pid",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "cir-2024-2977",
+        "cir-2024-2979",
+        "cir-2026-1731"
+      ]
+    },
+    {
+      "operation_id": "validate_legal_person_pid",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "cir-2024-2977",
+        "cir-2024-2979",
+        "cir-2026-1731"
+      ]
+    },
+    {
+      "operation_id": "validate_pid_issuance",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "cir-2024-2977",
+        "cir-2024-2982",
+        "cir-2026-1731"
+      ]
+    },
+    {
+      "operation_id": "validate_pid_allocation",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "cir-2024-2977",
+        "cir-2026-1731"
+      ]
+    },
+    {
+      "operation_id": "validate_pid_revocation",
+      "semantic_owner_role": "ssi",
+      "source_refs": [
+        "cir-2024-2977",
+        "cir-2024-2979",
+        "cir-2026-1731"
+      ]
+    }
+  ],
+  "execution_lanes": [
+    {
+      "lane_id": "normative_trace",
+      "runner": "framework",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "rust_product_boundary",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "eudi_openid_composition",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "typescript_sdk",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "python_sdk",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "go_sdk",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "kotlin_sdk",
+      "runner": "github_hosted_linux",
+      "required": true,
+      "state": "executable"
+    },
+    {
+      "lane_id": "swift_sdk",
+      "runner": "github_hosted_macos",
+      "required": true,
+      "state": "executable"
+    }
+  ],
+  "evidence_classes": {
+    "normative_specifications": {
+      "status": "executed",
+      "required_for_engineering_pass": true,
+      "evidence": [
+        "normative_trace",
+        "rust_product_boundary",
+        "eudi_openid_composition"
+      ]
+    },
+    "reference_implementation_parity": {
+      "status": "separate_deployed_interoperability_profile",
+      "required_for_engineering_pass": false,
+      "reason": "no_equivalent_eu_identity_sdk_boundary",
+      "targets": [
+        {
+          "scope_id": "identity_eudi_operations",
+          "status": "not_applicable",
+          "source_refs": [],
+          "reason": "no_official_executable_oracle_for_catalogue_requirement_or_pid_validation"
+        },
+        {
+          "scope_id": "openid4vci_composition",
+          "status": "external_runner_required",
+          "source_refs": [
+            "eudi-pid-issuer",
+            "eudi-issuer-wallet-tester",
+            "eudi-itb"
+          ],
+          "reason": "deployed_reference_issuer_and_test_services_required"
+        },
+        {
+          "scope_id": "openid4vp_verifier_composition",
+          "status": "external_runner_required",
+          "source_refs": [
+            "eudi-verifier-endpoint",
+            "eudi-web-verifier",
+            "eudi-itb"
+          ],
+          "reason": "deployed_reference_verifier_and_test_services_required"
+        },
+        {
+          "scope_id": "openid4vp_wallet_composition",
+          "status": "not_applicable",
+          "source_refs": [
+            "eudi-android-wallet-core",
+            "eudi-android-wallet-ui",
+            "eudi-ios-wallet-kit",
+            "eudi-ios-wallet-ui"
+          ],
+          "reason": "identity_sdk_candidate_contains_no_android_or_ios_wallet_application"
+        }
+      ]
+    },
+    "external_legal_and_certification": {
+      "status": "external_evidence_required",
+      "required_for_engineering_pass": false,
+      "external_evidence_rows": 53,
+      "legal_conformity_claim": false,
+      "certification_claim": false
+    }
+  },
+  "evidence_policy": {
+    "immutable_candidate_required_for_badge": true,
+    "exact_component_revisions_required": true,
+    "framework_executes_tests": true,
+    "attestations_satisfy_behavior": false,
+    "external_evidence_rows_are_code_passes": false,
+    "legal_conformity_claim": false,
+    "certification_claim": false
+  },
+  "evidence_coverage": {
+    "identity_operation_count": 8,
+    "required_lane_count": 8,
+    "executable_lane_count": 8,
+    "pending_lane_count": 0,
+    "badge_eligible": true
+  }
+}

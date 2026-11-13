@@ -38,6 +38,7 @@ import strict_json  # noqa: E402
 MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 MAX_PROBE_OUTPUT_BYTES = 16 * 1024
 MAX_SERVICE_PROBE_BYTES = 4 * 1024
+MAX_NORMATIVE_SOURCE_BYTES = 32 * 1024 * 1024
 COMMAND_TIMEOUT_SECONDS = 1_800
 SERVICE_PROBE_TIMEOUT_SECONDS = 15
 EXIT_CONFIGURATION = 78
@@ -273,6 +274,7 @@ def required_attestation_checks(
                     "family_id": family_id,
                     "assertion_id": assertion_id,
                     "check_ids": sorted(check_ids),
+                    "evidence_strength": "attestation_only",
                 }
             )
     bindings = adapter.get("source_bindings")
@@ -388,6 +390,180 @@ def execute_bounded_probe(
         return False
     finally:
         output[:] = b"\0" * len(output)
+
+
+def execute_profile_probe(
+    arguments: list[str],
+    cwd: Path,
+    required_tokens: list[str],
+    required_fields: set[str],
+) -> dict[str, str] | None:
+    """Run the offline profile command and parse only reviewed scalar fields."""
+
+    output = bytearray()
+    try:
+        with tempfile.TemporaryFile() as stdout:
+            completed = subprocess.run(
+                arguments,
+                cwd=cwd,
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=subprocess.DEVNULL,
+                timeout=120,
+            )
+            if completed.returncode != 0 or stdout.tell() > MAX_PROBE_OUTPUT_BYTES:
+                return None
+            stdout.seek(0)
+            output.extend(stdout.read(MAX_PROBE_OUTPUT_BYTES + 1))
+        if any(token.encode("utf-8") not in output for token in required_tokens):
+            return None
+        decoded = output.decode("utf-8")
+        fields: dict[str, str] = {}
+        for line in decoded.splitlines():
+            key, separator, value = line.partition("=")
+            if separator and key in required_fields:
+                if (
+                    key in fields
+                    or not value
+                    or any(character.isspace() for character in value)
+                ):
+                    return None
+                fields[key] = value
+        if set(fields) != required_fields:
+            return None
+        return fields
+    except (OSError, subprocess.TimeoutExpired, UnicodeError):
+        return None
+    finally:
+        output[:] = b"\0" * len(output)
+
+
+def hash_normative_source(path: Path, root: Path) -> str | None:
+    """Hash one regular source file only when it remains inside its checkout."""
+
+    try:
+        resolved_root = root.resolve(strict=True)
+        resolved_path = path.resolve(strict=True)
+        if not resolved_path.is_relative_to(resolved_root):
+            return None
+        metadata = path.lstat()
+        if path.is_symlink() or not path.is_file():
+            return None
+        if metadata.st_size < 1 or metadata.st_size > MAX_NORMATIVE_SOURCE_BYTES:
+            return None
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            while chunk := source.read(128 * 1024):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return None
+
+
+def evaluate_normative_profiles(
+    profile_fields: dict[str, str],
+    candidate_source: Path,
+    upstream_root: Path,
+    adapter: dict[str, object],
+) -> list[Check]:
+    """Bind candidate-vendored normative inputs to the framework-owned checkout."""
+
+    raw_profiles = adapter.get("normative_profiles")
+    if not isinstance(raw_profiles, list) or not raw_profiles:
+        raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+    checks: list[Check] = []
+    for raw_profile in raw_profiles:
+        if not isinstance(raw_profile, dict):
+            raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+        profile_id = raw_profile.get("profile_id")
+        version_field = raw_profile.get("version_field")
+        expected_version = raw_profile.get("expected_version")
+        commit_field = raw_profile.get("commit_field")
+        candidate_root = raw_profile.get("candidate_root")
+        pinned_root = raw_profile.get("upstream_root")
+        files = raw_profile.get("files")
+        if (
+            not isinstance(profile_id, str)
+            or not isinstance(version_field, str)
+            or not isinstance(expected_version, str)
+            or not isinstance(commit_field, str)
+            or not isinstance(candidate_root, str)
+            or not isinstance(pinned_root, str)
+            or not isinstance(files, list)
+            or not files
+        ):
+            raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+        declared_commit = profile_fields.get(commit_field)
+        declared_version = profile_fields.get(version_field)
+        profile_matches = (
+            declared_version == expected_version
+            and isinstance(declared_commit, str)
+            and adapter_verifier.GIT_COMMIT.fullmatch(declared_commit) is not None
+        )
+        for raw_file in files:
+            if not isinstance(raw_file, dict):
+                raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+            artifact_id = raw_file.get("artifact_id")
+            candidate_path = raw_file.get("candidate_path")
+            upstream_path = raw_file.get("upstream_path")
+            if (
+                not isinstance(artifact_id, str)
+                or not isinstance(candidate_path, str)
+                or not isinstance(upstream_path, str)
+            ):
+                raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+            matches = False
+            if profile_matches and declared_commit is not None:
+                candidate_file = (
+                    candidate_source / candidate_root / declared_commit / candidate_path
+                )
+                pinned_file = upstream_root / pinned_root / upstream_path
+                candidate_digest = hash_normative_source(
+                    candidate_file, candidate_source
+                )
+                pinned_digest = hash_normative_source(pinned_file, upstream_root)
+                matches = (
+                    candidate_digest is not None
+                    and pinned_digest is not None
+                    and candidate_digest == pinned_digest
+                )
+            checks.append(
+                Check(
+                    f"normative_source.{profile_id}.{artifact_id}",
+                    "normative_source_binding",
+                    "passed" if matches else "failed",
+                )
+            )
+    return checks
+
+
+def required_normative_check_ids(adapter: dict[str, object]) -> set[str]:
+    raw_profiles = adapter.get("normative_profiles")
+    if not isinstance(raw_profiles, list) or not raw_profiles:
+        raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+    check_ids: set[str] = set()
+    for profile in raw_profiles:
+        if not isinstance(profile, dict) or not isinstance(
+            profile.get("profile_id"), str
+        ):
+            raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+        files = profile.get("files")
+        if not isinstance(files, list) or not files:
+            raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+        for source_file in files:
+            if not isinstance(source_file, dict) or not isinstance(
+                source_file.get("artifact_id"), str
+            ):
+                raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+            check_id = (
+                f"normative_source.{profile['profile_id']}."
+                f"{source_file['artifact_id']}"
+            )
+            if check_id in check_ids:
+                raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+            check_ids.add(check_id)
+    return check_ids
 
 
 def probe_contract(adapter: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -526,7 +702,12 @@ def run_service_probe(
     )
 
 
-def run_binary_probes(binary: Path, source_root: Path, adapter: dict[str, object]) -> list[Check]:
+def run_binary_probes(
+    binary: Path,
+    source_root: Path,
+    upstream_root: Path,
+    adapter: dict[str, object],
+) -> list[Check]:
     probes = probe_contract(adapter)
     profile_arguments = probes["profile"].get("arguments")
     profile_tokens = probes["profile"].get("required_output_tokens")
@@ -540,18 +721,27 @@ def run_binary_probes(binary: Path, source_root: Path, adapter: dict[str, object
         or not all(isinstance(item, str) for item in invalid_arguments)
     ):
         raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+    raw_profiles = adapter.get("normative_profiles")
+    if not isinstance(raw_profiles, list):
+        raise RunnerError(RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
+    required_profile_fields = {
+        field
+        for profile in raw_profiles
+        if isinstance(profile, dict)
+        for field in (profile.get("version_field"), profile.get("commit_field"))
+        if isinstance(field, str)
+    }
+    profile_fields = execute_profile_probe(
+        [str(binary), *profile_arguments],
+        source_root,
+        profile_tokens,
+        required_profile_fields,
+    )
     checks = [
         Check(
             "binary_probe.profile",
             "binary_probe",
-            "passed"
-            if execute_bounded_probe(
-                [str(binary), *profile_arguments],
-                source_root,
-                expected_success=True,
-                required_tokens=profile_tokens,
-            )
-            else "failed",
+            "passed" if profile_fields is not None else "failed",
         ),
         Check(
             "binary_probe.invalid_command",
@@ -565,6 +755,14 @@ def run_binary_probes(binary: Path, source_root: Path, adapter: dict[str, object
             else "failed",
         ),
     ]
+    checks.extend(
+        evaluate_normative_profiles(
+            profile_fields if profile_fields is not None else {},
+            source_root,
+            upstream_root,
+            adapter,
+        )
+    )
     journal = probes["journal"]
     initialize = journal.get("initialize_argument")
     health = journal.get("health_argument")
@@ -734,7 +932,12 @@ def main() -> int:
         )
         checks = [Check(check_id, "attestation", "passed") for check_id in attested_checks]
         checks.extend(
-            run_binary_probes(binary, args.candidate_source, bundle.adapter)
+            run_binary_probes(
+                binary,
+                args.candidate_source,
+                args.upstream_root,
+                bundle.adapter,
+            )
         )
         mode = deployment["mode"]
         live_inputs = (args.live_config, args.journal, args.relying_party_id)

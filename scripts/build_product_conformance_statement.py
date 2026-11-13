@@ -278,54 +278,59 @@ def oidf_coverage(result: dict[str, object]) -> dict[str, object]:
 
 def oidf_composition(result: dict[str, object]) -> list[dict[str, object]]:
     raw_components = result.get("components")
-    if not isinstance(raw_components, list) or len(raw_components) != 6:
+    if not isinstance(raw_components, list) or not 1 <= len(raw_components) <= 64:
         raise StatementError(StatementErrorReason.RESULT_INVALID)
-    expected_ids = {"openid4vci", "openid4vp", "wallet", "ssi", "identity", "cose"}
     observed: set[str] = set()
+    observed_repositories: set[str] = set()
     composition: list[dict[str, object]] = []
     for raw_component in raw_components:
         if not isinstance(raw_component, dict) or set(raw_component) != {
             "component_id",
             "repository",
             "commit",
+            "release_id",
             "release_ref",
-            "release_artifact_sha256",
-            "component_attestation_sha256",
             "roles",
+            "adapter_contracts",
         }:
             raise StatementError(StatementErrorReason.RESULT_INVALID)
         component_id = raw_component["component_id"]
+        repository = raw_component["repository"]
         roles = raw_component["roles"]
+        adapter_contracts = raw_component["adapter_contracts"]
         if (
             not isinstance(component_id, str)
-            or component_id not in expected_ids
+            or IDENTIFIER.fullmatch(component_id) is None
             or component_id in observed
-            or raw_component["repository"]
-            != f"https://github.com/reallyme/{component_id}"
+            or not isinstance(repository, str)
+            or REPOSITORY.fullmatch(repository) is None
+            or repository in observed_repositories
             or not isinstance(raw_component["commit"], str)
             or COMMIT.fullmatch(raw_component["commit"]) is None
             or not isinstance(raw_component["release_ref"], str)
-            or RELEASE_REF.fullmatch(raw_component["release_ref"]) is None
-            or not raw_component["release_ref"].startswith(
-                f"reallyme-{component_id}-v"
+            or product_bom_validator.RELEASE_REF.fullmatch(
+                raw_component["release_ref"]
             )
-            or not isinstance(raw_component["release_artifact_sha256"], str)
-            or SHA256.fullmatch(raw_component["release_artifact_sha256"]) is None
-            or not isinstance(raw_component["component_attestation_sha256"], str)
-            or SHA256.fullmatch(raw_component["component_attestation_sha256"])
             is None
+            or not isinstance(raw_component["release_id"], int)
+            or isinstance(raw_component["release_id"], bool)
+            or not 1 <= raw_component["release_id"] <= 9_223_372_036_854_775_807
             or not isinstance(roles, list)
-            or not roles
             or len(roles) != len(set(roles))
             or not all(
                 isinstance(role, str) and IDENTIFIER.fullmatch(role) for role in roles
             )
+            or not isinstance(adapter_contracts, list)
+            or len(adapter_contracts) != len(set(adapter_contracts))
+            or not all(
+                isinstance(adapter, str) and IDENTIFIER.fullmatch(adapter)
+                for adapter in adapter_contracts
+            )
         ):
             raise StatementError(StatementErrorReason.RESULT_INVALID)
         observed.add(component_id)
+        observed_repositories.add(repository)
         composition.append(raw_component)
-    if observed != expected_ids:
-        raise StatementError(StatementErrorReason.RESULT_INVALID)
     return sorted(composition, key=lambda item: str(item["component_id"]))
 
 
@@ -378,6 +383,7 @@ def build_statement(
         if not isinstance(product, dict) or not isinstance(inputs, dict):
             raise StatementError(StatementErrorReason.RESULT_INVALID)
         product_bom = inputs.get("product_component_bom")
+        product_release_id = product.get("release_id")
         if (
             result.get("framework_revision") != framework_commit
             or product.get("product_id") != product_id
@@ -385,28 +391,35 @@ def build_statement(
             or product.get("release_ref") != product_release_ref
             or product.get("repository") != product_repository
             or product.get("commit") != product_commit
+            or not isinstance(product_release_id, int)
+            or isinstance(product_release_id, bool)
+            or not 1 <= product_release_id <= 9_223_372_036_854_775_807
             or not isinstance(product_bom, dict)
         ):
             raise StatementError(StatementErrorReason.RESULT_INVALID)
         candidate_sha256 = product_bom.get("canonical_sha256")
         coverage = oidf_coverage(result)
         composition = oidf_composition(result)
+        product_component_id = product.get("product_component_id")
         identity_components = [
             component
             for component in composition
-            if component.get("component_id") == "identity"
+            if component.get("component_id") == product_component_id
         ]
         if len(identity_components) != 1 or (
             identity_components[0].get("repository") != product_repository
             or identity_components[0].get("commit") != product_commit
+            or identity_components[0].get("release_id") != product_release_id
             or identity_components[0].get("release_ref") != product_release_ref
         ):
             raise StatementError(StatementErrorReason.RESULT_INVALID)
         reconstructed_bom = {
-            "schema_version": 1,
+            "schema_version": 3,
             "purpose": "reallyme-product-conformance-bom",
             "product_id": product["product_id"],
             "product_version": product["product_version"],
+            "product_component_id": product_component_id,
+            "product_release_id": product_release_id,
             "product_release_ref": product["release_ref"],
             "components": composition,
         }
@@ -435,7 +448,9 @@ def build_statement(
         "coverage": coverage,
         "product": {
             "product_id": product_id,
+            "product_component_id": product_component_id,
             "release_version": release_match.group("version"),
+            "release_id": product_release_id,
             "release_ref": product_release_ref,
             "repository": product_repository,
             "commit": product_commit,

@@ -3,6 +3,7 @@
   "schema_version": 1,
   "adapter_id": "eudi_relying_party_control_plane",
   "plan_path": "plans/eudi/relying-party-control-plane.json",
+  "requirement_test_plan_path": "plans/eudi/relying-party-requirement-tests.json",
   "upstream_lock_path": "upstream/eudi/sources.lock.json",
   "legal_sources_lock_path": "upstream/eudi/legal-sources.lock.json",
   "component": {
@@ -20,6 +21,34 @@
     "eudi-technical-specifications",
     "eudi-relying-party-registration-service"
   ],
+  "normative_profiles": [
+    {
+      "profile_id": "ts5",
+      "source_id": "eudi-technical-specifications",
+      "version_field": "ts5_version",
+      "expected_version": "1.6.1",
+      "commit_field": "ts5_baseline_commit",
+      "candidate_root": "apps/eudi-qp/resources/upstream/ts5",
+      "upstream_root": "eudi-doc-standards-and-technical-specifications/docs/technical-specifications",
+      "files": [
+        {"artifact_id": "json_common_rp_data_model", "candidate_path": "ts5-json-common-rp-data-model.json", "upstream_path": "api/ts5-json-common-rp-data-model.json"},
+        {"artifact_id": "registrar_api", "candidate_path": "ts5-openapi31-registrar-api.yml", "upstream_path": "api/ts5-openapi31-registrar-api.yml"},
+        {"artifact_id": "write_api", "candidate_path": "ts5-openapi31-write-api.yml", "upstream_path": "api/ts5-openapi31-write-api.yml"}
+      ]
+    },
+    {
+      "profile_id": "ts6",
+      "source_id": "eudi-technical-specifications",
+      "version_field": "ts6_version",
+      "expected_version": "1.2.2",
+      "commit_field": "ts6_baseline_commit",
+      "candidate_root": "apps/eudi-qp/resources/upstream/ts6",
+      "upstream_root": "eudi-doc-standards-and-technical-specifications/docs/technical-specifications",
+      "files": [
+        {"artifact_id": "common_set_of_rp_information", "candidate_path": "ts6-common-set-of-rp-information-to-be-registered.md", "upstream_path": "ts6-common-set-of-rp-information-to-be-registered.md"}
+      ]
+    }
+  ],
   "source_bindings": [
     {"source_id": "eudi-arf", "field": "ref_without_v", "attestation_check_id": "upstream_binding.eudi_arf"},
     {"source_id": "eudi-technical-specifications", "field": "commit", "attestation_check_id": "upstream_binding.eudi_technical_specifications"},
@@ -28,7 +57,7 @@
   "probes": {
     "profile": {
       "arguments": ["profile"],
-      "required_output_tokens": ["profile=ts5_v1_6", "role=normative_primary", "network_activity=none", "ts6_version=1.2.2", "arf_version=3.0.0"]
+      "required_output_tokens": ["role=normative_primary", "network_activity=none", "arf_version=3.0.0"]
     },
     "invalid_command": {"arguments": ["reference-profile"], "expected_success": false},
     "journal": {

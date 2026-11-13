@@ -8,7 +8,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -62,6 +64,113 @@ EXPECTED_POLICY = {
     "witness_material_retained": False,
     "private_key_material_retained": False,
 }
+EXPECTED_LINKED_PROBES = {
+    "probe.zk.fresh-proof-matrix.v1": (
+        "zk_provider",
+        "scripts/test-persona-credential-evidence-linked-proofs.py",
+    ),
+    "probe.zk.witness-parity.current-state.v1": (
+        "zk_provider",
+        "circuits::persona_credential_evidence_v1_current_state::tests::compiled_prepared_status_witness_matches_noir_in_both_lanes",
+    ),
+    "probe.zk.witness-parity.issuer-envelope.v1": (
+        "zk_provider",
+        "circuits::persona_credential_evidence_v1_issuer_envelope::tests::compiled_issuer_envelope_witness_matches_noir_in_both_lanes",
+    ),
+    "probe.zk.witness-parity.claim-root.v1": (
+        "zk_provider",
+        "circuits::persona_credential_evidence_v1_claim_root::tests::compiled_claim_root_witness_matches_noir_in_both_lanes",
+    ),
+    "probe.zk.witness-parity.signed-validity.v1": (
+        "zk_provider",
+        "circuits::persona_credential_evidence_v1_signed_validity::tests::compiled_signed_validity_witness_matches_noir_in_both_lanes",
+    ),
+    "probe.zk.witness-parity.selected-claim.v1": (
+        "zk_provider",
+        "circuits::persona_credential_evidence_v1_claim::tests::compiled_prepared_claim_witness_matches_noir_in_both_lanes",
+    ),
+    "probe.zk.frozen-mobile-request-parity.v1": (
+        "zk_provider",
+        "demo_prepared_requests_match_current_noir_witnesses",
+    ),
+    "probe.zk.native-linked-backend.v1": (
+        "zk_provider",
+        "fresh_prepared_proofs_verify_through_linked_library",
+    ),
+    "probe.identity.openid4vp-prepared-boundary.v1": (
+        "identity_product",
+        "linked_tests::fresh_linked_proofs_cross_openid4vp_prepared_boundary",
+    ),
+    "probe.identity.wallet-record-presentation.v1": (
+        "identity_product",
+        "select_inventory_presentations::mixed_record_tests::prepared_live_source::selected_ssi_vci_record_builds_signed_native_persona_credential_evidence_presentation",
+    ),
+    "probe.zk.mobile-ffi-exact-candidate.v1": (
+        "zk_provider",
+        "dispatch::tests::mobile_package_verifies_prepared_proofs_from_exact_candidate",
+    ),
+}
+EXPECTED_PROBE_TOOLCHAINS = {
+    "probe.zk.fresh-proof-matrix.v1": {"rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"},
+    "probe.zk.witness-parity.current-state.v1": {"rustc", "nargo"},
+    "probe.zk.witness-parity.issuer-envelope.v1": {"rustc", "nargo"},
+    "probe.zk.witness-parity.claim-root.v1": {"rustc", "nargo"},
+    "probe.zk.witness-parity.signed-validity.v1": {"rustc", "nargo"},
+    "probe.zk.witness-parity.selected-claim.v1": {"rustc", "nargo"},
+    "probe.zk.frozen-mobile-request-parity.v1": {"rustc", "nargo"},
+    "probe.zk.native-linked-backend.v1": {"rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"},
+    "probe.identity.openid4vp-prepared-boundary.v1": {"rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"},
+    "probe.identity.wallet-record-presentation.v1": {"rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"},
+    "probe.zk.mobile-ffi-exact-candidate.v1": {"rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"},
+}
+EXPECTED_PROBE_INPUTS = {
+    "probe.zk.fresh-proof-matrix.v1": {"proof_matrix_manifest", "zk_candidate_tree"},
+    "probe.zk.witness-parity.current-state.v1": {"zk_candidate_tree"},
+    "probe.zk.witness-parity.issuer-envelope.v1": {"zk_candidate_tree"},
+    "probe.zk.witness-parity.claim-root.v1": {"zk_candidate_tree"},
+    "probe.zk.witness-parity.signed-validity.v1": {"zk_candidate_tree"},
+    "probe.zk.witness-parity.selected-claim.v1": {"zk_candidate_tree"},
+    "probe.zk.frozen-mobile-request-parity.v1": {"frozen_request_manifest", "zk_candidate_tree"},
+    "probe.zk.native-linked-backend.v1": {"proof_matrix_manifest", "zk_candidate_tree"},
+    "probe.identity.openid4vp-prepared-boundary.v1": {"identity_candidate_tree", "proof_matrix_manifest"},
+    "probe.identity.wallet-record-presentation.v1": {"identity_candidate_tree", "proof_matrix_manifest"},
+    "probe.zk.mobile-ffi-exact-candidate.v1": {"proof_matrix_manifest", "release_index", "zk_candidate_tree"},
+}
+EXPECTED_ASSERTION_PROBES = {
+    "toolchain_identity": {"probe.zk.fresh-proof-matrix.v1"},
+    "artifact_identity": {
+        "probe.zk.fresh-proof-matrix.v1",
+        "probe.zk.mobile-ffi-exact-candidate.v1",
+    },
+    "canonical_vectors": {
+        "probe.zk.witness-parity.current-state.v1",
+        "probe.zk.witness-parity.issuer-envelope.v1",
+        "probe.zk.witness-parity.claim-root.v1",
+        "probe.zk.witness-parity.signed-validity.v1",
+        "probe.zk.witness-parity.selected-claim.v1",
+        "probe.zk.frozen-mobile-request-parity.v1",
+    },
+    "malicious_proof_rejection": {
+        "probe.zk.fresh-proof-matrix.v1",
+        "probe.zk.native-linked-backend.v1",
+        "probe.zk.mobile-ffi-exact-candidate.v1",
+    },
+    "request_binding": {
+        "probe.zk.native-linked-backend.v1",
+        "probe.identity.openid4vp-prepared-boundary.v1",
+        "probe.identity.wallet-record-presentation.v1",
+    },
+    "artifact_substitution_rejection": {
+        "probe.zk.fresh-proof-matrix.v1",
+        "probe.zk.mobile-ffi-exact-candidate.v1",
+    },
+    "provider_release_quality": {
+        "probe.zk.native-linked-backend.v1",
+        "probe.zk.mobile-ffi-exact-candidate.v1",
+        "probe.identity.openid4vp-prepared-boundary.v1",
+        "probe.identity.wallet-record-presentation.v1",
+    },
+}
 
 
 class ZkAdapterErrorReason(Enum):
@@ -94,10 +203,28 @@ def exact_object(
 
 def load_object(path: Path) -> dict[str, object]:
     try:
-        metadata = path.lstat()
-        if path.is_symlink() or not path.is_file() or not 1 <= metadata.st_size <= MAX_JSON_BYTES:
+        before = path.lstat()
+        if not stat.S_ISREG(before.st_mode) or not 1 <= before.st_size <= MAX_JSON_BYTES:
             raise ZkAdapterError(ZkAdapterErrorReason.INVALID_JSON)
-        value = strict_json.loads(path.read_text(encoding="utf-8"))
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        with os.fdopen(descriptor, "rb") as handle:
+            opened = os.fstat(handle.fileno())
+            raw = handle.read(MAX_JSON_BYTES + 1)
+            after_open = os.fstat(handle.fileno())
+        after_path = path.lstat()
+        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or len(raw) != before.st_size
+            or any(
+                getattr(before, field) != getattr(opened, field)
+                or getattr(before, field) != getattr(after_open, field)
+                or getattr(before, field) != getattr(after_path, field)
+                for field in stable_fields
+            )
+        ):
+            raise ZkAdapterError(ZkAdapterErrorReason.INVALID_JSON)
+        value = strict_json.loads(raw.decode("utf-8"))
     except (OSError, UnicodeError, strict_json.StrictJsonError) as error:
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_JSON) from error
     if not isinstance(value, dict):
@@ -116,6 +243,8 @@ def validate_plan(plan: dict[str, object]) -> None:
             "certification_claim",
             "required_components",
             "assertions",
+            "evidence_coverage",
+            "linked_observation_contract",
             "evidence_policy",
         },
         ZkAdapterErrorReason.INVALID_PLAN,
@@ -123,8 +252,15 @@ def validate_plan(plan: dict[str, object]) -> None:
     if (
         plan["schema_version"] != 1
         or plan["plan_id"] != "zk-presentation-proofs-v1"
-        or plan["execution_status"] != "executable"
+        or plan["execution_status"] != "executable_with_attestation_gaps"
         or plan["certification_claim"] is not False
+        or plan["evidence_coverage"]
+        != {
+            "assertion_count": 7,
+            "exact_assertion_binding_count": 0,
+            "candidate_test_inventory_assertion_count": 7,
+            "badge_eligible": False,
+        }
         or plan["evidence_policy"] != EXPECTED_POLICY
     ):
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
@@ -132,6 +268,7 @@ def validate_plan(plan: dict[str, object]) -> None:
         {"component_id": "zk", "repository": "https://github.com/reallyme/zk"}
     ]:
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    validate_linked_observation_contract(plan["linked_observation_contract"])
     assertions = plan["assertions"]
     if not isinstance(assertions, list) or len(assertions) != len(EXPECTED_ASSERTIONS):
         raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
@@ -158,6 +295,115 @@ def validate_plan(plan: dict[str, object]) -> None:
         ):
             raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
         observed.add(assertion_id)
+    if observed != EXPECTED_ASSERTIONS:
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+
+
+def validate_linked_observation_contract(value: object) -> None:
+    contract = exact_object(
+        value,
+        {
+            "profile_id",
+            "component_roles",
+            "proof_matrix",
+            "required_toolchain_bindings",
+            "probes",
+            "assertion_bindings",
+        },
+        ZkAdapterErrorReason.INVALID_PLAN,
+    )
+    if contract["profile_id"] != "identity-zk-linked-presentation-proofs-v1":
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    roles = contract["component_roles"]
+    if roles != [
+        {"component_role": "zk_provider", "selection": "zk_adapter_contract"},
+        {"component_role": "identity_product", "selection": "product_component_id"},
+    ]:
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    if contract["proof_matrix"] != {
+        "lanes": ["sha256", "poseidon2"],
+        "modes": ["public", "private"],
+        "stages": [
+            "issuer_envelope",
+            "claim_root",
+            "signed_validity",
+            "selected_claim",
+            "current_state",
+        ],
+        "row_count": 20,
+    }:
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    if contract["required_toolchain_bindings"] != [
+        "rustc",
+        "nargo",
+        "bb",
+        "libbb_external",
+        "bn254_g1",
+        "bn254_g2",
+    ]:
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    raw_probes = contract["probes"]
+    if not isinstance(raw_probes, list) or len(raw_probes) != len(
+        EXPECTED_LINKED_PROBES
+    ):
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    observed_probes: set[str] = set()
+    for raw_probe in raw_probes:
+        probe = exact_object(
+            raw_probe,
+            {
+                "probe_id",
+                "component_role",
+                "test_selector",
+                "required_toolchain_binding_ids",
+                "required_input_binding_ids",
+            },
+            ZkAdapterErrorReason.INVALID_PLAN,
+        )
+        probe_id = probe["probe_id"]
+        toolchain_ids = probe["required_toolchain_binding_ids"]
+        input_ids = probe["required_input_binding_ids"]
+        if (
+            not isinstance(probe_id, str)
+            or probe_id in observed_probes
+            or (probe["component_role"], probe["test_selector"])
+            != EXPECTED_LINKED_PROBES.get(probe_id)
+            or not isinstance(toolchain_ids, list)
+            or len(toolchain_ids) != len(set(toolchain_ids))
+            or set(toolchain_ids) != EXPECTED_PROBE_TOOLCHAINS.get(probe_id)
+            or not isinstance(input_ids, list)
+            or len(input_ids) != len(set(input_ids))
+            or set(input_ids) != EXPECTED_PROBE_INPUTS.get(probe_id)
+        ):
+            raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+        observed_probes.add(probe_id)
+    if observed_probes != set(EXPECTED_LINKED_PROBES):
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    raw_bindings = contract["assertion_bindings"]
+    if not isinstance(raw_bindings, list) or len(raw_bindings) != len(
+        EXPECTED_ASSERTION_PROBES
+    ):
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+    observed_assertions: set[str] = set()
+    for raw_binding in raw_bindings:
+        binding = exact_object(
+            raw_binding,
+            {"assertion_id", "required_probe_ids"},
+            ZkAdapterErrorReason.INVALID_PLAN,
+        )
+        assertion_id = binding["assertion_id"]
+        probe_ids = binding["required_probe_ids"]
+        if (
+            not isinstance(assertion_id, str)
+            or assertion_id in observed_assertions
+            or not isinstance(probe_ids, list)
+            or len(probe_ids) != len(set(probe_ids))
+            or set(probe_ids) != EXPECTED_ASSERTION_PROBES.get(assertion_id)
+        ):
+            raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
+        observed_assertions.add(assertion_id)
+    if observed_assertions != set(EXPECTED_ASSERTION_PROBES):
+        raise ZkAdapterError(ZkAdapterErrorReason.INVALID_PLAN)
 
 
 def validate_adapter(adapter: dict[str, object], plan: dict[str, object]) -> None:

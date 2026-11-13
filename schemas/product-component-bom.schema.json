@@ -5,70 +5,44 @@
   "title": "ReallyMe product component bill of materials",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "purpose", "product_id", "product_version", "components"],
+  "dependentRequired": {
+    "product_release_id": ["product_release_ref"],
+    "product_release_ref": ["product_release_id"]
+  },
+  "required": ["schema_version", "purpose", "product_id", "product_version", "product_component_id", "components"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "purpose": { "const": "reallyme-product-conformance-bom" },
-    "product_id": { "const": "identity" },
-    "product_version": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]*$"
-    },
-    "product_release_ref": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "pattern": "^reallyme-identity-v[0-9A-Za-z][0-9A-Za-z.+-]*$"
-    },
-    "components": {
-      "type": "array",
-      "minItems": 6,
-      "maxItems": 6,
-      "items": { "$ref": "#/$defs/component" }
-    }
+    "schema_version": {"const": 3},
+    "purpose": {"const": "reallyme-product-conformance-bom"},
+    "product_id": {"const": "identity"},
+    "product_version": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]*$"},
+    "product_component_id": {"$ref": "#/$defs/componentId"},
+    "product_release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "product_release_ref": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^reallyme-identity-v[0-9A-Za-z][0-9A-Za-z.+-]*$"},
+    "components": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"$ref": "#/$defs/component"}}
   },
   "$defs": {
+    "componentId": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "component": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["component_id", "repository", "commit", "release_artifact_sha256", "component_attestation_sha256", "roles"],
+      "dependentRequired": {
+        "release_id": ["release_ref"],
+        "release_ref": ["release_id"]
+      },
+      "required": ["component_id", "repository", "commit", "roles", "adapter_contracts"],
       "properties": {
-        "component_id": {
-          "enum": ["openid4vci", "openid4vp", "wallet", "ssi", "identity", "cose"]
-        },
-        "repository": {
-          "type": "string",
-          "pattern": "^https://github\\.com/reallyme/(openid4vci|openid4vp|wallet|ssi|identity|cose)$"
-        },
-        "commit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "release_artifact_sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "component_attestation_sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "release_ref": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-        },
+        "component_id": {"$ref": "#/$defs/componentId"},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})$"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "release_ref": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
         "roles": {
           "type": "array",
-          "minItems": 1,
           "maxItems": 4,
           "uniqueItems": true,
-          "items": {
-            "enum": ["openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"]
-          }
-        }
+          "items": {"enum": ["openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"]}
+        },
+        "adapter_contracts": {"type": "array", "maxItems": 3, "uniqueItems": true, "items": {"enum": ["openid4vci", "openid4vp", "zk"]}}
       }
     }
   }

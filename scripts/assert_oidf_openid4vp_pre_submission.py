@@ -122,11 +122,35 @@ def expected_module_count(profile: dict[str, object]) -> int:
     return total
 
 
-def locked_component(product_bom: dict[str, object]) -> tuple[str, str]:
+def adapter_component(
+    product_bom: dict[str, object], adapter_contract: str
+) -> tuple[str, str]:
     matches: list[tuple[str, str]] = []
     for raw_item in require_array(product_bom.get("components"), "product_bom_invalid"):
         item = require_object(raw_item, "product_bom_invalid")
-        if item.get("component_id") != "openid4vp":
+        contracts = require_array(
+            item.get("adapter_contracts"), "product_bom_invalid"
+        )
+        if adapter_contract not in contracts:
+            continue
+        repository = require_string(item.get("repository"), "product_bom_invalid")
+        commit = require_string(item.get("commit"), "product_bom_invalid")
+        if GIT_COMMIT.fullmatch(commit) is None:
+            fail("product_bom_invalid")
+        matches.append((repository, commit))
+    if len(matches) != 1:
+        fail("product_bom_invalid")
+    return matches[0]
+
+
+def product_component(product_bom: dict[str, object]) -> tuple[str, str]:
+    product_component_id = require_string(
+        product_bom.get("product_component_id"), "product_bom_invalid"
+    )
+    matches: list[tuple[str, str]] = []
+    for raw_item in require_array(product_bom.get("components"), "product_bom_invalid"):
+        item = require_object(raw_item, "product_bom_invalid")
+        if item.get("component_id") != product_component_id:
             continue
         repository = require_string(item.get("repository"), "product_bom_invalid")
         commit = require_string(item.get("commit"), "product_bom_invalid")
@@ -281,10 +305,22 @@ def validate(args: argparse.Namespace) -> None:
         fail("suite_revision_evidence_invalid")
     if suite_revision != suite_commit:
         fail("suite_revision_evidence_invalid")
-    repository, commit = locked_component(product_bom)
-    if matrix.get("source_repository") != repository:
-        fail("profile_matrix_source_mismatch")
-    assert_checkout(args.openid4vp_source_dir, commit)
+    _adapter_repository, adapter_commit = adapter_component(
+        product_bom, "openid4vp"
+    )
+    product_repository, product_commit = product_component(product_bom)
+    roles = require_object(deployment.get("roles"), "deployment_manifest_invalid")
+    for role in ("openid4vp_verifier", "openid4vp_wallet"):
+        deployment_role = require_object(
+            roles.get(role), "deployment_manifest_invalid"
+        )
+        if (
+            deployment_role.get("source_repository") != product_repository
+            or deployment_role.get("source_commit") != product_commit
+        ):
+            fail("product_source_binding_mismatch")
+    assert_checkout(args.openid4vp_source_dir, adapter_commit)
+    assert_checkout(args.product_source_dir, product_commit)
     if not args.result_assertion.is_file() or args.result_assertion.is_symlink():
         fail("result_assertion_unavailable")
     for profile_id, selection in selected.items():
@@ -329,6 +365,7 @@ def main() -> int:
     parser.add_argument("--product-component-bom", required=True, type=Path)
     parser.add_argument("--deployment-manifest", required=True, type=Path)
     parser.add_argument("--openid4vp-source-dir", required=True, type=Path)
+    parser.add_argument("--product-source-dir", required=True, type=Path)
     parser.add_argument("--result-assertion", required=True, type=Path)
     args = parser.parse_args()
     try:

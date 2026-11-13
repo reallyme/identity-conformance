@@ -25,12 +25,12 @@
     "coverage": {"$ref": "#/$defs/oidfCoverage"},
     "composition": {
       "type": "array",
-      "minItems": 6,
-      "maxItems": 6,
+      "minItems": 1,
+      "maxItems": 64,
       "items": {
         "allOf": [
           {"$ref": "product-component-bom.schema.json#/$defs/component"},
-          {"required": ["release_ref"]}
+          {"required": ["release_id", "release_ref"]}
         ]
       }
     },
@@ -39,7 +39,9 @@
       "additionalProperties": false,
       "required": [
         "product_id",
+        "product_component_id",
         "release_version",
+        "release_id",
         "release_ref",
         "repository",
         "commit",
@@ -47,7 +49,9 @@
       ],
       "properties": {
         "product_id": {"$ref": "#/$defs/identifier"},
+        "product_component_id": {"$ref": "#/$defs/identifier"},
         "release_version": {"$ref": "#/$defs/releaseVersion"},
+        "release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
         "release_ref": {"$ref": "#/$defs/releaseRef"},
         "repository": {
           "type": "string",

@@ -1,21 +1,22 @@
 {
   "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://really.me/schemas/identity-conformance/zk-deployment-manifest-v1.json",
+  "$id": "https://really.me/schemas/identity-conformance/zk-deployment-manifest-v2.json",
   "title": "ReallyMe ZK conformance deployment manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "plan_id", "component", "release_artifact", "component_attestation_sha256", "evidence_policy"],
   "properties": {
-    "schema": {"const": "reallyme.identity.zk_deployment_manifest.v1"},
+    "schema": {"const": "reallyme.identity.zk_deployment_manifest.v2"},
     "plan_id": {"const": "zk-presentation-proofs-v1"},
     "component": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["component_id", "repository", "release_ref", "commit"],
+      "required": ["component_id", "repository", "release_id", "release_ref", "commit"],
       "properties": {
         "component_id": {"const": "zk"},
         "repository": {"const": "https://github.com/reallyme/zk"},
+        "release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
         "release_ref": {"type": "string", "pattern": "^reallyme-zk-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"},
         "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
       }

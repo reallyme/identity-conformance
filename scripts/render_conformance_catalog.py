@@ -23,6 +23,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import strict_json  # noqa: E402
+import verify_conformance_selection as selection_validator  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -34,6 +35,8 @@ BADGES_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE BADGES -->"
 BADGES_END_MARKER = "<!-- END GENERATED CONFORMANCE BADGES -->"
 CATALOG_START_MARKER = "<!-- BEGIN GENERATED CONFORMANCE CATALOG -->"
 CATALOG_END_MARKER = "<!-- END GENERATED CONFORMANCE CATALOG -->"
+PROFILE_CATALOG_START_MARKER = "<!-- BEGIN GENERATED PROFILE CATALOG -->"
+PROFILE_CATALOG_END_MARKER = "<!-- END GENERATED PROFILE CATALOG -->"
 MAX_INPUT_BYTES = 2 * 1024 * 1024
 SEMANTIC_VERSION = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
@@ -575,6 +578,59 @@ def render_summary(root: Path = REPOSITORY_ROOT) -> str:
     return "\n".join(lines)
 
 
+def render_profile_catalog(root: Path = REPOSITORY_ROOT) -> str:
+    catalog = read_object(root / "plans/conformance-catalog.json")
+    try:
+        profiles, badges = selection_validator.validate_catalog(catalog)
+    except selection_validator.SelectionError as error:
+        raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE) from error
+    available_badges = {
+        badge_id: badge
+        for badge_id, badge in badges.items()
+        if badge["execution_state"] == "available"
+    }
+    state_labels = {
+        "executable": "Executable",
+        "executable_with_evidence_gaps": "Engineering run; badge unavailable",
+        "executable_with_attestation_gaps": "Engineering run; badge unavailable",
+        "executable_with_platform_runner_gaps": "Platform runners pending; badge unavailable",
+        "external_runner_required": "Caller-owned runner required",
+        "incomplete": "Incomplete",
+    }
+    lines = [
+        PROFILE_CATALOG_START_MARKER,
+        "| Profile | Applies to | Normative trace | Assertion evidence | Status | Pass badge |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for profile_id, profile in profiles.items():
+        workflow = profile["workflow"]
+        label = str(profile["label"])
+        profile_cell = (
+            f"[{label}]({workflow})"
+            if isinstance(workflow, str)
+            else label
+        )
+        product_kinds = ", ".join(
+            f"`{product_kind}`" for product_kind in profile["product_kinds"]
+        )
+        normative_trace = str(profile["normative_trace"]).replace("_", " ")
+        assertion_evidence = str(profile["assertion_evidence"]).replace("_", " ")
+        state = state_labels.get(str(profile["execution_state"]))
+        if state is None:
+            raise CatalogError(CatalogErrorReason.INCONSISTENT_BASELINE)
+        badge_labels = [
+            str(badge["label"])
+            for badge_id, badge in available_badges.items()
+            if badge_id == profile_id or profile_id in badge["required_profiles"]
+        ]
+        badge_claim = ", ".join(badge_labels) if badge_labels else "None"
+        lines.append(
+            f"| {profile_cell} | {product_kinds} | {normative_trace} | {assertion_evidence} | {state} | {badge_claim} |"
+        )
+    lines.append(PROFILE_CATALOG_END_MARKER)
+    return "\n".join(lines)
+
+
 def render_catalog(root: Path = REPOSITORY_ROOT) -> str:
     version = read_version(root)
     eu_rows, oidf_rows = build_rows(root)
@@ -676,6 +732,12 @@ def main() -> int:
             SUMMARY_START_MARKER,
             SUMMARY_END_MARKER,
             render_summary(),
+        )
+        expected_readme = replace_generated_section(
+            expected_readme,
+            PROFILE_CATALOG_START_MARKER,
+            PROFILE_CATALOG_END_MARKER,
+            render_profile_catalog(),
         )
         expected_baseline = replace_generated_section(
             current_baseline,

@@ -47,6 +47,12 @@ class ConformanceCatalogTests(unittest.TestCase):
             CATALOG.SUMMARY_END_MARKER,
             CATALOG.render_summary(),
         )
+        expected_readme = CATALOG.replace_generated_section(
+            expected_readme,
+            CATALOG.PROFILE_CATALOG_START_MARKER,
+            CATALOG.PROFILE_CATALOG_END_MARKER,
+            CATALOG.render_profile_catalog(),
+        )
         self.assertEqual(current_readme, expected_readme)
 
         current_baseline = (REPOSITORY_ROOT / "docs/STANDARDS_BASELINE.md").read_text(
@@ -109,6 +115,19 @@ class ConformanceCatalogTests(unittest.TestCase):
             badges,
         )
         self.assertNotIn("message=passing", badges)
+
+    def test_profile_catalog_distinguishes_passes_from_incomplete_lanes(self) -> None:
+        catalog = CATALOG.render_profile_catalog()
+        self.assertIn("OIDF Full Self-Assessment", catalog)
+        self.assertIn("Normative trace", catalog)
+        self.assertIn("Assertion evidence", catalog)
+        self.assertIn("partial exact clause trace", catalog)
+        self.assertIn("source bound test candidates and attestation", catalog)
+        self.assertIn("candidate test inventory or linked observation", catalog)
+        self.assertIn("Engineering run; badge unavailable", catalog)
+        self.assertIn("Identity Expanded Conformity", catalog)
+        self.assertIn("| Identity Expanded Conformity |", catalog)
+        self.assertIn("| Incomplete | None |", catalog)
 
     def test_inconsistent_ledger_commit_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

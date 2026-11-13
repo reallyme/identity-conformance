@@ -41,7 +41,10 @@ const openid4vpCertificationWorkflow =
   ".github/workflows/oidf-openid4vp-certification.yml";
 const identityProductWorkflow =
   ".github/workflows/identity-product-conformance.yml";
+const eudiIdentitySdkWorkflow =
+  ".github/workflows/eudi-identity-sdk-conformance.yml";
 const productWorkflows = [
+  eudiIdentitySdkWorkflow,
   ".github/workflows/eudi-relying-party-conformance.yml",
   ".github/workflows/eudi-wallet-conformance.yml",
   openid4vciCertificationWorkflow,
@@ -50,6 +53,7 @@ const productWorkflows = [
 ];
 const pythonWorkflows = [
   ".github/workflows/conformance-catalog.yml",
+  eudiIdentitySdkWorkflow,
   ".github/workflows/eudi-relying-party-conformance.yml",
   ".github/workflows/eudi-wallet-conformance.yml",
   ".github/workflows/eu-arf-normative.yml",
@@ -66,12 +70,55 @@ const pythonWorkflows = [
   ".github/workflows/upstream-update-proposal.yml",
   ".github/workflows/zk-conformance.yml",
 ];
+const nodeWorkflows = [
+  eudiIdentitySdkWorkflow,
+  releaseCandidateWorkflow,
+  workflow,
+];
 const sharedRevision = "18a6d91d99837e80f92e41fe04effb0b043d754e";
 const gitleaksVersion = "8.30.1";
 const gitleaksArchiveSha256 = "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb";
 const frameworkVersion = readFileSync("VERSION", "utf8").trim();
 if (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(frameworkVersion)) {
   fail("VERSION must contain a stable semantic version");
+}
+
+const callerOwnedRevisionFields = new Set([
+  "commit",
+  "version",
+  "release_ref",
+  "release_id",
+  "release_artifact_sha256",
+  "component_attestation_sha256",
+]);
+const callerSelectedContractPaths = [
+  "plans/eudi/identity-sdk.json",
+  "plans/eudi/wallet.json",
+  "plans/oidf/wallet.json",
+  "plans/zk/presentation-proofs.json",
+  "adapters/eudi-wallet/adapter.json",
+  "adapters/zk/adapter.json",
+  "references/reallyme/release-sources.json",
+];
+function rejectCallerOwnedRevisionFields(value, path) {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      rejectCallerOwnedRevisionFields(entry, path);
+    }
+    return;
+  }
+  if (value === null || typeof value !== "object") {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (callerOwnedRevisionFields.has(key)) {
+      fail(`${path} must not pin caller-owned product field ${key}`);
+    }
+    rejectCallerOwnedRevisionFields(entry, path);
+  }
+}
+for (const path of callerSelectedContractPaths) {
+  rejectCallerOwnedRevisionFields(JSON.parse(readFileSync(path, "utf8")), path);
 }
 
 assertReallyMeReleasePackagePolicy({
@@ -116,8 +163,11 @@ for (const path of loadTrackedFiles()) {
   }
   if (
     path.startsWith("plans/") &&
-    !/^plans\/oidf\/[A-Za-z0-9_.-]+\.json$/u.test(path) &&
+    path !== "plans/conformance-catalog.json" &&
+    !/^plans\/oidf\/(?:execution\/)?[A-Za-z0-9_.-]+\.json$/u.test(path) &&
+    path !== "plans/eudi/identity-sdk.json" &&
     path !== "plans/eudi/relying-party-control-plane.json" &&
+    path !== "plans/eudi/relying-party-requirement-tests.json" &&
     path !== "plans/eudi/wallet.json" &&
     path !== "plans/eudi/upstream-coverage.json" &&
     path !== "plans/eudi/upstream-assets.json" &&
@@ -175,17 +225,172 @@ assertContains("plans/oidf/wallet.json", '"profile_count": 10');
 assertContains("plans/oidf/wallet.json", '"module_execution_count": 278');
 assertContains("plans/oidf/wallet.json", '"component_test_substitution_allowed": false');
 assertContains("plans/oidf/wallet.json", '"mobile_app_required": false');
+assertContains("plans/oidf/wallet.json", '"required_roles": [');
+assertContains("plans/oidf/wallet.json", '"candidate_revision_selected_by": "caller"');
+assertContains("plans/conformance-catalog.json", '"profile_id": "oidf-wallet-role-self-assessment"');
+assertContains("plans/conformance-catalog.json", '"catalog_id": "reallyme-identity-conformance"');
+assertContains("plans/conformance-catalog.json", '"profile_id": "eu-identity-sdk-engineering"');
+assertContains("plans/oidf/execution/openid4vp-profile-matrix.json", '"version": "5.3.4"');
+assertContains("scripts/verify_conformance_selection.py", "MANDATORY_PROFILE_MISSING");
+assertContains("scripts/build_oidf_runtime_contracts.py", "--require-release-refs");
 assertContains("plans/eudi/relying-party-control-plane.json", '"certification_claim": false');
-assertContains("plans/eudi/relying-party-control-plane.json", '"execution_status": "executable"');
+assertContains("plans/eudi/relying-party-control-plane.json", '"execution_status": "executable_with_attestation_gaps"');
+assertContains("plans/eudi/relying-party-control-plane.json", '"independently_observed_assertion_count": 0');
+assertContains("plans/eudi/relying-party-control-plane.json", '"attestation_only_assertion_count": 19');
 assertContains("plans/eudi/relying-party-control-plane.json", '"transaction_content_non_retention"');
 assertContains("plans/eudi/relying-party-control-plane.json", '"component_id": "eudi-relying-party-control-plane"');
+assertContains("plans/eudi/relying-party-requirement-tests.json", '"complete": false');
+assertContains("plans/eudi/relying-party-requirement-tests.json", '"subject_repository": "reallyme/eudi"');
+assertContains("plans/eudi/relying-party-requirement-tests.json", '"normalization": "utf8_line_range_lf_v1"');
+assertContains("plans/eudi/relying-party-requirement-tests.json", '"evidence_class": "oversized_input_test"');
+assertContains("plans/eudi/identity-sdk.json", '"plan_id": "eudi-identity-sdk-v1"');
+assertContains("plans/eudi/identity-sdk.json", '"selection": "caller_product_component_bom"');
+assertContains("plans/eudi/identity-sdk.json", '"reference_baseline_fallback": false');
+assertContains("plans/eudi/identity-sdk.json", '"dependency_release_ids_required": true');
+assertContains("plans/eudi/identity-sdk.json", '"dependency_release_refs_required": true');
+assertContains("plans/eudi/identity-sdk.json", '"identity_operation_count": 8');
+assertContains("plans/eudi/identity-sdk.json", '"external_evidence_rows_are_code_passes": false');
+assertContains("scripts/verify_eudi_identity_sdk_plan.py", "EXPECTED_OPERATIONS");
+assertContains(
+  "schemas/eudi-relying-party-requirement-test-plan.schema.json",
+  '"const": "eudi-relying-party-requirement-tests-v1"',
+);
+assertContains(
+  "schemas/eudi-relying-party-requirement-test-result.schema.json",
+  '"const": "reallyme.identity.eudi_requirement_test_result.v1"',
+);
+assertContains(
+  "schemas/eudi-relying-party-requirement-test-execution.schema.json",
+  '"const": "reallyme.identity.eudi_requirement_test_execution.v1"',
+);
+assertContains(
+  "schemas/eudi-identity-sdk-execution-result.schema.json",
+  '"const": "reallyme.identity.eudi_identity_sdk_execution_result.v1"',
+);
+assertContains(
+  "scripts/verify_eudi_identity_sdk_execution_result.py",
+  "product_component_bom_sha256",
+);
+assertContains(
+  "scripts/verify_identity_candidate_bom.py",
+  "caller-selected Identity candidate BOM",
+);
+assertContains(
+  "scripts/verify_identity_candidate_bom.py",
+  'expected_component_ids = {"identity", *DEPENDENCY_REPOSITORIES}',
+);
+assertContains(
+  "scripts/verify_identity_release_dependencies.py",
+  "REQUIRED_COMPONENT_PACKAGES",
+);
+for (const identitySdkNeedle of [
+  "name: Product · Identity · EU SDK",
+  "target_mode:",
+  "target_commit:",
+  "target_version:",
+  "candidate_artifact_name:",
+  "actions/download-artifact@",
+  "verify_identity_candidate_bom.py",
+  "candidate_source_archive_sha256",
+  'gh api "repos/reallyme/${component}/releases/${release_id}"',
+  'git -C "${checkout}" archive --format=tar HEAD',
+  "runs-on: ubuntu-26.04",
+  "runs-on: macos-26",
+  'python-version: "3.15.2"',
+  'pip-version: "26.2.2"',
+  'node-version: "26"',
+  'toolchain: "1.99.0"',
+  "verify_identity_release_dependencies.py",
+  "audit_etsi_eaa_pid_trace.py",
+  "verify_eudi_identity_sdk_execution_result.py",
+  "reallyme-identity-oidf-openid4vci-wallet-host",
+  "reallyme-identity-oidf-openid4vp-verifier-host",
+  "test/eudi-catalogue.test.mjs",
+  "packages/python/tests/test_eudi.py",
+  "eudi-identity-sdk-python-requirements.lock",
+  "--require-hashes",
+  "go test ./...",
+  "--tests '*EudiTest*'",
+  "swift test --filter Eudi",
+  "product_component_bom_sha256",
+  "candidate_cargo_lock_sha256",
+]) {
+  assertContains(eudiIdentitySdkWorkflow, identitySdkNeedle);
+}
+for (const pythonRequirement of [
+  "build==1.6.1",
+  "cffi==2.1.1",
+  "cryptography==50.0.2",
+  "iniconfig==2.3.1",
+  "packaging==26.3",
+  "pluggy==1.7.0",
+  "protobuf==7.36.2",
+  "pycparser==3.12",
+  "pygments==2.21.0",
+  "pyproject-hooks==1.3.3",
+  "pytest==9.2.0",
+  "setuptools==84.2.1",
+  "wheel==0.48.0",
+]) {
+  assertContains(
+    "scripts/eudi-identity-sdk-python-requirements.lock",
+    pythonRequirement,
+  );
+}
+for (const prohibitedIdentitySdkNeedle of [
+  "--all-features",
+  "--test evidence",
+  "for component in identity",
+]) {
+  if (readFileSync(eudiIdentitySdkWorkflow, "utf8").includes(prohibitedIdentitySdkNeedle)) {
+    fail(`EU Identity SDK workflow contains prohibited contract: ${prohibitedIdentitySdkNeedle}`);
+  }
+}
+for (const component of ["ssi", "openid4vci", "openid4vp"]) {
+  assertContains(
+    eudiIdentitySdkWorkflow,
+    `ref: \${{ steps.revisions.outputs.${component}_commit }}`,
+  );
+  if (
+    readFileSync(eudiIdentitySdkWorkflow, "utf8").includes(
+      `ref: \${{ steps.revisions.outputs.${component}_release_ref }}`,
+    )
+  ) {
+    fail(`EU Identity SDK workflow checks out a mutable ${component} release tag`);
+  }
+}
 assertContains("adapters/eudi-relying-party/adapter.json", '"adapter_id": "eudi_relying_party_control_plane"');
 assertContains("adapters/eudi-relying-party/adapter.json", '"raw_process_output_retained": false');
-assertContains(".github/workflows/eudi-relying-party-conformance.yml", "repository: ${{ github.repository }}");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "candidate_repository:");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "repository: ${{ inputs.candidate_repository }}");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "candidate_binary_path:");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "--candidate-repository");
-assertContains(".github/workflows/eudi-relying-party-conformance.yml", "repos/reallyme/ssi/releases/latest");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "steps.revisions.outputs.ssi");
 assertContains(".github/workflows/eudi-relying-party-conformance.yml", "scripts/run_eudi_relying_party_conformance.py");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "scripts/run_eudi_relying_party_requirement_tests.py");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "scripts/verify_eudi_relying_party_requirement_results.py");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "audit_conformance_execution_observation.rb");
+assertContains(".github/workflows/eudi-relying-party-conformance.yml", "--subject-root components/candidate");
+assertContains(
+  "scripts/run_eudi_relying_party_requirement_tests.py",
+  'requirement.get("subject_repository") != "reallyme/eudi"',
+);
+assertContains(
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  '--taxonomy-commit "${TAXONOMY_COMMIT}"',
+);
+assertContains(
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  "conformance/observations/executions",
+);
+assertContains(
+  ".github/workflows/eudi-relying-party-conformance.yml",
+  "conformance/observations/receipts",
+);
+assertContains(
+  "scripts/verify_eudi_relying_party_requirement_results.py",
+  '"auditor"',
+);
 assertContains("schemas/eudi-public-evidence.schema.json", '"classification": {"const": "public"}');
 assertContains("scripts/build_eudi_public_evidence.py", "private_source_attestation_sha256");
 assertContains("plans/eudi/wallet.json", '"certification_claim": false');
@@ -318,16 +523,35 @@ for (const forbiddenBoundary of [
   }
 }
 assertContains("plans/zk/presentation-proofs.json", '"certification_claim": false');
+assertContains("plans/zk/presentation-proofs.json", '"execution_status": "executable_with_attestation_gaps"');
+assertContains("plans/zk/presentation-proofs.json", '"exact_assertion_binding_count": 0');
+assertContains("plans/zk/presentation-proofs.json", '"profile_id": "identity-zk-linked-presentation-proofs-v1"');
+assertContains("plans/zk/presentation-proofs.json", '"row_count": 20');
 assertContains("adapters/zk/adapter.json", '"adapter_id": "zk_presentation_proofs"');
 assertContains("adapters/zk/adapter.json", '"reallyme-zk-conformance"');
 assertContains("scripts/run_zk_conformance.py", "execute_package");
+assertContains("scripts/run_zk_conformance.py", "linked_observation.validate_evidence");
+assertContains("scripts/verify_zk_linked_observation_evidence.py", "validate_proof_rows");
+assertContains("schemas/zk-linked-observation-evidence.schema.json", '"raw_proof_material_retained": {"const": false}');
 assertContains(".github/workflows/zk-conformance.yml", "repository: reallyme/zk");
 assertContains(".github/workflows/zk-conformance.yml", "scripts/run_zk_conformance.py");
 assertContains(".github/workflows/zk-conformance.yml", "release_artifact_path:");
-assertContains(".github/workflows/zk-conformance.yml", "repos/reallyme/zk/releases/latest");
-assertContains(".github/workflows/zk-conformance.yml", "steps.source.outputs.release_ref");
+assertContains(".github/workflows/zk-conformance.yml", "repos/reallyme/zk/releases/${release_id}");
+assertContains(".github/workflows/zk-conformance.yml", ".draft == false and .prerelease == false");
+assertContains(".github/workflows/zk-conformance.yml", "repos/reallyme/zk/commits/${selected_ref}");
+assertContains(".github/workflows/zk-conformance.yml", "steps.source.outputs.commit");
 assertContains(".github/workflows/zk-conformance.yml", "environment: zk-conformance");
 assertContains(".github/workflows/zk-conformance.yml", "Clear controlled checkout paths");
+assertContains(".github/workflows/zk-conformance.yml", "Report engineering-only coverage");
+assertContains(".github/workflows/zk-conformance.yml", "release_evidence_eligible");
+if (readFileSync(".github/workflows/zk-conformance.yml", "utf8").includes("Build product conformance statement")) {
+  fail("ZK workflow must not issue a product statement from candidate-test inventory");
+}
+for (const productWorkflow of productWorkflows) {
+  if (readFileSync(productWorkflow, "utf8").includes("/releases/latest")) {
+    fail(`${productWorkflow} must not select a product revision from the latest release`);
+  }
+}
 assertContains(
   ".github/workflows/eudi-relying-party-conformance.yml",
   "environment: eudi-conformance",
@@ -350,7 +574,7 @@ assertContains(
 );
 assertContains(
   "schemas/product-component-bom.schema.json",
-  '"purpose": { "const": "reallyme-product-conformance-bom" }',
+  '"purpose": {"const": "reallyme-product-conformance-bom"}',
 );
 assertContains(
   "schemas/product-component-bom.schema.json",
@@ -423,10 +647,12 @@ for (const productWorkflow of productWorkflows) {
 assertContains("scripts/strict_json.py", "json_non_finite_number");
 assertContains("scripts/strict_json.py", "json_depth_limit_exceeded");
 assertContains("scripts/verify_product_component_bom.py", "strict_json.loads");
-assertContains("scripts/run_oidf_openid4vci_certification.sh", "--require-release-refs --verify-checkouts");
-assertContains("scripts/run_oidf_openid4vp_certification.sh", "--require-release-refs --verify-checkouts");
-assertContains("scripts/run_oidf_openid4vci_certification.sh", "OpenID4VCI suite revision disagrees with the framework release");
-assertContains("scripts/run_oidf_openid4vp_certification.sh", "OpenID4VP suite revision disagrees with the framework release");
+assertContains("scripts/run_oidf_openid4vci_certification.sh", '"${checkout_arguments[@]}"');
+assertContains("scripts/run_oidf_openid4vp_certification.sh", '"${checkout_arguments[@]}"');
+assertContains("scripts/run_oidf_openid4vci_certification.sh", "build_oidf_runtime_contracts.py");
+assertContains("scripts/run_oidf_openid4vp_certification.sh", "build_oidf_runtime_contracts.py");
+assertContains("scripts/run_oidf_openid4vci_certification.sh", "assert_oidf_openid4vci_suite_results.py");
+assertContains("scripts/run_oidf_openid4vp_certification.sh", "assert_oidf_openid4vp_suite_results.py");
 assertContains("scripts/audit_etsi_eaa_pid_trace.py", "external_evidence_still_required");
 assertContains("scripts/audit_etsi_eaa_pid_trace.py", "caller-selected-product-sources");
 assertContains("scripts/verify_oidf_deployment_manifest.py", "strict_json.loads");
@@ -466,9 +692,12 @@ assertContains(
 );
 assertContains(
   openid4vciCertificationWorkflow,
-  "Verify complete official OIDF Wallet scope",
+  "Verify official OIDF Wallet inventory",
 );
-assertContains(openid4vciCertificationWorkflow, "releases/latest");
+assertContains(openid4vciCertificationWorkflow, "resolved_commit=\"$(gh api");
+assertContains(openid4vciCertificationWorkflow, "done < <(jq -cer '.components[]'");
+assertContains(openid4vciCertificationWorkflow, "ref: ${{ steps.release-bom.outputs.adapter_commit }}");
+assertContains(openid4vciCertificationWorkflow, "ref: ${{ steps.release-bom.outputs.product_commit }}");
 assertContains(
   openid4vciCertificationWorkflow,
   "Verify the selected published framework release",
@@ -483,7 +712,7 @@ assertContains(
 );
 assertContains(
   openid4vciCertificationWorkflow,
-  '[[ "${release_ref}" =~ ^[A-Za-z0-9._-]+$ ]]',
+  '[[ "${release_ref}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]',
 );
 assertContains(
   openid4vciCertificationWorkflow,
@@ -526,7 +755,10 @@ assertContains(
   openid4vpCertificationWorkflow,
   "name: Internal · Identity · OpenID4VP lane",
 );
-assertContains(openid4vpCertificationWorkflow, "releases/latest");
+assertContains(openid4vpCertificationWorkflow, "resolved_commit=\"$(gh api");
+assertContains(openid4vpCertificationWorkflow, "done < <(jq -cer '.components[]'");
+assertContains(openid4vpCertificationWorkflow, "ref: ${{ steps.release-bom.outputs.adapter_commit }}");
+assertContains(openid4vpCertificationWorkflow, "ref: ${{ steps.release-bom.outputs.product_commit }}");
 assertContains(openid4vpCertificationWorkflow, "workflow_call:");
 assertContains(openid4vpCertificationWorkflow, '[[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]');
 assertContains(openid4vpCertificationWorkflow, "repository: reallyme/identity-conformance");
@@ -558,7 +790,7 @@ assertContains(
 );
 assertContains(
   openid4vpCertificationWorkflow,
-  "Verify complete official OIDF Wallet scope",
+  "Verify official OIDF Wallet inventory",
 );
 assertContains(
   openid4vpCertificationWorkflow,
@@ -566,7 +798,7 @@ assertContains(
 );
 assertContains(
   openid4vpCertificationWorkflow,
-  '[[ "${release_ref}" =~ ^[A-Za-z0-9._-]+$ ]]',
+  '[[ "${release_ref}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]',
 );
 assertContains(
   openid4vpCertificationWorkflow,
@@ -751,6 +983,14 @@ assertContains("references/pin-policy.json", '"id": "actions-setup-python"');
 assertContains("references/pin-policy.json", '"id": "actions-setup-node"');
 assertContains(releaseCandidateWorkflow, 'node-version: "26"');
 assertContains(workflow, 'node-version: "26"');
+for (const nodeWorkflow of nodeWorkflows) {
+  const nodeWorkflowText = readFileSync(nodeWorkflow, "utf8");
+  const setupCount = nodeWorkflowText.match(/actions\/setup-node@/gu)?.length ?? 0;
+  const latestCount = nodeWorkflowText.match(/check-latest: true/gu)?.length ?? 0;
+  if (setupCount === 0 || latestCount !== setupCount) {
+    fail(`${nodeWorkflow} must resolve the latest available Node 26 release`);
+  }
+}
 assertContains(
   "references/upstream-update-policy.json",
   '"default_branch": "branch_snapshot_review"',
@@ -777,6 +1017,7 @@ run("python3", ["scripts/verify_reallyme_release_sources.py"]);
 run("python3", ["scripts/verify_normative_sources.py"]);
 run("python3", ["scripts/verify_eudi_publications.py"]);
 run("python3", ["scripts/verify_eudi_relying_party_plan.py"]);
+run("python3", ["scripts/verify_eudi_identity_sdk_plan.py"]);
 run("python3", ["scripts/verify_eudi_legal_sources.py"]);
 run("python3", ["scripts/verify_eudi_upstream_coverage.py"]);
 run("python3", ["scripts/verify_eudi_upstream_assets.py", "--plan-only"]);

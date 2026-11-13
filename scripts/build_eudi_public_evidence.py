@@ -136,11 +136,12 @@ def verify_public_evidence(evidence: dict[str, object]) -> None:
     for assertion in assertions:
         if (
             not isinstance(assertion, dict)
-            or set(assertion) != {"family_id", "assertion_id", "result"}
+            or set(assertion) != {"family_id", "assertion_id", "result", "evidence_strength"}
             or not isinstance(assertion["assertion_id"], str)
             or assertion["assertion_id"] in observed_assertions
             or assertion["family_id"] != expected_families.get(assertion["assertion_id"])
             or assertion["result"] != "passed"
+            or assertion["evidence_strength"] != "attestation_only"
         ):
             raise runner.RunnerError(runner.RunnerErrorReason.INVALID_DEPLOYMENT_MANIFEST)
         observed_assertions.add(assertion["assertion_id"])
@@ -221,6 +222,7 @@ def build_evidence(
                 "family_id": assertion["family_id"],
                 "assertion_id": assertion["assertion_id"],
                 "result": assertion["result"],
+                "evidence_strength": assertion["evidence_strength"],
             }
             for assertion in assertions
         ],

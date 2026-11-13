@@ -28,6 +28,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
 
 import verify_component_attestation as component_attestation  # noqa: E402
 import verify_zk_adapter as zk_adapter  # noqa: E402
+import verify_zk_linked_observation_evidence as linked_observation  # noqa: E402
 
 
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024
@@ -83,7 +84,7 @@ def validate_deployment(
         ZkRunnerErrorReason.INVALID_DEPLOYMENT,
     )
     if (
-        value["schema"] != "reallyme.identity.zk_deployment_manifest.v1"
+        value["schema"] != "reallyme.identity.zk_deployment_manifest.v2"
         or value["plan_id"] != "zk-presentation-proofs-v1"
         or value["evidence_policy"] != zk_adapter.EXPECTED_POLICY
         or not isinstance(value["component_attestation_sha256"], str)
@@ -93,7 +94,7 @@ def validate_deployment(
         raise ZkRunnerError(ZkRunnerErrorReason.INVALID_DEPLOYMENT)
     component = exact_object(
         value["component"],
-        {"component_id", "repository", "release_ref", "commit"},
+        {"component_id", "repository", "release_id", "release_ref", "commit"},
         ZkRunnerErrorReason.INVALID_DEPLOYMENT,
     )
     requirement = adapter.get("component_requirement")
@@ -101,6 +102,9 @@ def validate_deployment(
         not isinstance(requirement, dict)
         or component.get("component_id") != requirement.get("component_id")
         or component.get("repository") != requirement.get("repository")
+        or not isinstance(component.get("release_id"), int)
+        or isinstance(component.get("release_id"), bool)
+        or not 1 <= component["release_id"] <= 9_223_372_036_854_775_807
         or not isinstance(component.get("release_ref"), str)
         or re.fullmatch(
             r"reallyme-zk-v(0|[1-9][0-9]*)\."
@@ -242,6 +246,8 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--release-artifact", required=True, type=Path)
     parser.add_argument("--component-attestation", required=True, type=Path)
+    parser.add_argument("--linked-observation-evidence", type=Path)
+    parser.add_argument("--product-component-bom", type=Path)
     parser.add_argument("--framework-revision", required=True)
     parser.add_argument("--workflow-revision", required=True)
     parser.add_argument("--output", required=True, type=Path)
@@ -298,6 +304,28 @@ def main() -> int:
                     "passed" if execute_package(args.source, package) else "failed",
                 )
             )
+        if (
+            args.linked_observation_evidence is None
+            and args.product_component_bom is not None
+        ):
+            raise ZkRunnerError(ZkRunnerErrorReason.INVALID_DEPLOYMENT)
+        linked_summary: linked_observation.LinkedObservationSummary | None = None
+        if args.linked_observation_evidence is not None:
+            linked_summary = linked_observation.validate_evidence(
+                zk_adapter.load_object(args.linked_observation_evidence),
+                plan,
+                bom=(
+                    linked_observation.bom_verifier.load_bom(
+                        args.product_component_bom
+                    )
+                    if args.product_component_bom is not None
+                    else None
+                ),
+                expected_framework_revision=args.framework_revision,
+                expected_workflow_revision=args.workflow_revision,
+            )
+            for probe_id in linked_summary.probe_ids:
+                checks.append(Check(probe_id, "observation", "passed"))
         check_results = {check.check_id: check.result for check in checks}
         raw_assertions = plan["assertions"]
         if not isinstance(raw_assertions, list):
@@ -310,12 +338,24 @@ def main() -> int:
             assertion_id = raw_assertion.get("assertion_id")
             if not isinstance(required_checks, list) or not isinstance(assertion_id, str):
                 raise ZkRunnerError(ZkRunnerErrorReason.INVALID_DEPLOYMENT)
+            assertion_checks = list(required_checks)
+            evidence_strength = "candidate_test_inventory"
+            if linked_summary is not None:
+                required_probes = zk_adapter.EXPECTED_ASSERTION_PROBES.get(assertion_id)
+                if required_probes is None:
+                    raise ZkRunnerError(ZkRunnerErrorReason.INVALID_DEPLOYMENT)
+                assertion_checks.extend(sorted(required_probes))
+                evidence_strength = "independently_observed_behavior"
             assertions.append(
                 {
                     "assertion_id": assertion_id,
-                    "check_ids": required_checks,
+                    "check_ids": assertion_checks,
+                    "evidence_strength": evidence_strength,
                     "result": "passed"
-                    if all(check_results.get(check) == "passed" for check in required_checks)
+                    if all(
+                        check_results.get(check) == "passed"
+                        for check in assertion_checks
+                    )
                     else "failed",
                 }
             )
@@ -323,7 +363,7 @@ def main() -> int:
             assertion["result"] == "passed" for assertion in assertions
         )
         result = {
-            "schema": "reallyme.identity.zk_execution_result.v1",
+            "schema": "reallyme.identity.zk_execution_result.v2",
             "plan_id": "zk-presentation-proofs-v1",
             "result": "passed" if passed else "failed",
             "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -335,6 +375,36 @@ def main() -> int:
             "component_attestation_sha256": deployment[
                 "component_attestation_sha256"
             ],
+            "linked_observation": (
+                {
+                    "candidate_binding": linked_summary.candidate_binding,
+                    "evidence_sha256": linked_summary.evidence_sha256,
+                    "product_component_bom_sha256": (
+                        linked_summary.product_component_bom_sha256
+                    ),
+                    "probe_count": len(linked_summary.probe_ids),
+                    "proof_row_count": linked_summary.proof_row_count,
+                }
+                if linked_summary is not None
+                else None
+            ),
+            "coverage": {
+                "assertion_count": 7,
+                "independently_observed_assertion_count": (
+                    7 if linked_summary is not None else 0
+                ),
+                "candidate_test_inventory_assertion_count": (
+                    0 if linked_summary is not None else 7
+                ),
+                "immutable_candidate_bound": (
+                    linked_summary is not None
+                    and linked_summary.candidate_binding == "immutable_release"
+                ),
+                "release_evidence_eligible": (
+                    linked_summary is not None
+                    and linked_summary.candidate_binding == "immutable_release"
+                ),
+            },
             "checks": [check.__dict__ for check in sorted(checks, key=lambda item: item.check_id)],
             "assertions": sorted(assertions, key=lambda item: str(item["assertion_id"])),
             "evidence_policy": zk_adapter.EXPECTED_POLICY,
@@ -343,6 +413,8 @@ def main() -> int:
         return 0 if passed else 1
     except zk_adapter.ZkAdapterError as error:
         zk_adapter.fail(error.reason)
+    except linked_observation.LinkedObservationError:
+        fail(ZkRunnerErrorReason.INVALID_ATTESTATION)
     except ZkRunnerError as error:
         fail(error.reason)
 

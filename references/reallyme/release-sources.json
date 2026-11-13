@@ -7,36 +7,42 @@
       "component_id": "ssi",
       "repository": "https://github.com/reallyme/ssi",
       "release_prefix": "reallyme-ssi-v",
+      "release_required": true,
       "update_strategy": "observe_latest_release"
     },
     {
       "component_id": "identity",
       "repository": "https://github.com/reallyme/identity",
       "release_prefix": "reallyme-identity-v",
+      "release_required": false,
       "update_strategy": "observe_latest_release"
     },
     {
       "component_id": "zk",
       "repository": "https://github.com/reallyme/zk",
       "release_prefix": "reallyme-zk-v",
+      "release_required": true,
       "update_strategy": "observe_latest_release"
     },
     {
       "component_id": "wallet",
       "repository": "https://github.com/reallyme/wallet",
       "release_prefix": "reallyme-wallet-v",
+      "release_required": true,
       "update_strategy": "observe_latest_release"
     },
     {
       "component_id": "openid4vci",
       "repository": "https://github.com/reallyme/openid4vci",
       "release_prefix": "reallyme-openid4vci-v",
+      "release_required": true,
       "update_strategy": "observe_latest_release"
     },
     {
       "component_id": "openid4vp",
       "repository": "https://github.com/reallyme/openid4vp",
       "release_prefix": "reallyme-openid4vp-v",
+      "release_required": true,
       "update_strategy": "observe_latest_release"
     }
   ]

@@ -1,0 +1,43 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-relying-party-requirement-test-execution-v1.json",
+  "title": "ReallyMe EUDI relying-party requirement test execution",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema", "plan_id", "framework_commit", "candidate_repository", "candidate_commit", "command_manifest_sha256", "status", "records", "taxonomy_observations_emitted"],
+  "properties": {
+    "$comment": {"type": "string", "minLength": 1},
+    "schema": {"const": "reallyme.identity.eudi_requirement_test_execution.v1"},
+    "plan_id": {"const": "eudi-relying-party-requirement-tests-v1"},
+    "framework_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "candidate_repository": {"const": "reallyme/eudi"},
+    "candidate_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "command_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["passed", "failed"]},
+    "records": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "taxonomy_observations_emitted": {"type": "boolean"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_id", "assertion_id", "evidence_class", "status", "test_source_sha256", "result_sha256", "observation_emitted"],
+      "properties": {
+        "command_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]*$"},
+        "assertion_id": {"enum": ["association_is_service_to_service", "current_ts5_signed_envelope_is_strict"]},
+        "evidence_class": {"enum": ["behavior_test", "downgrade_test", "invalid_input_test", "oversized_input_test", "round_trip_test"]},
+        "status": {"enum": ["passed", "failed", "error"]},
+        "test_source_sha256": {"$ref": "#/$defs/sha256"},
+        "result_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_emitted": {"type": "boolean"}
+      }
+    }
+  }
+}

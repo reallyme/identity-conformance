@@ -33,17 +33,16 @@ shared framework run against the assembled product.
 
 ## Run sequence
 
-1. Each component release publishes an immutable artifact and an attestation
-   tied to its source commit and dependency lock.
+1. Each component identifies the source or release selected for the run.
 2. The product selects an immutable framework release and supplies the BOM,
    deployment manifest, artifacts, and attestations required by the plan.
-3. The framework checks every release reference, source checkout, digest,
+3. The framework checks every supplied release identity, source checkout, digest,
    adapter, configuration, upstream pin, and selected profile.
 4. The framework runs the applicable external suite and ReallyMe integration
    checks against the deployed artifacts.
 5. Raw results stay private. Reviewed evidence records the framework version,
-   candidate BOM, source commits, artifact and attestation digests, deployment,
-   test inventory, and disclosure decision.
+   candidate BOM, tested source digests, any plan-required artifact evidence,
+   deployment, test inventory, and disclosure decision.
 6. A claim applies only to the exact product composition and plan named by that
    evidence.
 
@@ -104,18 +103,23 @@ reviewed before it becomes part of a new baseline.
 ### Product candidate BOM
 
 The caller supplies the candidate BOM. The framework has no default ReallyMe
-candidate and does not substitute a known-compatible version. Each plan lists
-its required components. Missing, duplicate, and ambiguous entries are errors.
+candidate and does not substitute a known-compatible version. OIDF plans list
+the roles and adapter contracts they need. The caller chooses the components
+that provide them. Missing roles, duplicate component identities, and multiple
+providers for one adapter contract are errors.
 
-Wallet and ZK plans need their respective component candidates. Composed
-Identity OIDF plans need the complete six-component BOM.
+Wallet and ZK plans still require their respective candidates. An Identity
+OIDF BOM may contain any number of dependencies within the schema limit. It
+must identify the Identity product component and cover all four OIDF roles plus
+the OpenID4VCI and OpenID4VP adapter contracts.
 
 ### Integration evidence
 
 Integration evidence records the framework revision, caller workflow revision,
-canonical BOM digest, source commits, artifact hashes, attestation hashes, and
-deployment identity. Every participating component must use an immutable
-release reference.
+canonical BOM digest, source commits, framework-derived source archive hashes,
+and deployment identity. Artifact or attestation hashes are recorded only when
+the plan verifies the corresponding bytes. Published components must include
+their exact release ID and tag.
 
 The composed run determines the integration result. Component test results do
 not replace it.
@@ -132,7 +136,7 @@ digest, caller workflow revision, candidate digest, result digest, and the
 coverage that actually ran. EU statements keep incomplete and fixture-only
 areas visible by identifier, status, and limitation. OIDF statements list the
 exact roles, profiles, module executions, suite revision, retained exports, and
-complete six-component BOM.
+caller-selected component BOM.
 The BOM is included in the statement and checked against its canonical digest,
 so a component release cannot be substituted without invalidating the result.
 
@@ -163,19 +167,61 @@ engineering matrices. They verify the selected module inventory, run the
 applicable product roles, reject incomplete results, and build digest-bound
 evidence indexes.
 
-The framework pin, component profile matrix or suite contract, suite checkout,
-and retained module inventory must agree. Component tests, the EU Wallet run,
-and local rehearsals cannot replace an official OIDF Wallet module result.
+The framework release owns the suite pin, execution matrices, module inventory,
+and result policy. Adapter code drives the product flows, but it cannot choose
+the expected modules or decide which results count as passing. The framework
+pin, suite checkout, generated runtime contracts, and retained exports must
+agree. Component tests, the EU Wallet run, and local rehearsals cannot replace
+an official OIDF Wallet module result.
 
 ### EUDI relying party
 
-The relying-party runner checks an exact candidate, Platform, and SSI BOM. It
-verifies component attestations and pinned EU sources, then runs bounded probes
-against the production artifact. `live_ts5` mode also performs the four-read
-TS5 operation against an approved national-register deployment.
+The relying-party runner checks an exact control-plane candidate, Platform,
+and SSI manifest. The caller supplies every product revision. The framework
+does not contain a default EUDI, Platform, or SSI commit.
+
+The runner first verifies the component attestation and pinned EU sources. It
+then compares the candidate's TS5 and TS6 source files with the framework's
+pinned copies. For the two assertions that have exact requirement bindings, it
+runs seven named Rust tests and records only bounded hashes and metadata. A
+successful Cargo command that runs zero matching tests is rejected. The other
+17 assertions still rely on component attestations, so this profile cannot
+earn a product badge. `live_ts5` mode also performs the four-read TS5 operation
+against an approved national-register deployment.
 
 The runner produces internal engineering evidence, not an EU
 conformity-assessment result.
+
+This control-plane profile is not part of the public Identity SDK profile.
+Identity currently reserves its hosted relying-party API and does not execute
+those lifecycle operations through its local SDKs.
+
+### EU Identity SDK
+
+The Identity SDK profile checks eight public EUDI operations: catalogue and
+requirement-registry validation, requirement lookup, and natural-person,
+legal-person, issuance, allocation, and revocation PID validation. It audits
+740 ETSI rows and 229 EU rows, then runs the Rust boundary, the VCI and VP
+composition hosts, and the TypeScript, Python, Go, Kotlin, and Swift SDK tests.
+The caller supplies the complete candidate BOM. The framework verifies the
+selected Identity commit and each dependency release without choosing a
+component version itself.
+
+The evidence is split into three classes:
+
+- Normative engineering evidence is executable. The requirement audit and the
+  candidate tests must pass.
+- EU reference implementations are interoperability targets, not normative
+  authorities. The Identity operations have no matching official executable
+  oracle. VCI and VP interoperability with the pinned PID issuer, issuer
+  tester, verifier endpoint, and ITB needs deployed services and belongs in a
+  separate profile. The Android and iOS reference wallets do not apply to an
+  Identity SDK candidate because it contains no mobile application.
+- Fifty-three rows require external evidence. They are not counted as code
+  passes. This profile makes no legal-conformity or certification claim.
+
+Source-lock validation proves which reference revisions were reviewed. It is
+not behavioral parity with those implementations.
 
 ### EUDI Wallet
 
@@ -202,10 +248,13 @@ downloads that artifact on a clean GitHub-hosted runner and checks out the
 manifest-selected Wallet commit. It does not depend on preinstalled files or
 persistent runner state.
 
-The result covers the ReallyMe EU core engineering plan. It does not cover the
-official OIDF Wallet suite, Android or iOS application behavior, ITB deployment
-tests, RQES services, or an external conformity assessment. Those use separate
-plans and evidence.
+The EU Wallet run is not currently badge-eligible. Three normative rules have
+exact clause or boundary traces and five assertions have framework-owned
+probes. The remaining flow and security assertions still depend on broad
+candidate test inventories and component attestations. The result also does
+not cover the official OIDF Wallet suite, Android or iOS application behavior,
+ITB deployment tests, RQES services, or an external conformity assessment.
+Those use separate plans and evidence.
 
 ### EU upstream assets
 
@@ -226,10 +275,23 @@ are engineering inputs and cannot support a certification claim.
 
 ### ZK presentation proofs
 
-The ZK runner checks the source, toolchain, provider manifest, Cargo lock,
-artifact bundle, and component attestation. A product may claim ZK coverage
-only when its BOM enables ZK and supplies those exact digests. Wallet and
-verifier integrations must still exercise the composed presentation flow.
+The base ZK runner checks the source, toolchain, provider manifest, Cargo lock,
+artifact bundle, package tests, and component attestation. Those checks are
+candidate test inventory, not assertion-specific observations.
+
+The linked observation contract adds 11 exact probes and a 20-row proof matrix:
+two hash lanes, public and private presentation modes, and five witness stages.
+Each row records artifact, verification-key, proof, public-input, and frozen
+request digests. It also records whether modified proofs and public inputs were
+rejected. Witnesses, proof bytes, private keys, and machine-local paths are not
+retained.
+
+A dirty working-tree run may be recorded as local engineering evidence. It is
+not release evidence. Release evidence must bind the Identity product and its
+ZK provider to an immutable caller BOM, release artifacts, component
+attestations, source commits, source trees, toolchain digests, all 11 probes,
+and all 20 proof rows. The framework does not pin the Identity or ZK release
+version.
 
 ### Identity Taxonomy
 

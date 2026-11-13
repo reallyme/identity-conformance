@@ -272,10 +272,14 @@ class ProductConformanceStatementTests(unittest.TestCase):
                 "component_id": component_id,
                 "repository": f"https://github.com/reallyme/{component_id}",
                 "commit": "e" * 40,
+                "release_id": 100 + len(component_id),
                 "release_ref": f"reallyme-{component_id}-v2.0.0",
-                "release_artifact_sha256": "1" * 64,
-                "component_attestation_sha256": "2" * 64,
                 "roles": component_roles,
+                "adapter_contracts": (
+                    [component_id]
+                    if component_id in {"openid4vci", "openid4vp"}
+                    else []
+                ),
             }
             for component_id, component_roles in roles.items()
         ]
@@ -283,10 +287,12 @@ class ProductConformanceStatementTests(unittest.TestCase):
     def oidf_bom_digest(self) -> str:
         return STATEMENT.product_bom_validator.canonical_digest(
             {
-                "schema_version": 1,
+                "schema_version": 3,
                 "purpose": "reallyme-product-conformance-bom",
                 "product_id": "identity",
                 "product_version": "2.0.0",
+                "product_component_id": "identity",
+                "product_release_id": 108,
                 "product_release_ref": "reallyme-identity-v2.0.0",
                 "components": self.oidf_components(),
             }
@@ -364,6 +370,8 @@ class ProductConformanceStatementTests(unittest.TestCase):
             "product": {
                 "product_id": "identity",
                 "product_version": "2.0.0",
+                "product_component_id": "identity",
+                "release_id": 108,
                 "release_ref": "reallyme-identity-v2.0.0",
                 "repository": "https://github.com/reallyme/identity",
                 "commit": "e" * 40,
@@ -408,6 +416,8 @@ class ProductConformanceStatementTests(unittest.TestCase):
             "product": {
                 "product_id": "identity",
                 "product_version": "2.0.0",
+                "product_component_id": "identity",
+                "release_id": 108,
                 "release_ref": "reallyme-identity-v2.0.0",
                 "repository": "https://github.com/reallyme/identity",
                 "commit": "e" * 40,
@@ -450,6 +460,8 @@ class ProductConformanceStatementTests(unittest.TestCase):
             "product": {
                 "product_id": "identity",
                 "product_version": "2.0.0",
+                "product_component_id": "identity",
+                "release_id": 108,
                 "release_ref": "reallyme-identity-v2.0.0",
                 "repository": "https://github.com/reallyme/identity",
                 "commit": "e" * 40,
@@ -495,6 +507,7 @@ class ProductConformanceStatementTests(unittest.TestCase):
             "product": {
                 "product_id": "identity",
                 "product_version": "2.0.0",
+                "release_id": 108,
                 "release_ref": "reallyme-identity-v2.0.0",
                 "repository": "https://github.com/reallyme/identity",
                 "commit": "e" * 40,

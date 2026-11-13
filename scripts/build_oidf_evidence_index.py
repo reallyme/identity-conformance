@@ -185,28 +185,39 @@ def retained_product_bom_digest(
     return retained
 
 
-def product_identity(product_bom: Path) -> dict[str, str]:
+def product_identity(product_bom: Path) -> dict[str, object]:
     value = product_bom_validator.load_bom(product_bom)
     components = product_bom_validator.validate_bom(
         value, require_release_refs=True
     )
-    identity = components.get("identity")
+    product_component_id = value.get("product_component_id")
+    identity = (
+        components.get(product_component_id)
+        if isinstance(product_component_id, str)
+        else None
+    )
     product_id = value.get("product_id")
     product_version = value.get("product_version")
     product_release_ref = value.get("product_release_ref")
+    product_release_id = value.get("product_release_id")
     if (
         identity is None
         or identity.release_ref is None
         or not isinstance(product_id, str)
         or not isinstance(product_version, str)
         or not isinstance(product_release_ref, str)
+        or not isinstance(product_release_id, int)
+        or isinstance(product_release_id, bool)
+        or identity.release_id != product_release_id
         or identity.release_ref != product_release_ref
     ):
         fail("product_identity_invalid")
     return {
         "product_id": product_id,
         "product_version": product_version,
+        "product_component_id": product_component_id,
         "release_ref": product_release_ref,
+        "release_id": product_release_id,
         "repository": identity.repository,
         "commit": identity.commit,
     }
@@ -219,19 +230,17 @@ def product_components(product_bom: Path) -> list[dict[str, object]]:
     )
     result: list[dict[str, object]] = []
     for component_id, component in sorted(components.items()):
-        if component.release_ref is None:
-            fail("product_component_release_ref_missing")
+        if component.release_id is None or component.release_ref is None:
+            fail("product_component_release_identity_missing")
         result.append(
             {
                 "component_id": component_id,
                 "repository": component.repository,
                 "commit": component.commit,
+                "release_id": component.release_id,
                 "release_ref": component.release_ref,
-                "release_artifact_sha256": component.release_artifact_sha256,
-                "component_attestation_sha256": (
-                    component.component_attestation_sha256
-                ),
                 "roles": sorted(component.roles),
+                "adapter_contracts": sorted(component.adapter_contracts),
             }
         )
     return result

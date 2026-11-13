@@ -24,6 +24,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
 import strict_json  # noqa: E402
 import verify_eudi_legal_sources as legal_sources  # noqa: E402
 import verify_eudi_relying_party_plan as plan_verifier  # noqa: E402
+import verify_eudi_relying_party_requirement_tests as requirement_tests  # noqa: E402
 import verify_eudi_upstream_coverage as upstream_coverage  # noqa: E402
 
 
@@ -32,6 +33,9 @@ ADAPTER_PATH = (
     REPOSITORY_ROOT / "adapters" / "eudi-relying-party" / "adapter.json"
 )
 PLAN_PATH = REPOSITORY_ROOT / "plans" / "eudi" / "relying-party-control-plane.json"
+REQUIREMENT_TEST_PLAN_PATH = (
+    REPOSITORY_ROOT / "plans" / "eudi" / "relying-party-requirement-tests.json"
+)
 UPSTREAM_LOCK_PATH = REPOSITORY_ROOT / "upstream" / "eudi" / "sources.lock.json"
 LEGAL_SOURCES_LOCK_PATH = (
     REPOSITORY_ROOT / "upstream" / "eudi" / "legal-sources.lock.json"
@@ -47,6 +51,60 @@ EXPECTED_EXECUTION_SOURCES = {
     "eudi-technical-specifications",
     "eudi-relying-party-registration-service",
 }
+EXPECTED_NORMATIVE_PROFILES = [
+    {
+        "profile_id": "ts5",
+        "source_id": "eudi-technical-specifications",
+        "version_field": "ts5_version",
+        "expected_version": "1.6.1",
+        "commit_field": "ts5_baseline_commit",
+        "candidate_root": "apps/eudi-qp/resources/upstream/ts5",
+        "upstream_root": (
+            "eudi-doc-standards-and-technical-specifications/"
+            "docs/technical-specifications"
+        ),
+        "files": [
+            {
+                "artifact_id": "json_common_rp_data_model",
+                "candidate_path": "ts5-json-common-rp-data-model.json",
+                "upstream_path": "api/ts5-json-common-rp-data-model.json",
+            },
+            {
+                "artifact_id": "registrar_api",
+                "candidate_path": "ts5-openapi31-registrar-api.yml",
+                "upstream_path": "api/ts5-openapi31-registrar-api.yml",
+            },
+            {
+                "artifact_id": "write_api",
+                "candidate_path": "ts5-openapi31-write-api.yml",
+                "upstream_path": "api/ts5-openapi31-write-api.yml",
+            },
+        ],
+    },
+    {
+        "profile_id": "ts6",
+        "source_id": "eudi-technical-specifications",
+        "version_field": "ts6_version",
+        "expected_version": "1.2.2",
+        "commit_field": "ts6_baseline_commit",
+        "candidate_root": "apps/eudi-qp/resources/upstream/ts6",
+        "upstream_root": (
+            "eudi-doc-standards-and-technical-specifications/"
+            "docs/technical-specifications"
+        ),
+        "files": [
+            {
+                "artifact_id": "common_set_of_rp_information",
+                "candidate_path": (
+                    "ts6-common-set-of-rp-information-to-be-registered.md"
+                ),
+                "upstream_path": (
+                    "ts6-common-set-of-rp-information-to-be-registered.md"
+                ),
+            },
+        ],
+    },
+]
 
 
 class AdapterErrorReason(Enum):
@@ -70,6 +128,7 @@ class AdapterError(Exception):
 class ContractBundle:
     adapter: dict[str, object]
     plan: dict[str, object]
+    requirement_test_plan: dict[str, object]
     upstream_lock: dict[str, object]
     upstream_sources: dict[str, dict[str, object]]
 
@@ -108,11 +167,13 @@ def validate_adapter(adapter: dict[str, object]) -> None:
             "schema_version",
             "adapter_id",
             "plan_path",
+            "requirement_test_plan_path",
             "upstream_lock_path",
             "legal_sources_lock_path",
             "component",
             "dependent_artifacts",
             "execution_sources",
+            "normative_profiles",
             "source_bindings",
             "probes",
             "evidence_policy",
@@ -123,6 +184,8 @@ def validate_adapter(adapter: dict[str, object]) -> None:
         adapter["schema_version"] != 1
         or adapter["adapter_id"] != "eudi_relying_party_control_plane"
         or adapter["plan_path"] != "plans/eudi/relying-party-control-plane.json"
+        or adapter["requirement_test_plan_path"]
+        != "plans/eudi/relying-party-requirement-tests.json"
         or adapter["upstream_lock_path"] != "upstream/eudi/sources.lock.json"
         or adapter["legal_sources_lock_path"]
         != "upstream/eudi/legal-sources.lock.json"
@@ -172,6 +235,8 @@ def validate_adapter(adapter: dict[str, object]) -> None:
     execution_sources = adapter["execution_sources"]
     if not isinstance(execution_sources, list) or set(execution_sources) != EXPECTED_EXECUTION_SOURCES:
         raise AdapterError(AdapterErrorReason.INVALID_ADAPTER)
+    if adapter["normative_profiles"] != EXPECTED_NORMATIVE_PROFILES:
+        raise AdapterError(AdapterErrorReason.INVALID_SOURCE_BINDING)
     bindings = adapter["source_bindings"]
     if not isinstance(bindings, list) or not bindings:
         raise AdapterError(AdapterErrorReason.INVALID_SOURCE_BINDING)
@@ -238,10 +303,24 @@ def index_upstream_sources(lock: dict[str, object]) -> dict[str, dict[str, objec
 def load_contract_bundle() -> ContractBundle:
     adapter = load_object(ADAPTER_PATH)
     plan = load_object(PLAN_PATH)
+    requirement_test_plan = requirement_tests.load_plan(REQUIREMENT_TEST_PLAN_PATH)
     upstream_lock = load_object(UPSTREAM_LOCK_PATH)
     validate_adapter(adapter)
     validate_plan(plan, adapter)
     indexed = index_upstream_sources(upstream_lock)
+    technical_specification_commit = indexed["eudi-technical-specifications"].get(
+        "commit"
+    )
+    if not isinstance(technical_specification_commit, str):
+        raise AdapterError(AdapterErrorReason.INVALID_UPSTREAM_LOCK)
+    try:
+        requirement_tests.verify_plan(
+            requirement_test_plan,
+            plan,
+            technical_specification_commit,
+        )
+    except requirement_tests.RequirementTestPlanError as error:
+        raise AdapterError(AdapterErrorReason.INVALID_PLAN) from error
     try:
         legal_lock = legal_sources.load_lock(LEGAL_SOURCES_LOCK_PATH)
         legal_sources.verify_lock(legal_lock)
@@ -254,7 +333,13 @@ def load_contract_bundle() -> ContractBundle:
     reference = indexed["eudi-relying-party-registration-service"]
     if legacy.get("commit") != reference.get("commit"):
         raise AdapterError(AdapterErrorReason.INVALID_PLAN)
-    return ContractBundle(adapter, plan, upstream_lock, indexed)
+    return ContractBundle(
+        adapter,
+        plan,
+        requirement_test_plan,
+        upstream_lock,
+        indexed,
+    )
 
 
 def git_output(checkout: Path, *arguments: str) -> str:

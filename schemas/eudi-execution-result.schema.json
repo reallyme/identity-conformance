@@ -93,18 +93,19 @@
       "required": ["check_id", "kind", "result"],
       "properties": {
         "check_id": {"$ref": "#/$defs/identifier"},
-        "kind": {"enum": ["attestation", "binary_probe", "service_probe", "live_probe"]},
+        "kind": {"enum": ["attestation", "binary_probe", "normative_source_binding", "service_probe", "live_probe"]},
         "result": {"enum": ["passed", "failed"]}
       }
     },
     "assertion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["family_id", "assertion_id", "result", "check_ids"],
+      "required": ["family_id", "assertion_id", "result", "check_ids", "evidence_strength"],
       "properties": {
         "family_id": {"$ref": "#/$defs/identifier"},
         "assertion_id": {"$ref": "#/$defs/identifier"},
         "result": {"enum": ["passed", "failed"]},
+        "evidence_strength": {"const": "attestation_only"},
         "check_ids": {
           "type": "array",
           "minItems": 1,

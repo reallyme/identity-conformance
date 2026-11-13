@@ -24,7 +24,6 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
 
 import strict_json  # noqa: E402
 import verify_product_component_bom as product_bom_validator  # noqa: E402
-import verify_zk_adapter as zk_adapter_validator  # noqa: E402
 
 
 MAX_MANIFEST_BYTES = 256 * 1024
@@ -236,12 +235,13 @@ def validate_manifest(value: dict[str, object]) -> dict[str, dict[str, str]]:
             },
             "capabilities.zk_presentations",
         )
-        _zk_plan, zk_adapter = zk_adapter_validator.load_contract()
-        component = zk_adapter["component_requirement"]
         if (
             zk_presentations.get("plan_id") != "zk-presentation-proofs-v1"
-            or not isinstance(component, dict)
-            or zk_presentations.get("source_repository") != component.get("repository")
+            or validate_source_repository(
+                zk_presentations.get("source_repository"),
+                "capabilities.zk_presentations.source_repository",
+            )
+            != zk_presentations.get("source_repository")
             or not isinstance(zk_presentations.get("source_commit"), str)
             or GIT_COMMIT.fullmatch(zk_presentations["source_commit"]) is None
         ):
@@ -332,6 +332,23 @@ def verify_component_bindings(
         locked = approved.get(repository)
         if locked is None or locked[0] != commit or role not in locked[1]:
             fail(f"{role} source binding does not match the caller product BOM")
+
+    capabilities = require_object(manifest.get("capabilities"), "capabilities")
+    zk_presentations = require_object(
+        capabilities.get("zk_presentations"), "capabilities.zk_presentations"
+    )
+    if zk_presentations.get("enabled") is True:
+        repository = zk_presentations.get("source_repository")
+        commit = zk_presentations.get("source_commit")
+        matching = [
+            component
+            for component in components.values()
+            if component.repository == repository
+            and component.commit == commit
+            and "zk" in component.adapter_contracts
+        ]
+        if len(matching) != 1:
+            fail("ZK capability does not match the caller product BOM")
 
 
 def verify_bindings(

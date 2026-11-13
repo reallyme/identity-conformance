@@ -22,37 +22,19 @@
     "suite_ref": "release-v5.3.4",
     "suite_commit": "23353b36957d6466010de767c812d2c91ed37638"
   },
-  "execution_owner": {
-    "repository": "https://github.com/reallyme/identity",
-    "workflow_path": ".github/workflows/identity-product-conformance.yml",
-    "candidate_component": "wallet",
-    "candidate_selected_by": "product_component_bom"
+  "selection": {
+    "product_kind": "wallet",
+    "candidate_role": "wallet_core",
+    "candidate_selected_by": "product_component_bom",
+    "candidate_revision_selected_by": "caller"
   },
-  "required_components": [
-    {
-      "component_id": "openid4vci",
-      "repository": "https://github.com/reallyme/openid4vci"
-    },
-    {
-      "component_id": "openid4vp",
-      "repository": "https://github.com/reallyme/openid4vp"
-    },
-    {
-      "component_id": "wallet",
-      "repository": "https://github.com/reallyme/wallet"
-    },
-    {
-      "component_id": "ssi",
-      "repository": "https://github.com/reallyme/ssi"
-    },
-    {
-      "component_id": "identity",
-      "repository": "https://github.com/reallyme/identity"
-    },
-    {
-      "component_id": "cose",
-      "repository": "https://github.com/reallyme/cose"
-    }
+  "required_roles": [
+    "openid4vci_wallet",
+    "openid4vp_wallet"
+  ],
+  "required_adapter_contracts": [
+    "openid4vci",
+    "openid4vp"
   ],
   "required_wallet_roles": [
     {

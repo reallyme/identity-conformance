@@ -5,13 +5,13 @@
   "title": "ReallyMe EUDI relying-party control-plane conformance plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_id", "authority", "certification_claim", "execution_status", "taxonomy_program", "system_under_test", "sources", "evidence_policy", "assertion_families"],
+  "required": ["schema_version", "plan_id", "authority", "certification_claim", "execution_status", "taxonomy_program", "system_under_test", "sources", "evidence_policy", "evidence_coverage", "assertion_families"],
   "properties": {
     "schema_version": {"const": 1},
     "plan_id": {"const": "eudi-relying-party-control-plane-v1"},
     "authority": {"const": "internal_non_certification_evidence"},
     "certification_claim": {"const": false},
-    "execution_status": {"const": "executable"},
+    "execution_status": {"const": "executable_with_attestation_gaps"},
     "taxonomy_program": {"const": "eudi_relying_party_control_plane"},
     "system_under_test": {
       "type": "object",
@@ -73,6 +73,17 @@
         "oversized_input_evidence_required": {"const": true},
         "reviewed_redacted_results_required": {"const": true},
         "transaction_content_prohibited": {"const": true}
+      }
+    },
+    "evidence_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assertion_count", "independently_observed_assertion_count", "attestation_only_assertion_count", "badge_eligible"],
+      "properties": {
+        "assertion_count": {"const": 19},
+        "independently_observed_assertion_count": {"const": 0},
+        "attestation_only_assertion_count": {"const": 19},
+        "badge_eligible": {"const": false}
       }
     },
     "assertion_families": {
