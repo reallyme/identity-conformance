@@ -18,8 +18,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 def load_script() -> ModuleType:
     specification = importlib.util.spec_from_file_location(
-        "verify_wallet_release_preflight",
-        REPOSITORY_ROOT / "scripts/verify_wallet_release_preflight.py",
+        "verify_wallet_package_preflight",
+        REPOSITORY_ROOT / "scripts/verify_wallet_package_preflight.py",
     )
     if specification is None or specification.loader is None:
         raise RuntimeError("Wallet preflight verifier could not be loaded")
@@ -43,7 +43,13 @@ def valid_result() -> dict[str, object]:
             "repository": "https://github.com/reallyme/wallet",
             "commit": COMMIT,
         },
-        "release_evidence": {
+        "target": {
+            "mode": "candidate",
+            "version": "0.1.2",
+            "commit": COMMIT,
+            "preflight_run_id": RUN_ID,
+        },
+        "package_evidence": {
             "preflight_run_id": RUN_ID,
             "preflight_job_id": JOB_ID,
             "fuzz_run_id": PREREQUISITE_RUN_IDS["fuzz"],
@@ -186,7 +192,7 @@ class WalletReleasePreflightTests(unittest.TestCase):
                 valid_prerequisite_jobs(),
                 COMMIT,
             ),
-            VERIFIER.ReleaseEvidenceIdentity(
+            VERIFIER.PackageEvidenceIdentity(
                 preflight_run_id=RUN_ID,
                 preflight_job_id=JOB_ID,
                 fuzz_run_id=31,
@@ -199,7 +205,7 @@ class WalletReleasePreflightTests(unittest.TestCase):
         expected = tuple(
             dict.fromkeys(
                 step
-                for steps in VERIFIER.wallet_release_bundle.EXPECTED_EVIDENCE_STEPS.values()
+                for steps in VERIFIER.wallet_package_bundle.EXPECTED_EVIDENCE_STEPS.values()
                 for step in steps
             )
         )
@@ -219,11 +225,11 @@ class WalletReleasePreflightTests(unittest.TestCase):
             ("component", "component_id", "identity"),
             ("component", "repository", "https://github.com/reallyme/identity"),
             ("component", "commit", "2" * 40),
-            ("release_evidence", "preflight_run_id", True),
-            ("release_evidence", "preflight_job_id", 0),
-            ("release_evidence", "fuzz_run_id", 0),
-            ("release_evidence", "protobuf_ci_run_id", True),
-            ("release_evidence", "rust_ci_run_id", 0),
+            ("package_evidence", "preflight_run_id", True),
+            ("package_evidence", "preflight_job_id", 0),
+            ("package_evidence", "fuzz_run_id", 0),
+            ("package_evidence", "protobuf_ci_run_id", True),
+            ("package_evidence", "rust_ci_run_id", 0),
         )
         for container_name, key, value in cases:
             with self.subTest(container=container_name, key=key):
@@ -494,7 +500,7 @@ class WalletReleasePreflightTests(unittest.TestCase):
 
     def test_rejects_reused_prerequisite_run_identity(self) -> None:
         result = valid_result()
-        evidence = result["release_evidence"]
+        evidence = result["package_evidence"]
         evidence["fuzz_run_id"] = evidence["preflight_run_id"]
         self.assert_reason(
             result,

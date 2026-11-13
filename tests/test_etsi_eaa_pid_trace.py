@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-import copy
 import importlib.util
-import os
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
-from unittest.mock import patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -34,103 +32,94 @@ def load_script() -> ModuleType:
 AUDITOR = load_script()
 
 
+def selection() -> dict[str, object]:
+    return {
+        "schema": "reallyme.identity.trace_source_selection.v1",
+        "purpose": "caller-selected-product-sources",
+        "sources": [
+            {
+                "component_id": component_id,
+                "repository": repository,
+                "commit": index * 40,
+            }
+            for index, (component_id, repository) in zip(
+                ("1", "2", "3"),
+                AUDITOR.EXPECTED_COMPONENT_REPOSITORIES.items(),
+                strict=True,
+            )
+        ],
+    }
+
+
 class EtsiEaaPidTraceTests(unittest.TestCase):
-    def test_isolated_trace_source_root_selects_each_exact_checkout(self) -> None:
+    def load_selection(
+        self, value: dict[str, object]
+    ) -> dict[str, AUDITOR.Component]:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            for component_id in ("ssi", "openid4vci", "openid4vp"):
+            for component_id in AUDITOR.EXPECTED_COMPONENT_REPOSITORIES:
                 (root / component_id).mkdir()
-            with patch.dict(
-                os.environ,
-                {AUDITOR.TRACE_SOURCE_ROOT_ENVIRONMENT: str(root)},
-                clear=False,
-            ):
-                components = AUDITOR.load_components()
-            self.assertEqual(
-                {component.checkout for component in components.values()},
-                {(root / component_id).resolve() for component_id in components},
+            manifest = root / "selection.json"
+            manifest.write_text(
+                json.dumps(value, separators=(",", ":")) + "\n",
+                encoding="utf-8",
             )
+            return AUDITOR.load_components(manifest, root)
 
-    def test_current_trace_is_complete_and_keeps_claim_boundary_explicit(self) -> None:
-        artifact = AUDITOR.build_artifact(
-            AUDITOR.load_components(), verify_component_revision=False
-        )
-        summary = artifact["summary"]
-        self.assertEqual(summary["total_rows"], 969)
-        self.assertEqual(summary["etsi_requirement_rows"], 740)
-        self.assertEqual(summary["eu_profile_rows"], 229)
-        self.assertEqual(
-            summary["production_registry_status"],
-            "all_740_identifiers_fail_closed",
-        )
-        self.assertEqual(
-            summary["production_registry_symbols"], list(AUDITOR.REGISTRY_SYMBOLS)
-        )
-        self.assertEqual(summary["product_conformance_status"], "external_evidence_still_required")
-        self.assertEqual(
-            summary["disposition_counts"], AUDITOR.EXPECTED_DISPOSITION_COUNTS
-        )
+    def test_caller_selected_commits_are_loaded_without_framework_pins(self) -> None:
+        components = self.load_selection(selection())
+        self.assertEqual(set(components), set(AUDITOR.EXPECTED_COMPONENT_REPOSITORIES))
+        self.assertEqual(components["ssi"].commit, "3" * 40)
 
-    def test_duplicate_requirement_is_rejected(self) -> None:
-        artifact = AUDITOR.build_artifact(
-            AUDITOR.load_components(), verify_component_revision=False
-        )
-        rows = copy.deepcopy(artifact["requirements"])
-        rows.append(copy.deepcopy(rows[0]))
-        seen: set[tuple[str, str]] = set()
-        with self.assertRaises(AUDITOR.AuditError):
-            for row in rows:
-                key = (row["source"], row["requirement_id"])
-                if key in seen:
-                    raise AUDITOR.AuditError("duplicate")
-                seen.add(key)
-
-    def test_non_applicable_row_requires_fixed_empty_evidence_shape(self) -> None:
-        artifact = AUDITOR.build_artifact(
-            AUDITOR.load_components(), verify_component_revision=False
-        )
-        row = next(
-            item
-            for item in artifact["requirements"]
-            if item["disposition"] == AUDITOR.NOT_APPLICABLE_DISPOSITION
-        )
-        changed = dict(row)
-        changed["code_path"] = "crates/eudi/etsi-eaa-conformance/src/validate.rs"
-        with self.assertRaises(AUDITOR.AuditError):
-            AUDITOR.verify_row(
-                changed,
-                AUDITOR.load_components(),
-            )
-
-    def test_symbol_evidence_is_read_from_the_pinned_git_blob(self) -> None:
-        components = AUDITOR.load_components()
-        component, relative_path = AUDITOR.resolve_reference(
-            components,
-            "openid4vci/crates/issuer/src/endpoint.rs",
-        )
-        with patch.object(
-            AUDITOR,
-            "read_regular_file",
-            side_effect=AssertionError("working-tree source must not be read"),
+    def test_second_caller_selection_can_use_different_commits(self) -> None:
+        first = selection()
+        second = selection()
+        second_sources = second["sources"]
+        if not isinstance(second_sources, list) or not isinstance(
+            second_sources[2], dict
         ):
-            AUDITOR.verify_symbol(
-                component,
-                relative_path,
-                "handle_credential_request",
-            )
-
-    def test_absent_symbol_is_rejected_at_the_pinned_revision(self) -> None:
-        components = AUDITOR.load_components()
-        component, relative_path = AUDITOR.resolve_reference(
-            components,
-            "openid4vci/crates/issuer/src/endpoint.rs",
+            self.fail("test fixture is invalid")
+        second_sources[2]["commit"] = "f" * 40
+        self.assertNotEqual(
+            self.load_selection(first)["ssi"].commit,
+            self.load_selection(second)["ssi"].commit,
         )
+
+    def test_missing_component_is_rejected(self) -> None:
+        value = selection()
+        sources = value["sources"]
+        if not isinstance(sources, list):
+            self.fail("test fixture is invalid")
+        value["sources"] = sources[:-1]
         with self.assertRaises(AUDITOR.AuditError):
-            AUDITOR.verify_symbol(
-                component,
-                relative_path,
-                "symbol_added_only_after_the_pinned_revision",
-            )
+            self.load_selection(value)
+
+    def test_repository_substitution_is_rejected(self) -> None:
+        value = selection()
+        sources = value["sources"]
+        if not isinstance(sources, list) or not isinstance(sources[0], dict):
+            self.fail("test fixture is invalid")
+        sources[0]["repository"] = "https://github.com/example/openid4vci"
+        with self.assertRaises(AUDITOR.AuditError):
+            self.load_selection(value)
+
+    def test_short_commit_is_rejected(self) -> None:
+        value = selection()
+        sources = value["sources"]
+        if not isinstance(sources, list) or not isinstance(sources[0], dict):
+            self.fail("test fixture is invalid")
+        sources[0]["commit"] = "abc123"
+        with self.assertRaises(AUDITOR.AuditError):
+            self.load_selection(value)
+
+    def test_extra_selection_field_is_rejected(self) -> None:
+        value = selection()
+        sources = value["sources"]
+        if not isinstance(sources, list) or not isinstance(sources[0], dict):
+            self.fail("test fixture is invalid")
+        sources[0]["release_ref"] = "reallyme-openid4vci-v1.0.0"
+        with self.assertRaises(AUDITOR.AuditError):
+            self.load_selection(value)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,13 @@
 <!-- BEGIN GENERATED CONFORMANCE CATALOG -->
 # Standards baseline
 
-Framework version: **v0.3.0**
+Framework version: **v0.3.1**
 
 The framework pins the specifications, requirements, and test suites listed
 below. Each entry identifies the upstream version, the implemented validation,
 and when the pin was last reviewed.
 
-[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.0&color=475569)](../VERSION)
+[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.1&color=475569)](../VERSION)
 [![EU ARF](https://img.shields.io/static/v1?label=EU%20ARF&message=v3.0.0%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md)
 [![EU technical specifications](https://img.shields.io/static/v1?label=EU%20technical%20specifications&message=included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md)
 [![EU FCAF](https://img.shields.io/static/v1?label=EU%20FCAF&message=v0.0.10%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md)

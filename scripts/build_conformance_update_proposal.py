@@ -147,8 +147,6 @@ def classify_change(
         return classification
     if check.check_id.startswith("oidf.release."):
         return "tagged_release_candidate"
-    if check.check_id.startswith("reallyme.trace."):
-        return "tagged_release_candidate"
     if check.check_id.startswith(("oidf.master.", "oidf.engineering.")):
         return "branch_snapshot_review"
     if check.check_id.startswith(

@@ -22,12 +22,7 @@
     "result": {"const": "passed"},
     "certification_claim": {"const": false},
     "plan_id": {"$ref": "#/$defs/identifier"},
-    "coverage": {
-      "oneOf": [
-        {"$ref": "#/$defs/euWalletCoverage"},
-        {"$ref": "#/$defs/oidfCoverage"}
-      ]
-    },
+    "coverage": {"$ref": "#/$defs/oidfCoverage"},
     "composition": {
       "type": "array",
       "minItems": 6,
@@ -38,9 +33,6 @@
           {"required": ["release_ref"]}
         ]
       }
-    },
-    "release_evidence": {
-      "$ref": "eudi-wallet-execution-result.schema.json#/properties/release_evidence"
     },
     "product": {
       "type": "object",
@@ -121,47 +113,8 @@
       }
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "coverage": {
-            "properties": {
-              "authority": {"const": "openid_foundation_hosted_suite"}
-            },
-            "required": ["authority"]
-          }
-        }
-      },
-      "then": {"required": ["composition"]}
-    },
-    {
-      "if": {
-        "properties": {
-          "coverage": {
-            "properties": {
-              "authority": {"const": "internal_engineering"}
-            },
-            "required": ["authority"]
-          }
-        }
-      },
-      "then": {"required": ["release_evidence"]}
-    }
-  ],
+  "allOf": [{"required": ["composition"]}],
   "$defs": {
-    "euWalletCoverage": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["authority", "certification_claim", "minimum_requirements", "declared_cases", "normative_boundaries"],
-      "properties": {
-        "authority": {"const": "internal_engineering"},
-        "certification_claim": {"const": false},
-        "minimum_requirements": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/minimum_requirements"},
-        "declared_cases": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/declared_cases"},
-        "normative_boundaries": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage/properties/normative_boundaries"}
-      }
-    },
     "oidfCoverage": {
       "type": "object",
       "additionalProperties": false,

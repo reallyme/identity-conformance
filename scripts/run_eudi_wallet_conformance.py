@@ -31,7 +31,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
 import verify_component_attestation as component_attestation  # noqa: E402
 import verify_eu_wallet_boundaries as normative_boundaries  # noqa: E402
 import verify_eudi_wallet_adapter as wallet_adapter  # noqa: E402
-import verify_wallet_release_bundle as wallet_release_bundle  # noqa: E402
+import verify_wallet_package_bundle as wallet_package_bundle  # noqa: E402
 
 
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024
@@ -244,7 +244,8 @@ def validate_deployment(
             "schema",
             "plan_id",
             "component",
-            "release_artifact",
+            "target",
+            "package_bundle",
             "component_attestation_sha256",
             "source_locks",
             "evidence_policy",
@@ -252,7 +253,7 @@ def validate_deployment(
         EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT,
     )
     if (
-        value["schema"] != "reallyme.identity.eudi_wallet_deployment_manifest.v1"
+        value["schema"] != "reallyme.identity.eudi_wallet_deployment_manifest.v2"
         or value["plan_id"] != "eudi-wallet-engineering-v1"
         or value["evidence_policy"] != wallet_adapter.EXPECTED_POLICY
         or not isinstance(value["component_attestation_sha256"], str)
@@ -262,7 +263,7 @@ def validate_deployment(
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
     component = exact_object(
         value["component"],
-        {"component_id", "repository", "release_ref", "commit"},
+        {"component_id", "repository", "commit"},
         EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT,
     )
     requirement = adapter.get("component_requirement")
@@ -270,25 +271,47 @@ def validate_deployment(
         not isinstance(requirement, dict)
         or component.get("component_id") != requirement.get("component_id")
         or component.get("repository") != requirement.get("repository")
-        or not isinstance(component.get("release_ref"), str)
-        or re.fullmatch(
-            r"reallyme-wallet-v(0|[1-9][0-9]*)\."
-            r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-            r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
-            component["release_ref"],
-        )
-        is None
         or not isinstance(component.get("commit"), str)
         or re.fullmatch(r"[0-9a-f]{40}", component["commit"]) is None
     ):
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+    target = value["target"]
+    if not isinstance(target, dict):
+        raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
+    mode = target.get("mode")
+    target_keys = {"mode", "version", "commit", "preflight_run_id"}
+    if mode == "published":
+        target_keys.update({"release_id", "release_ref"})
+    target = exact_object(
+        target,
+        target_keys,
+        EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT,
+    )
+    if (
+        mode not in {"candidate", "published"}
+        or not isinstance(target["version"], str)
+        or SEMANTIC_VERSION.fullmatch(target["version"]) is None
+        or target["commit"] != component["commit"]
+        or type(target["preflight_run_id"]) is not int
+        or target["preflight_run_id"] < 1
+        or (
+            mode == "published"
+            and (
+                type(target["release_id"]) is not int
+                or target["release_id"] < 1
+                or target["release_ref"]
+                != f"reallyme-wallet-v{target['version']}"
+            )
+        )
+    ):
+        raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
     artifact = exact_object(
-        value["release_artifact"],
+        value["package_bundle"],
         {"artifact_id", "kind", "sha256"},
         EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT,
     )
     if (
-        artifact["artifact_id"] != "wallet-release-bundle"
+        artifact["artifact_id"] != "wallet-package-bundle"
         or artifact["kind"] != "archive"
         or not isinstance(artifact["sha256"], str)
         or wallet_adapter.SHA256.fullmatch(artifact["sha256"]) is None
@@ -345,7 +368,8 @@ def candidate_digest(deployment: dict[str, object]) -> str:
         "plan_id": deployment["plan_id"],
         "framework_version": deployment.get("framework_version", framework_version()),
         "component": deployment["component"],
-        "release_artifact": deployment["release_artifact"],
+        "target": deployment["target"],
+        "package_bundle": deployment["package_bundle"],
         "component_attestation_sha256": deployment["component_attestation_sha256"],
         "source_locks": deployment["source_locks"],
         "normative_ledgers": normative_ledger_digests(),
@@ -372,7 +396,7 @@ def hash_regular_file(path: Path) -> str:
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ARTIFACT) from error
 
 
-def verify_release_artifact(path: Path, expected_digest: str) -> str:
+def verify_package_bundle(path: Path, expected_digest: str) -> str:
     observed_digest = hash_regular_file(path)
     if observed_digest != expected_digest:
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ARTIFACT)
@@ -384,6 +408,7 @@ def verify_attestation(
     expected_digest: str,
     expected_artifact_digest: str,
     expected_commit: str,
+    expected_target: dict[str, object],
 ) -> tuple[set[str], dict[str, object]]:
     if hash_regular_file(path) != expected_digest:
         raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_ATTESTATION)
@@ -395,6 +420,7 @@ def verify_attestation(
             EudiWalletRunnerErrorReason.INVALID_ATTESTATION
         ) from error
     component = attestation["component"]
+    target = attestation.get("target")
     artifacts = attestation["artifacts"]
     checks = attestation["checks"]
     if (
@@ -404,10 +430,11 @@ def verify_attestation(
             "repository": "https://github.com/reallyme/wallet",
             "source_commit": expected_commit,
         }
+        or target != expected_target
         or not isinstance(artifacts, list)
         or not any(
             isinstance(artifact, dict)
-            and artifact.get("artifact_id") == "wallet-release-bundle"
+            and artifact.get("artifact_id") == "wallet-package-bundle"
             and artifact.get("sha256") == expected_artifact_digest
             for artifact in artifacts
         )
@@ -475,10 +502,10 @@ def publishable_workspace_packages(source: Path) -> dict[str, str]:
         version = raw_package.get("version")
         if (
             not isinstance(name, str)
-            or wallet_release_bundle.CRATE_NAME.fullmatch(name) is None
+            or wallet_package_bundle.CRATE_NAME.fullmatch(name) is None
             or name in packages
             or not isinstance(version, str)
-            or wallet_release_bundle.SEMVER.fullmatch(version) is None
+            or wallet_package_bundle.SEMVER.fullmatch(version) is None
         ):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
         packages[name] = version
@@ -1105,7 +1132,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--deployment-manifest", required=True, type=Path)
     parser.add_argument("--source", required=True, type=Path)
-    parser.add_argument("--release-artifact", required=True, type=Path)
+    parser.add_argument("--package-bundle", required=True, type=Path)
     parser.add_argument("--component-attestation", required=True, type=Path)
     parser.add_argument("--framework-revision", required=True)
     parser.add_argument("--workflow-revision", required=True)
@@ -1132,11 +1159,16 @@ def main() -> int:
             or re.fullmatch(r"[0-9a-f]{40}", args.workflow_revision) is None
         ):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
-        artifact_digest = verify_release_artifact(
-            args.release_artifact, artifact["sha256"]
+        artifact_digest = verify_package_bundle(
+            args.package_bundle, artifact["sha256"]
         )
         component = deployment["component"]
-        if not isinstance(component, dict) or not isinstance(component.get("commit"), str):
+        target = deployment["target"]
+        if (
+            not isinstance(component, dict)
+            or not isinstance(component.get("commit"), str)
+            or not isinstance(target, dict)
+        ):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
         wallet_adapter.verify_checkout(args.source, adapter, component["commit"])
         categories, attestation = verify_attestation(
@@ -1144,20 +1176,20 @@ def main() -> int:
             deployment["component_attestation_sha256"],
             artifact_digest,
             component["commit"],
+            target,
         )
-        release_ref = component.get("release_ref")
-        if not isinstance(release_ref, str):
-            raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
         try:
-            release_evidence = wallet_release_bundle.verify_bundle(
-                args.release_artifact,
+            package_evidence = wallet_package_bundle.verify_bundle(
+                args.package_bundle,
                 attestation,
+                target["mode"],
                 component["commit"],
-                release_ref,
+                target["version"],
+                target["preflight_run_id"],
                 publishable_workspace_packages(args.source),
                 args.source / "Cargo.lock",
             )
-        except wallet_release_bundle.WalletReleaseBundleError as error:
+        except wallet_package_bundle.WalletPackageBundleError as error:
             raise EudiWalletRunnerError(
                 EudiWalletRunnerErrorReason.INVALID_ARTIFACT
             ) from error
@@ -1171,7 +1203,7 @@ def main() -> int:
         ]
         if len(checks) != len(source_artifacts):
             raise EudiWalletRunnerError(EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT)
-        checks.append(Check("artifact.wallet-release-bundle", "artifact", "passed"))
+        checks.append(Check("artifact.wallet-package-bundle", "artifact", "passed"))
         checks.append(Check("framework.eudi-source-lock", "source", "passed"))
         checks.append(Check("framework.eudi-legal-source-lock", "source", "passed"))
         checks.append(Check("framework.eudi-publications-lock", "source", "passed"))
@@ -1267,7 +1299,7 @@ def main() -> int:
             assertion["result"] == "passed" for assertion in assertions
         )
         result = {
-            "schema": "reallyme.identity.eudi_wallet_execution_result.v2",
+            "schema": "reallyme.identity.eudi_wallet_execution_result.v3",
             "plan_id": "eudi-wallet-engineering-v1",
             "result": "passed" if passed else "failed",
             "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -1276,19 +1308,21 @@ def main() -> int:
             "workflow_revision": args.workflow_revision,
             "candidate_sha256": candidate_digest(deployment),
             "component": component,
-            "release_artifact_sha256": artifact_digest,
+            "target": target,
+            "package_bundle_sha256": artifact_digest,
             "component_attestation_sha256": deployment["component_attestation_sha256"],
-            "release_evidence": {
-                "preflight_run_id": release_evidence.preflight_run_id,
-                "preflight_job_id": release_evidence.preflight_job_id,
-                "fuzz_run_id": release_evidence.fuzz_run_id,
-                "protobuf_ci_run_id": release_evidence.protobuf_ci_run_id,
-                "rust_ci_run_id": release_evidence.rust_ci_run_id,
-                "crate_count": release_evidence.crate_count,
-                "crate_inventory_sha256": release_evidence.crate_inventory_sha256,
-                "evidence_count": release_evidence.evidence_count,
-                "evidence_inventory_sha256": release_evidence.evidence_inventory_sha256,
-                "cargo_lock_sha256": release_evidence.cargo_lock_sha256,
+            "package_evidence": {
+                "preflight_run_id": package_evidence.preflight_run_id,
+                "preflight_job_id": package_evidence.preflight_job_id,
+                "fuzz_run_id": package_evidence.fuzz_run_id,
+                "protobuf_ci_run_id": package_evidence.protobuf_ci_run_id,
+                "rust_ci_run_id": package_evidence.rust_ci_run_id,
+                "crate_count": package_evidence.crate_count,
+                "crates": [crate.__dict__ for crate in package_evidence.crates],
+                "crate_inventory_sha256": package_evidence.crate_inventory_sha256,
+                "evidence_count": package_evidence.evidence_count,
+                "evidence_inventory_sha256": package_evidence.evidence_inventory_sha256,
+                "cargo_lock_sha256": package_evidence.cargo_lock_sha256,
             },
             "source_locks": source_locks,
             "normative_ledgers": normative_ledger_digests(),

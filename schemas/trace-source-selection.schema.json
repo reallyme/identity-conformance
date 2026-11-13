@@ -1,0 +1,28 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/trace-source-selection-v1.json",
+  "title": "Caller-selected ETSI trace source revisions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "purpose", "sources"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.trace_source_selection.v1"},
+    "purpose": {"const": "caller-selected-product-sources"},
+    "sources": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["component_id", "repository", "commit"],
+        "properties": {
+          "component_id": {"enum": ["openid4vci", "openid4vp", "ssi"]},
+          "repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/(openid4vci|openid4vp|ssi)$"},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    }
+  }
+}

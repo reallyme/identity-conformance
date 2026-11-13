@@ -47,16 +47,21 @@ def valid_deployment() -> dict[str, object]:
     _plan, adapter = ADAPTER.load_contract()
     requirement = adapter["component_requirement"]
     return {
-        "schema": "reallyme.identity.eudi_wallet_deployment_manifest.v1",
+        "schema": "reallyme.identity.eudi_wallet_deployment_manifest.v2",
         "plan_id": "eudi-wallet-engineering-v1",
         "component": {
             "component_id": requirement["component_id"],
             "repository": requirement["repository"],
-            "release_ref": "reallyme-wallet-v1.0.0",
             "commit": "1" * 40,
         },
-        "release_artifact": {
-            "artifact_id": "wallet-release-bundle",
+        "target": {
+            "mode": "candidate",
+            "version": "1.0.0",
+            "commit": "1" * 40,
+            "preflight_run_id": 41,
+        },
+        "package_bundle": {
+            "artifact_id": "wallet-package-bundle",
             "kind": "archive",
             "sha256": "a" * 64,
         },
@@ -74,8 +79,26 @@ def valid_result() -> dict[str, object]:
     plan, adapter = ADAPTER.load_contract()
     kinds = RESULT.expected_check_kinds(adapter)
     deployment = valid_deployment()
+    crates = [
+        {
+            "name": name,
+            "version": "1.0.0",
+            "file": f"{name}-1.0.0.crate",
+            "size": index,
+            "sha256": f"{index:x}" * 64,
+        }
+        for index, name in enumerate(
+            ("reallyme-wallet", "reallyme-wallet-types"), 1
+        )
+    ]
+    crate_inventory_sha256 = RUNNER.wallet_package_bundle.digest_entries(
+        [
+            f"{crate['name']}|{crate['version']}|{crate['size']}|{crate['sha256']}"
+            for crate in crates
+        ]
+    )
     result = {
-        "schema": "reallyme.identity.eudi_wallet_execution_result.v2",
+        "schema": "reallyme.identity.eudi_wallet_execution_result.v3",
         "plan_id": "eudi-wallet-engineering-v1",
         "result": "passed",
         "created_at": "2026-11-11T12:00:00Z",
@@ -84,16 +107,18 @@ def valid_result() -> dict[str, object]:
         "workflow_revision": "3" * 40,
         "candidate_sha256": "0" * 64,
         "component": deployment["component"],
-        "release_artifact_sha256": "a" * 64,
+        "target": deployment["target"],
+        "package_bundle_sha256": "a" * 64,
         "component_attestation_sha256": "b" * 64,
-        "release_evidence": {
+        "package_evidence": {
             "preflight_run_id": 41,
             "preflight_job_id": 42,
             "fuzz_run_id": 31,
             "protobuf_ci_run_id": 32,
             "rust_ci_run_id": 33,
-            "crate_count": 17,
-            "crate_inventory_sha256": "6" * 64,
+            "crate_count": len(crates),
+            "crates": crates,
+            "crate_inventory_sha256": crate_inventory_sha256,
             "evidence_count": 7,
             "evidence_inventory_sha256": "7" * 64,
             "cargo_lock_sha256": "8" * 64,
@@ -206,7 +231,8 @@ def valid_result() -> dict[str, object]:
         "plan_id": result["plan_id"],
         "framework_version": result["framework_version"],
         "component": result["component"],
-        "release_artifact": deployment["release_artifact"],
+        "target": result["target"],
+        "package_bundle": deployment["package_bundle"],
         "component_attestation_sha256": result["component_attestation_sha256"],
         "source_locks": result["source_locks"],
         "normative_ledgers": result["normative_ledgers"],
@@ -299,15 +325,23 @@ class EudiWalletConformanceTests(unittest.TestCase):
     def test_valid_deployment_is_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
         artifact = RUNNER.validate_deployment(valid_deployment(), adapter)
-        self.assertEqual(artifact["artifact_id"], "wallet-release-bundle")
+        self.assertEqual(artifact["artifact_id"], "wallet-package-bundle")
 
     def test_two_caller_selected_wallet_commits_are_accepted(self) -> None:
         _plan, adapter = ADAPTER.load_contract()
         first = valid_deployment()
         second = copy.deepcopy(first)
         second["component"]["commit"] = "f" * 40
+        second["target"]["commit"] = "f" * 40
         RUNNER.validate_deployment(first, adapter)
         RUNNER.validate_deployment(second, adapter)
+
+    def test_component_and_target_commit_mismatch_is_rejected(self) -> None:
+        _plan, adapter = ADAPTER.load_contract()
+        changed = valid_deployment()
+        changed["target"]["commit"] = "f" * 40
+        with self.assertRaises(RUNNER.EudiWalletRunnerError):
+            RUNNER.validate_deployment(changed, adapter)
 
     def test_plan_cannot_add_an_undeclared_component(self) -> None:
         plan, _adapter = ADAPTER.load_contract()
@@ -346,13 +380,13 @@ class EudiWalletConformanceTests(unittest.TestCase):
         with self.assertRaises(RUNNER.EudiWalletRunnerError):
             RUNNER.validate_deployment(changed, adapter)
 
-    def test_substituted_release_artifact_is_rejected(self) -> None:
+    def test_substituted_package_bundle_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             artifact = Path(directory) / "wallet.tar"
             artifact.write_bytes(b"substituted")
             expected = hashlib.sha256(b"intended").hexdigest()
             with self.assertRaises(RUNNER.EudiWalletRunnerError):
-                RUNNER.verify_release_artifact(artifact, expected)
+                RUNNER.verify_package_bundle(artifact, expected)
 
     def test_mismatched_attestation_digest_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -364,6 +398,7 @@ class EudiWalletConformanceTests(unittest.TestCase):
                     "0" * 64,
                     "1" * 64,
                     "2" * 40,
+                    valid_deployment()["target"],
                 )
 
     def test_valid_execution_result_is_accepted(self) -> None:
@@ -371,7 +406,7 @@ class EudiWalletConformanceTests(unittest.TestCase):
 
     def test_result_rejects_mixed_candidate_inputs(self) -> None:
         changed = valid_result()
-        changed["release_artifact_sha256"] = "f" * 64
+        changed["package_bundle_sha256"] = "f" * 64
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
 
@@ -381,9 +416,9 @@ class EudiWalletConformanceTests(unittest.TestCase):
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
 
-    def test_result_rejects_incomplete_release_evidence(self) -> None:
+    def test_result_rejects_incomplete_package_evidence(self) -> None:
         changed = valid_result()
-        changed["release_evidence"]["evidence_count"] = 6
+        changed["package_evidence"]["evidence_count"] = 6
         with self.assertRaises(RESULT.runner.EudiWalletRunnerError):
             RESULT.verify_result(changed)
 

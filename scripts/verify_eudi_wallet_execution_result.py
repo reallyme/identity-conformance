@@ -88,7 +88,7 @@ def expected_check_kinds(adapter: dict[str, object]) -> dict[str, str]:
             normative_checks[check_id] = "normative"
     return {
         **source_checks,
-        "artifact.wallet-release-bundle": "artifact",
+        "artifact.wallet-package-bundle": "artifact",
         "framework.eudi-source-lock": "source",
         "framework.eudi-legal-source-lock": "source",
         "framework.eudi-publications-lock": "source",
@@ -212,7 +212,9 @@ def verify_framework_probes(value: object, adapter: dict[str, object]) -> None:
             )
 
 
-def verify_release_evidence(value: object) -> None:
+def verify_package_evidence(
+    value: object, expected_version: str, expected_preflight_run_id: int
+) -> None:
     if not isinstance(value, dict) or set(value) != {
         "preflight_run_id",
         "preflight_job_id",
@@ -220,6 +222,7 @@ def verify_release_evidence(value: object) -> None:
         "protobuf_ci_run_id",
         "rust_ci_run_id",
         "crate_count",
+        "crates",
         "crate_inventory_sha256",
         "evidence_count",
         "evidence_inventory_sha256",
@@ -230,7 +233,7 @@ def verify_release_evidence(value: object) -> None:
         )
     if (
         type(value["preflight_run_id"]) is not int
-        or value["preflight_run_id"] < 1
+        or value["preflight_run_id"] != expected_preflight_run_id
         or type(value["preflight_job_id"]) is not int
         or value["preflight_job_id"] < 1
         or type(value["fuzz_run_id"]) is not int
@@ -250,6 +253,8 @@ def verify_release_evidence(value: object) -> None:
         != 4
         or type(value["crate_count"]) is not int
         or not 1 <= value["crate_count"] <= 128
+        or not isinstance(value["crates"], list)
+        or len(value["crates"]) != value["crate_count"]
         or not isinstance(value["crate_inventory_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["crate_inventory_sha256"])
         is None
@@ -259,6 +264,49 @@ def verify_release_evidence(value: object) -> None:
         is None
         or not isinstance(value["cargo_lock_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["cargo_lock_sha256"]) is None
+    ):
+        raise runner.EudiWalletRunnerError(
+            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        )
+    crate_entries: list[str] = []
+    observed_names: set[str] = set()
+    previous_name = ""
+    for raw_crate in value["crates"]:
+        if not isinstance(raw_crate, dict) or set(raw_crate) != {
+            "name",
+            "version",
+            "file",
+            "size",
+            "sha256",
+        }:
+            raise runner.EudiWalletRunnerError(
+                runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+            )
+        name = raw_crate["name"]
+        expected_file = f"{name}-{expected_version}.crate"
+        if (
+            not isinstance(name, str)
+            or runner.wallet_package_bundle.CRATE_NAME.fullmatch(name) is None
+            or name in observed_names
+            or name <= previous_name
+            or raw_crate["version"] != expected_version
+            or raw_crate["file"] != expected_file
+            or type(raw_crate["size"]) is not int
+            or not 1 <= raw_crate["size"] <= runner.wallet_package_bundle.MAX_CRATE_BYTES
+            or not isinstance(raw_crate["sha256"], str)
+            or adapter_verifier.SHA256.fullmatch(raw_crate["sha256"]) is None
+        ):
+            raise runner.EudiWalletRunnerError(
+                runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+            )
+        observed_names.add(name)
+        previous_name = name
+        crate_entries.append(
+            f"{name}|{expected_version}|{raw_crate['size']}|{raw_crate['sha256']}"
+        )
+    if (
+        runner.wallet_package_bundle.digest_entries(crate_entries)
+        != value["crate_inventory_sha256"]
     ):
         raise runner.EudiWalletRunnerError(
             runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
@@ -423,9 +471,10 @@ def verify_result(value: dict[str, object]) -> None:
         "workflow_revision",
         "candidate_sha256",
         "component",
-        "release_artifact_sha256",
+        "target",
+        "package_bundle_sha256",
         "component_attestation_sha256",
-        "release_evidence",
+        "package_evidence",
         "source_locks",
         "normative_ledgers",
         "coverage",
@@ -440,7 +489,7 @@ def verify_result(value: dict[str, object]) -> None:
         )
     plan, adapter = adapter_verifier.load_contract()
     if (
-        value["schema"] != "reallyme.identity.eudi_wallet_execution_result.v2"
+        value["schema"] != "reallyme.identity.eudi_wallet_execution_result.v3"
         or value["plan_id"] != "eudi-wallet-engineering-v1"
         or value["result"] != "passed"
         or not isinstance(value["created_at"], str)
@@ -453,8 +502,8 @@ def verify_result(value: dict[str, object]) -> None:
         or not isinstance(value["candidate_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["candidate_sha256"]) is None
         or value["evidence_policy"] != adapter_verifier.EXPECTED_POLICY
-        or not isinstance(value["release_artifact_sha256"], str)
-        or adapter_verifier.SHA256.fullmatch(value["release_artifact_sha256"]) is None
+        or not isinstance(value["package_bundle_sha256"], str)
+        or adapter_verifier.SHA256.fullmatch(value["package_bundle_sha256"]) is None
         or not isinstance(value["component_attestation_sha256"], str)
         or adapter_verifier.SHA256.fullmatch(value["component_attestation_sha256"])
         is None
@@ -477,7 +526,32 @@ def verify_result(value: dict[str, object]) -> None:
         )
     verify_test_execution(value["test_execution"])
     verify_framework_probes(value["framework_probes"], adapter)
-    verify_release_evidence(value["release_evidence"])
+    target = value["target"]
+    component = value["component"]
+    deployment = {
+        "schema": "reallyme.identity.eudi_wallet_deployment_manifest.v2",
+        "plan_id": value["plan_id"],
+        "component": component,
+        "target": target,
+        "package_bundle": {
+            "artifact_id": "wallet-package-bundle",
+            "kind": "archive",
+            "sha256": value["package_bundle_sha256"],
+        },
+        "component_attestation_sha256": value["component_attestation_sha256"],
+        "source_locks": value["source_locks"],
+        "evidence_policy": value["evidence_policy"],
+    }
+    runner.validate_deployment(deployment, adapter)
+    if not isinstance(target, dict):
+        raise runner.EudiWalletRunnerError(
+            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
+        )
+    verify_package_evidence(
+        value["package_evidence"],
+        target["version"],
+        target["preflight_run_id"],
+    )
     verify_coverage(value["coverage"])
     test_execution = value["test_execution"]
     coverage = value["coverage"]
@@ -491,36 +565,15 @@ def verify_result(value: dict[str, object]) -> None:
         raise runner.EudiWalletRunnerError(
             runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
         )
-    component = value["component"]
-    requirement = adapter.get("component_requirement")
-    if (
-        not isinstance(component, dict)
-        or set(component) != {"component_id", "repository", "release_ref", "commit"}
-        or not isinstance(requirement, dict)
-        or component.get("component_id") != requirement.get("component_id")
-        or component.get("repository") != requirement.get("repository")
-        or not isinstance(component.get("release_ref"), str)
-        or re.fullmatch(
-            r"reallyme-wallet-v(0|[1-9][0-9]*)\."
-            r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-            r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
-            component["release_ref"],
-        )
-        is None
-        or not isinstance(component.get("commit"), str)
-        or re.fullmatch(r"[0-9a-f]{40}", component["commit"]) is None
-    ):
-        raise runner.EudiWalletRunnerError(
-            runner.EudiWalletRunnerErrorReason.INVALID_DEPLOYMENT
-        )
     candidate = {
         "plan_id": value["plan_id"],
         "framework_version": value["framework_version"],
         "component": component,
-        "release_artifact": {
-            "artifact_id": "wallet-release-bundle",
+        "target": target,
+        "package_bundle": {
+            "artifact_id": "wallet-package-bundle",
             "kind": "archive",
-            "sha256": value["release_artifact_sha256"],
+            "sha256": value["package_bundle_sha256"],
         },
         "component_attestation_sha256": value["component_attestation_sha256"],
         "source_locks": value["source_locks"],

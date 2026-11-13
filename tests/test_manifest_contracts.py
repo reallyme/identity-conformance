@@ -98,6 +98,49 @@ def valid_product_bom() -> dict[str, object]:
     }
 
 
+def caller_openid4vci_profile_matrix(
+    plan: dict[str, object],
+) -> dict[str, object]:
+    profiles = VCI_PRE_SUBMISSION.selected_profiles(plan)
+    return {
+        "source_repository": "https://github.com/reallyme/openid4vci",
+        "profiles": [
+            {
+                "profile_id": profile_id,
+                "entity_under_test": (
+                    "credential_issuer" if role == "issuer" else "wallet"
+                ),
+                "plan_id": plan_id,
+                "plan_expression": expression,
+                "expected_module_count": 1,
+            }
+            for profile_id, (role, plan_id, expression) in profiles.items()
+        ],
+    }
+
+
+def caller_openid4vp_profile_matrix(
+    plan: dict[str, object], suite_commit: str
+) -> dict[str, object]:
+    profiles = VP_PRE_SUBMISSION.selected_profiles(plan)
+    return {
+        "source_repository": "https://github.com/reallyme/openid4vp",
+        "suite": {"commit": suite_commit},
+        "profiles": [
+            {
+                "id": profile_id,
+                "role": role,
+                "plan_id": plan_id,
+                "expression": expression,
+                "expected_groups": [
+                    {"name": "caller-fixture", "modules": ["fixture-module"]}
+                ],
+            }
+            for profile_id, (role, plan_id, expression) in profiles.items()
+        ],
+    }
+
+
 def valid_deployment_manifest() -> dict[str, object]:
     components = {
         item["component_id"]: item for item in valid_product_bom()["components"]
@@ -547,21 +590,13 @@ class ManifestContractTests(unittest.TestCase):
             with self.assertRaises(LOCAL_ENDPOINTS.EndpointError):
                 LOCAL_ENDPOINTS.require_ca_bundle(empty)
 
-    def test_openid4vp_composed_plan_matches_public_profile_contract(self) -> None:
+    def test_openid4vp_composed_plan_matches_caller_profile_contract(self) -> None:
         plan = json.loads(
             (REPOSITORY_ROOT / "plans" / "oidf" / "certification.json").read_text(
                 encoding="utf-8"
             )
         )
-        matrix = json.loads(
-            (
-                REPOSITORY_ROOT.parent
-                / "openid4vp"
-                / "conformance"
-                / "oidf"
-                / "profile-matrix.json"
-            ).read_text(encoding="utf-8")
-        )
+        matrix = caller_openid4vp_profile_matrix(plan, "a" * 40)
         selected = VP_PRE_SUBMISSION.selected_profiles(plan)
         supported = VP_PRE_SUBMISSION.supported_profiles(matrix)
         self.assertEqual(len(selected), 6)
@@ -635,20 +670,13 @@ class ManifestContractTests(unittest.TestCase):
             runner.index(retained_lock_copy), runner.index(retained_lock_binding)
         )
 
-    def test_openid4vci_composed_plan_matches_public_profile_contract(self) -> None:
+    def test_openid4vci_composed_plan_matches_caller_profile_contract(self) -> None:
         plan = json.loads(
             (REPOSITORY_ROOT / "plans" / "oidf" / "certification.json").read_text(
                 encoding="utf-8"
             )
         )
-        matrix_path = (
-            REPOSITORY_ROOT.parent
-            / "openid4vci"
-            / "conformance"
-            / "oidf"
-            / "profile-matrix.json"
-        )
-        matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+        matrix = caller_openid4vci_profile_matrix(plan)
         selected = VCI_PRE_SUBMISSION.selected_profiles(plan)
         supported = VCI_PRE_SUBMISSION.supported_profiles(matrix)
         self.assertEqual(len(selected), 10)
@@ -746,29 +774,24 @@ class ManifestContractTests(unittest.TestCase):
             certification_plan.write_bytes(
                 (REPOSITORY_ROOT / "plans" / "oidf" / "certification.json").read_bytes()
             )
-            profile_matrix = root / "profile-matrix.json"
-            profile_matrix.write_bytes(
+            plan = json.loads(certification_plan.read_text(encoding="utf-8"))
+            suite_commit = json.loads(
                 (
-                    REPOSITORY_ROOT.parent
-                    / "openid4vci"
-                    / "conformance"
+                    REPOSITORY_ROOT
+                    / "upstream"
                     / "oidf"
-                    / "profile-matrix.json"
-                ).read_bytes()
+                    / "conformance-suite.lock.json"
+                ).read_text(encoding="utf-8")
+            )["commit"]
+            profile_matrix = root / "profile-matrix.json"
+            profile_matrix.write_text(
+                json.dumps(caller_openid4vci_profile_matrix(plan)),
+                encoding="utf-8",
             )
             suite_contract = root / "suite-contract.json"
-            suite_contract.write_bytes(
-                (
-                    REPOSITORY_ROOT.parent
-                    / "openid4vci"
-                    / "conformance"
-                    / "oidf"
-                    / "suite-contract.json"
-                ).read_bytes()
+            suite_contract.write_text(
+                json.dumps({"commit": suite_commit}), encoding="utf-8"
             )
-            suite_commit = json.loads(suite_contract.read_text(encoding="utf-8"))[
-                "commit"
-            ]
             product_bom = root / "product-component-bom.json"
             product_bom.write_text(
                 json.dumps(
@@ -828,7 +851,6 @@ class ManifestContractTests(unittest.TestCase):
             module_inventory = root / "module-inventory.json"
             module_inventory.write_text("{}\n", encoding="utf-8")
 
-            plan = json.loads(certification_plan.read_text(encoding="utf-8"))
             selections = VCI_PRE_SUBMISSION.selected_profiles(plan)
             for profile_id, (role, plan_id, expression) in selections.items():
                 profile_dir = result_root / role / profile_id

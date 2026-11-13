@@ -33,13 +33,13 @@ def load_script(name: str, relative_path: str) -> ModuleType:
 
 
 VERIFIER = load_script(
-    "verify_wallet_release_bundle", "scripts/verify_wallet_release_bundle.py"
+    "verify_wallet_package_bundle", "scripts/verify_wallet_package_bundle.py"
 )
 
 
 COMMIT = "1" * 40
 VERSION = "1.2.3"
-RELEASE_REF = f"reallyme-wallet-v{VERSION}"
+PREFLIGHT_RUN_ID = 41
 PACKAGES = {
     "reallyme-wallet": VERSION,
     "reallyme-wallet-types": VERSION,
@@ -81,10 +81,10 @@ def evidence_bytes(category: str, *, conclusion: str = "success") -> bytes:
         for index, name in enumerate(VERIFIER.EXPECTED_EVIDENCE_STEPS[category])
     ]
     value = {
-        "schema": "reallyme.wallet.eudi_release_check_evidence.v1",
+        "schema": "reallyme.wallet.eudi_package_check_evidence.v1",
         "repository": "reallyme/wallet",
         "release_sha": COMMIT,
-        "run_id": 41,
+        "run_id": PREFLIGHT_RUN_ID,
         "run_attempt": 1,
         "job_id": 42,
         "category": category,
@@ -116,7 +116,7 @@ def material(
         "schema": "reallyme.wallet.crates_preflight.v3",
         "repository": "reallyme/wallet",
         "workflow": "crates-package-preflight.yml",
-        "run_id": 41,
+        "run_id": PREFLIGHT_RUN_ID,
         "run_attempt": 1,
         "release_sha": COMMIT,
         "version": VERSION,
@@ -135,14 +135,19 @@ def material(
         files[f"evidence-{category}.json"] = content
         checks.append(
             {
-                "check_id": f"release-preflight-{category}",
+                "check_id": f"package-preflight-{category}",
                 "category": category,
                 "result": "passed",
                 "evidence_sha256": hashlib.sha256(content).hexdigest(),
             }
         )
     attestation = {
-        "release": {"version": VERSION, "source_ref": RELEASE_REF},
+        "target": {
+            "mode": "candidate",
+            "version": VERSION,
+            "commit": COMMIT,
+            "preflight_run_id": PREFLIGHT_RUN_ID,
+        },
         "dependency_lock": {
             "kind": "cargo",
             "sha256": hashlib.sha256(cargo_lock).hexdigest(),
@@ -158,7 +163,7 @@ def write_bundle(path: Path, files: dict[str, bytes]) -> None:
             add_bytes(archive, name, content)
 
 
-class WalletReleaseBundleTests(unittest.TestCase):
+class WalletPackageBundleTests(unittest.TestCase):
     def verify(
         self,
         directory: Path,
@@ -174,13 +179,15 @@ class WalletReleaseBundleTests(unittest.TestCase):
         return VERIFIER.verify_bundle(
             bundle,
             attestation,
+            "candidate",
             COMMIT,
-            RELEASE_REF,
+            VERSION,
+            PREFLIGHT_RUN_ID,
             PACKAGES if packages is None else packages,
             lock,
         )
 
-    def test_complete_bundle_is_bound_to_source_release_and_preflight(self) -> None:
+    def test_complete_bundle_is_bound_to_candidate_and_preflight(self) -> None:
         cargo_lock = b"version = 4\n"
         attestation, files = material(cargo_lock)
         with tempfile.TemporaryDirectory() as directory:
@@ -198,30 +205,30 @@ class WalletReleaseBundleTests(unittest.TestCase):
         cargo_lock = b"version = 4\n"
         attestation, files = material(cargo_lock)
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, b"changed\n")
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.SOURCE_MISMATCH
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.SOURCE_MISMATCH
         )
 
     def test_crate_from_another_source_revision_is_rejected(self) -> None:
         cargo_lock = b"version = 4\n"
         attestation, files = material(cargo_lock, crate_commit="2" * 40)
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.SOURCE_MISMATCH
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.SOURCE_MISMATCH
         )
 
     def test_failed_preflight_step_cannot_be_relabelled_as_passing(self) -> None:
         cargo_lock = b"version = 4\n"
         attestation, files = material(cargo_lock, failed_evidence="security")
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.INVALID_EVIDENCE
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.INVALID_EVIDENCE
         )
 
     def test_evidence_content_substitution_is_rejected(self) -> None:
@@ -229,10 +236,10 @@ class WalletReleaseBundleTests(unittest.TestCase):
         attestation, files = material(cargo_lock)
         files["evidence-format.json"] += b" "
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.INVALID_EVIDENCE
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.INVALID_EVIDENCE
         )
 
     def test_missing_publishable_crate_is_rejected(self) -> None:
@@ -241,7 +248,7 @@ class WalletReleaseBundleTests(unittest.TestCase):
         changed_packages = copy.deepcopy(PACKAGES)
         changed_packages["reallyme-wallet-provider"] = VERSION
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(
                     Path(directory),
                     attestation,
@@ -250,7 +257,7 @@ class WalletReleaseBundleTests(unittest.TestCase):
                     changed_packages,
                 )
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.SOURCE_MISMATCH
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.SOURCE_MISMATCH
         )
 
     def test_unexpected_bundle_member_is_rejected(self) -> None:
@@ -258,21 +265,21 @@ class WalletReleaseBundleTests(unittest.TestCase):
         attestation, files = material(cargo_lock)
         files["unreviewed.txt"] = b"not evidence"
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.INVALID_BUNDLE
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.INVALID_BUNDLE
         )
 
-    def test_release_reference_mismatch_is_rejected(self) -> None:
+    def test_target_commit_mismatch_is_rejected(self) -> None:
         cargo_lock = b"version = 4\n"
         attestation, files = material(cargo_lock)
-        attestation["release"]["source_ref"] = "reallyme-wallet-v9.9.9"
+        attestation["target"]["commit"] = "9" * 40
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.SOURCE_MISMATCH
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.SOURCE_MISMATCH
         )
 
     def test_duplicate_manifest_member_is_rejected(self) -> None:
@@ -287,17 +294,19 @@ class WalletReleaseBundleTests(unittest.TestCase):
                 for name, content in files.items():
                     add_bytes(archive, name, content)
                 add_bytes(archive, "crates-preflight.json", files["crates-preflight.json"])
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 VERIFIER.verify_bundle(
                     bundle,
                     attestation,
+                    "candidate",
                     COMMIT,
-                    RELEASE_REF,
+                    VERSION,
+                    PREFLIGHT_RUN_ID,
                     PACKAGES,
                     lock,
                 )
         self.assertIs(
-            raised.exception.reason, VERIFIER.WalletReleaseBundleErrorReason.INVALID_BUNDLE
+            raised.exception.reason, VERIFIER.WalletPackageBundleErrorReason.INVALID_BUNDLE
         )
 
     def test_attested_manifest_and_crates_are_materialized_exactly(self) -> None:
@@ -330,7 +339,7 @@ class WalletReleaseBundleTests(unittest.TestCase):
             bundle = root / "wallet-release"
             output = root / "subjects"
             write_bundle(bundle, files)
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError):
+            with self.assertRaises(VERIFIER.WalletPackageBundleError):
                 VERIFIER.materialize_attestation_subjects(
                     bundle, output, len(PACKAGES) + 1
                 )
@@ -347,7 +356,7 @@ class WalletReleaseBundleTests(unittest.TestCase):
             output = root / "subjects"
             output.mkdir()
             write_bundle(bundle, files)
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError):
+            with self.assertRaises(VERIFIER.WalletPackageBundleError):
                 VERIFIER.materialize_attestation_subjects(
                     bundle, output, len(PACKAGES)
                 )
@@ -363,7 +372,7 @@ class WalletReleaseBundleTests(unittest.TestCase):
             bundle = root / "wallet-release"
             output = root / "subjects"
             write_bundle(bundle, files)
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError):
+            with self.assertRaises(VERIFIER.WalletPackageBundleError):
                 VERIFIER.materialize_attestation_subjects(
                     bundle, output, len(PACKAGES)
                 )
@@ -378,11 +387,11 @@ class WalletReleaseBundleTests(unittest.TestCase):
             json.dumps(manifest, indent=2, sort_keys=True) + "\n"
         ).encode("utf-8")
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(VERIFIER.WalletReleaseBundleError) as raised:
+            with self.assertRaises(VERIFIER.WalletPackageBundleError) as raised:
                 self.verify(Path(directory), attestation, files, cargo_lock)
         self.assertIs(
             raised.exception.reason,
-            VERIFIER.WalletReleaseBundleErrorReason.INVALID_MANIFEST,
+            VERIFIER.WalletPackageBundleErrorReason.INVALID_MANIFEST,
         )
 
 

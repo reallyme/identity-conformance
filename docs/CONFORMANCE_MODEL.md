@@ -23,9 +23,9 @@ normative requirement or turn a failed external result into a pass.
 
 | Owner | Responsibility |
 | --- | --- |
-| Component repository | Implementation tests, release artifact, dependency lock, and component attestation |
+| Component repository | Implementation tests, package or deployment artifact, dependency lock, and component attestation |
 | `identity-conformance` | Upstream pins, shared plans, adapter contracts, runners, negative tests, result evaluation, evidence schemas, and disclosure rules |
-| Product release | Exact component BOM, deployment manifest, artifact digests, endpoints, and credentials required by the selected plan |
+| Product target | Exact component BOM, deployment manifest, artifact digests, endpoints, and credentials required by the selected plan |
 | External authority | Standards, official suite behavior, hosted results, and certification decisions |
 
 A component attestation covers that component. An integration claim requires a
@@ -122,8 +122,10 @@ not replace it.
 
 ### Product conformance statement
 
-A passing product run creates a disclosure-safe statement for one product
-release and one published framework release. The workflow first verifies the
+A passing product run creates a disclosure-safe statement for one candidate or
+published product target, one named profile, and one published framework
+release. The caller selects the profile; it cannot select individual checks
+inside that profile. The workflow first verifies the
 framework tag and release manifest. The statement then binds the product
 release reference and commit, framework version and commit, framework input-set
 digest, caller workflow revision, candidate digest, result digest, and the
@@ -137,8 +139,9 @@ so a component release cannot be substituted without invalidating the result.
 The statement has `certification_claim: false`. It records a framework result;
 it does not turn an engineering run into an external certification decision.
 Product repositories may publish a reviewed statement with a pass badge. The
-badge must name the product release and framework release and link to that
-statement.
+badge must name the product target, profile, and framework release and link to
+that statement. A combined badge is valid only when every profile in the
+combined plan passed against the same target and evidence set.
 
 A historical pass remains valid for the versions in its statement. It does not
 claim that the product has passed a newer framework baseline. Product
@@ -176,14 +179,14 @@ conformity-assessment result.
 
 ### EUDI Wallet
 
-The Wallet runner ties the source commit, release bundle, and component
-attestation to the same candidate. It checks the EU source selection and
+The Wallet runner ties the source commit, package bundle, and component
+attestation to the same caller-selected target. It checks the EU source selection and
 ledgers, evaluates observable boundary values, and runs every test in the
 Wallet workspace with all features enabled, including tests marked ignored.
 The result records the complete discovered-test inventory and binds it to the
 candidate.
 
-The release bundle is not accepted by digest alone. The runner checks its exact
+The package bundle is not accepted by digest alone. The runner checks its exact
 file set, preflight records, Cargo lock, public crate inventory, crate digests,
 and the source revision embedded in every crate.
 
@@ -255,8 +258,7 @@ OIDF gate against the exact candidate commit. The protected promotion workflow
 rebuilds and compares the manifest before creating `v<VERSION>`. Product runs,
 evidence publication, and framework publication remain separate operations.
 
-Latest-release regression runs cover `ssi`, `identity`, `zk`, `wallet`,
-`openid4vci`, and `openid4vp`. They resolve published release tags and verify
-their commits; they do not use default branches. Exact-BOM runs may test an
-older release or a selected release candidate, but the result must say that it
-is not the latest-release lane.
+The maintenance report may show the latest published releases of `ssi`,
+`identity`, `zk`, `wallet`, `openid4vci`, and `openid4vp` as convenient targets.
+Those observations are not framework pins and do not advance the framework
+version. Product workflows test the exact commits selected by their callers.

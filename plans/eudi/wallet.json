@@ -35,7 +35,7 @@
     "cir-2026-1731"
   ],
   "assertions": [
-    {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock", "source.eudi-test-cases", "artifact.wallet-release-bundle"]},
+    {"assertion_id": "candidate_source_integrity", "required_checks": ["source.cargo-lock", "source.wallet-sources-lock", "source.eudi-test-cases", "artifact.wallet-package-bundle"]},
     {"assertion_id": "upstream_reference_binding", "required_checks": ["source.reference-implementation-lock", "source.upstream-tests", "framework.eudi-source-lock", "framework.eudi-legal-source-lock", "framework.eudi-publications-lock"]},
     {"assertion_id": "eudi_minimum_requirements", "required_checks": ["source.eudi-wallet-minimums", "normative.eu.arf.wua-33", "normative.eu.arf.ew-dm-44-027", "normative.eu.technical-specification.ts3-wia-ttl", "cargo.wallet-workspace-all-features"]},
     {"assertion_id": "issuance_flow", "required_checks": ["cargo.wallet-workspace-all-features", "attestation.integration"]},

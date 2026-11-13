@@ -1,13 +1,13 @@
 {
   "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://really.me/schemas/identity-conformance/eudi-wallet-execution-result-v2.json",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-wallet-execution-result-v3.json",
   "title": "ReallyMe EUDI Wallet engineering execution result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "plan_id", "result", "created_at", "framework_version", "framework_revision", "workflow_revision", "candidate_sha256", "component", "release_artifact_sha256", "component_attestation_sha256", "release_evidence", "source_locks", "normative_ledgers", "coverage", "test_execution", "framework_probes", "checks", "assertions", "evidence_policy"],
+  "required": ["schema", "plan_id", "result", "created_at", "framework_version", "framework_revision", "workflow_revision", "candidate_sha256", "component", "target", "package_bundle_sha256", "component_attestation_sha256", "package_evidence", "source_locks", "normative_ledgers", "coverage", "test_execution", "framework_probes", "checks", "assertions", "evidence_policy"],
   "properties": {
-    "schema": {"const": "reallyme.identity.eudi_wallet_execution_result.v2"},
+    "schema": {"const": "reallyme.identity.eudi_wallet_execution_result.v3"},
     "plan_id": {"const": "eudi-wallet-engineering-v1"},
     "result": {"enum": ["passed", "failed"]},
     "created_at": {"type": "string", "format": "date-time"},
@@ -16,12 +16,13 @@
     "workflow_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "candidate_sha256": {"$ref": "#/$defs/sha256"},
     "component": {"$ref": "eudi-wallet-deployment-manifest.schema.json#/properties/component"},
-    "release_artifact_sha256": {"$ref": "#/$defs/sha256"},
+    "target": {"$ref": "eudi-wallet-deployment-manifest.schema.json#/$defs/target"},
+    "package_bundle_sha256": {"$ref": "#/$defs/sha256"},
     "component_attestation_sha256": {"$ref": "#/$defs/sha256"},
-    "release_evidence": {
+    "package_evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["preflight_run_id", "preflight_job_id", "fuzz_run_id", "protobuf_ci_run_id", "rust_ci_run_id", "crate_count", "crate_inventory_sha256", "evidence_count", "evidence_inventory_sha256", "cargo_lock_sha256"],
+      "required": ["preflight_run_id", "preflight_job_id", "fuzz_run_id", "protobuf_ci_run_id", "rust_ci_run_id", "crate_count", "crates", "crate_inventory_sha256", "evidence_count", "evidence_inventory_sha256", "cargo_lock_sha256"],
       "properties": {
         "preflight_run_id": {"type": "integer", "minimum": 1},
         "preflight_job_id": {"type": "integer", "minimum": 1},
@@ -29,6 +30,23 @@
         "protobuf_ci_run_id": {"type": "integer", "minimum": 1},
         "rust_ci_run_id": {"type": "integer", "minimum": 1},
         "crate_count": {"type": "integer", "minimum": 1, "maximum": 128},
+        "crates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "version", "file", "size", "sha256"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^reallyme-wallet(?:-[a-z0-9][a-z0-9-]{0,63})?$"},
+              "version": {"$ref": "eudi-wallet-deployment-manifest.schema.json#/$defs/semver"},
+              "file": {"type": "string", "pattern": "^reallyme-wallet(?:-[a-z0-9][a-z0-9-]{0,63})?-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.crate$"},
+              "size": {"type": "integer", "minimum": 1, "maximum": 67108864},
+              "sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        },
         "crate_inventory_sha256": {"$ref": "#/$defs/sha256"},
         "evidence_count": {"const": 7},
         "evidence_inventory_sha256": {"$ref": "#/$defs/sha256"},

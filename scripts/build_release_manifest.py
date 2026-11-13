@@ -28,13 +28,11 @@ VERSION = re.compile(
 )
 FIXED_INPUTS = (
     "VERSION",
-    "references/reallyme/trace-sources.lock.json",
     "references/reallyme/release-sources.json",
     "references/normative-sources.lock.json",
     "references/eudi-publications.lock.json",
     "references/pin-policy.json",
     "references/upstream-update-policy.json",
-    "references/etsi-eaa-pid/requirement-trace.json",
     "upstream/eudi/sources.lock.json",
     "upstream/eudi/legal-sources.lock.json",
     "upstream/oidf/conformance-suite.lock.json",

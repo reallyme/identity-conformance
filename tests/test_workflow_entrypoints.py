@@ -11,21 +11,21 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 
 class WorkflowEntrypointTests(unittest.TestCase):
-    def test_wallet_workflow_revalidates_the_exact_release_preflight(self) -> None:
+    def test_wallet_workflow_revalidates_the_exact_package_preflight(self) -> None:
         workflow = (WORKFLOWS / "eudi-wallet-conformance.yml").read_text(
             encoding="utf-8"
         )
         self.assertIn(
-            "Revalidate the Wallet release preflight independently", workflow
+            "Revalidate exact Wallet package preflight", workflow
         )
-        self.assertIn("actions/runs/${run_id}/attempts/1/jobs?per_page=100", workflow)
+        self.assertIn("actions/runs/${PREFLIGHT_RUN_ID}/attempts/1/jobs?per_page=100", workflow)
         self.assertIn(
-            "python3 identity-conformance/scripts/verify_wallet_release_preflight.py",
+            "python3 identity-conformance/scripts/verify_wallet_package_preflight.py",
             workflow,
         )
-        self.assertIn(".release_evidence.fuzz_run_id", workflow)
-        self.assertIn(".release_evidence.protobuf_ci_run_id", workflow)
-        self.assertIn(".release_evidence.rust_ci_run_id", workflow)
+        self.assertIn(".package_evidence.fuzz_run_id", workflow)
+        self.assertIn(".package_evidence.protobuf_ci_run_id", workflow)
+        self.assertIn(".package_evidence.rust_ci_run_id", workflow)
         self.assertNotIn("required_steps", workflow)
 
     def test_wallet_workflow_verifies_each_release_subject_provenance(self) -> None:
@@ -40,7 +40,7 @@ class WorkflowEntrypointTests(unittest.TestCase):
             "crates-package-preflight.yml",
             workflow,
         )
-        self.assertIn('--source-digest "${commit}"', workflow)
+        self.assertIn('--source-digest "${TARGET_COMMIT}"', workflow)
         self.assertIn("--deny-self-hosted-runners", workflow)
 
     def test_identity_has_one_product_entrypoint_for_both_oidf_lanes(self) -> None:
