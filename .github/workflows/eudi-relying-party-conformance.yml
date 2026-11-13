@@ -12,6 +12,10 @@ on:
         description: Exact identity-conformance commit selected by the private caller
         required: true
         type: string
+      candidate_repository:
+        description: Repository slug for the substantive relying-party control-plane component
+        required: true
+        type: string
       candidate_binary_path:
         description: Absolute path to the candidate executable on the ephemeral runner
         required: true
@@ -31,6 +35,11 @@ on:
         type: string
       journal_path:
         description: Absolute path to the durable TS5 journal for live mode
+        required: false
+        default: ""
+        type: string
+      taxonomy_commit:
+        description: Optional exact Identity Taxonomy commit for audited requirement receipts
         required: false
         default: ""
         type: string
@@ -68,13 +77,19 @@ jobs:
     timeout-minutes: 360
     environment: eudi-conformance
     steps:
-      - name: Require a ReallyMe caller
+      - name: Validate caller and immutable revisions
         run: |
           [[ "${GITHUB_REPOSITORY_OWNER}" == "reallyme" ]]
           [[ "${GITHUB_REPOSITORY}" != "reallyme/identity-conformance" ]]
           [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${CANDIDATE_REPOSITORY}" =~ ^reallyme/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$ ]]
+          if [[ -n "${TAXONOMY_COMMIT}" ]]; then
+            [[ "${TAXONOMY_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+          fi
         env:
           FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          CANDIDATE_REPOSITORY: ${{ inputs.candidate_repository }}
+          TAXONOMY_COMMIT: ${{ inputs.taxonomy_commit }}
 
       - name: Clear controlled checkout paths
         run: |
@@ -108,6 +123,7 @@ jobs:
 
       - name: Materialize and validate the protected deployment manifest
         env:
+          CANDIDATE_REPOSITORY: ${{ inputs.candidate_repository }}
           EUDI_DEPLOYMENT_MANIFEST_B64: ${{ secrets.EUDI_DEPLOYMENT_MANIFEST_B64 }}
         run: |
           umask 077
@@ -117,12 +133,10 @@ jobs:
           printf '%s' "${EUDI_DEPLOYMENT_MANIFEST_B64}" | base64 --decode > "${input_dir}/deployment.json"
           python3 identity-conformance/scripts/verify_eudi_deployment_manifest.py \
             --manifest "${input_dir}/deployment.json" \
-            --candidate-repository "https://github.com/${GITHUB_REPOSITORY}"
+            --candidate-repository "https://github.com/${CANDIDATE_REPOSITORY}"
 
       - name: Resolve immutable source revisions
         id: revisions
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           manifest="${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json"
           for component in candidate platform ssi; do
@@ -133,14 +147,6 @@ jobs:
             [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
             printf '%s=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
           done
-          latest_ssi_ref="$(gh api 'repos/reallyme/ssi/releases/latest' --jq '.tag_name')"
-          [[ "${latest_ssi_ref}" =~ ^reallyme-ssi-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
-          latest_ssi_commit="$(gh api "repos/reallyme/ssi/commits/${latest_ssi_ref}" --jq '.sha')"
-          test "${latest_ssi_commit}" = "$(jq -er '
-            [.components[] | select(.component_id == "ssi")]
-            | if length == 1 then .[0].commit else error("SSI revision must be unique") end
-          ' "${manifest}")"
-          printf 'ssi_release_ref=%s\n' "${latest_ssi_ref}" >> "${GITHUB_OUTPUT}"
           while IFS=$'\t' read -r source_id commit; do
             [[ "${source_id}" =~ ^[a-z0-9-]+$ ]]
             [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
@@ -162,13 +168,13 @@ jobs:
       - name: Checkout candidate component
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ github.repository }}
+          repository: ${{ inputs.candidate_repository }}
           ref: ${{ steps.revisions.outputs.candidate }}
           path: components/candidate
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
 
-      - name: Checkout pinned Platform dependency
+      - name: Checkout caller-selected Platform dependency
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/platform
@@ -177,12 +183,22 @@ jobs:
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
 
-      - name: Checkout pinned SSI dependency
+      - name: Checkout caller-selected SSI dependency
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/ssi
-          ref: ${{ steps.revisions.outputs.ssi_release_ref }}
+          ref: ${{ steps.revisions.outputs.ssi }}
           path: components/ssi
+          token: ${{ secrets.REALLYME_CI_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout caller-selected Identity Taxonomy revision
+        if: inputs.taxonomy_commit != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-taxonomy
+          ref: ${{ inputs.taxonomy_commit }}
+          path: components/identity-taxonomy
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
 
@@ -240,6 +256,17 @@ jobs:
             "${RUNNER_TEMP}/eudi-conformance-inputs/component-attestation.json"
           python3 identity-conformance/scripts/verify_component_attestation.py \
             --attestation "${RUNNER_TEMP}/eudi-conformance-inputs/component-attestation.json"
+
+      - name: Install current Rust toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.100.0
+
+      - name: Install Ruby for optional Taxonomy receipt audit
+        if: inputs.taxonomy_commit != ''
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: "3.3"
 
       - name: Materialize optional live inputs
         env:
@@ -309,11 +336,106 @@ jobs:
           python3 identity-conformance/scripts/verify_eudi_execution_result.py \
             --result "${result_dir}/result.json"
 
+      - name: Execute exact requirement tests
+        env:
+          CANDIDATE_REPOSITORY: ${{ inputs.candidate_repository }}
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          TAXONOMY_COMMIT: ${{ inputs.taxonomy_commit }}
+        run: |
+          manifest="${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json"
+          candidate_commit="$(jq -er \
+            '[.components[] | select(.component_id == "candidate")] \
+             | if length == 1 then .[0].commit else error("candidate revision must be unique") end' \
+            "${manifest}")"
+          rust_version="$(rustc --version | awk '{print $2}')"
+          requirement_result_dir="${GITHUB_WORKSPACE}/identity-conformance/results/eudi-relying-party-requirements"
+          arguments=(
+            --candidate-source components/candidate
+            --candidate-commit "${candidate_commit}"
+            --candidate-repository "${CANDIDATE_REPOSITORY}"
+            --framework-root identity-conformance
+            --framework-commit "${FRAMEWORK_COMMIT}"
+            --technical-specification-source upstream/eudi/eudi-doc-standards-and-technical-specifications
+            --validated-execution-result "${RUNNER_TEMP}/eudi-relying-party-conformance/result.json"
+            --result-dir "${requirement_result_dir}"
+            --rust-version "${rust_version}"
+          )
+          if [[ -n "${TAXONOMY_COMMIT}" ]]; then
+            arguments+=(
+              --taxonomy-inventory components/identity-taxonomy/conformance/inventory/requirements.json
+              --taxonomy-source components/identity-taxonomy
+              --taxonomy-commit "${TAXONOMY_COMMIT}"
+            )
+            taxonomy_observations="required"
+          else
+            taxonomy_observations="forbidden"
+          fi
+          python3 identity-conformance/scripts/run_eudi_relying_party_requirement_tests.py \
+            "${arguments[@]}"
+          python3 identity-conformance/scripts/verify_eudi_relying_party_requirement_results.py \
+            --result-dir "${requirement_result_dir}" \
+            --candidate-source components/candidate \
+            --candidate-commit "${candidate_commit}" \
+            --framework-commit "${FRAMEWORK_COMMIT}" \
+            --taxonomy-observations "${taxonomy_observations}" \
+            --taxonomy-receipts forbidden
+
+      - name: Audit optional Taxonomy observations
+        if: inputs.taxonomy_commit != ''
+        env:
+          TAXONOMY_COMMIT: ${{ inputs.taxonomy_commit }}
+        run: |
+          observation_dir="identity-conformance/results/eudi-relying-party-requirements/observations"
+          receipt_dir="identity-conformance/results/eudi-relying-party-requirements/receipts"
+          taxonomy_observation_dir="components/identity-taxonomy/conformance/observations/executions"
+          taxonomy_receipt_dir="components/identity-taxonomy/conformance/observations/receipts"
+          mkdir -p "${receipt_dir}"
+          mkdir -p "${taxonomy_observation_dir}" "${taxonomy_receipt_dir}"
+          while IFS= read -r -d '' observation; do
+            name="$(basename "${observation}" .json)"
+            taxonomy_observation="${taxonomy_observation_dir}/${name}.json"
+            taxonomy_receipt="${taxonomy_receipt_dir}/${name}.json"
+            test ! -e "${taxonomy_observation}"
+            test ! -L "${taxonomy_observation}"
+            test ! -e "${taxonomy_receipt}"
+            test ! -L "${taxonomy_receipt}"
+            cp "${observation}" "${taxonomy_observation}"
+            ruby components/identity-taxonomy/scripts/audit_conformance_execution_observation.rb \
+              --input "${taxonomy_observation}" \
+              --producer-root identity-conformance \
+              --subject-root components/candidate \
+              --runner-root identity-conformance \
+              --inventory components/identity-taxonomy/conformance/inventory/requirements.json \
+              --receipt "${taxonomy_receipt}"
+            cp "${taxonomy_receipt}" "${receipt_dir}/${name}.json"
+          done < <(find "${observation_dir}" -type f -name '*.json' -print0)
+          expected="$(jq -er '.tests | length' \
+            identity-conformance/plans/eudi/relying-party-requirement-tests.json)"
+          observed="$(find "${observation_dir}" -type f -name '*.json' | wc -l | tr -d '[:space:]')"
+          receipts="$(find "${receipt_dir}" -type f -name '*.json' | wc -l | tr -d '[:space:]')"
+          [[ "${observed}" == "${expected}" ]]
+          [[ "${receipts}" == "${expected}" ]]
+          candidate_commit="$(jq -er \
+            '[.components[] | select(.component_id == "candidate")] \
+             | if length == 1 then .[0].commit else error("candidate revision must be unique") end' \
+            "${RUNNER_TEMP}/eudi-conformance-inputs/deployment.json")"
+          python3 identity-conformance/scripts/verify_eudi_relying_party_requirement_results.py \
+            --result-dir identity-conformance/results/eudi-relying-party-requirements \
+            --candidate-source components/candidate \
+            --candidate-commit "${candidate_commit}" \
+            --framework-commit "${{ inputs.framework_commit }}" \
+            --taxonomy-observations required \
+            --taxonomy-receipts required \
+            --taxonomy-source components/identity-taxonomy \
+            --taxonomy-commit "${TAXONOMY_COMMIT}"
+
       - name: Upload validated EUDI result
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: eudi-relying-party-conformance-${{ github.sha }}
-          path: ${{ runner.temp }}/eudi-relying-party-conformance/result.json
+          path: |
+            ${{ runner.temp }}/eudi-relying-party-conformance/result.json
+            identity-conformance/results/eudi-relying-party-requirements
           if-no-files-found: error
           retention-days: 7
 

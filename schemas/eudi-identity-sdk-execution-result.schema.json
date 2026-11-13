@@ -1,0 +1,210 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-identity-sdk-execution-result-v1.json",
+  "title": "ReallyMe EUDI Identity SDK execution result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "plan_id",
+    "result",
+    "created_at",
+    "framework",
+    "execution",
+    "candidate",
+    "components",
+    "product_component_bom_sha256",
+    "candidate_cargo_lock_sha256",
+    "source_locks",
+    "coverage",
+    "lanes",
+    "evidence_policy"
+  ],
+  "properties": {
+    "schema": {
+      "const": "reallyme.identity.eudi_identity_sdk_execution_result.v1"
+    },
+    "plan_id": {
+      "const": "eudi-identity-sdk-v1"
+    },
+    "result": {
+      "const": "passed"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "commit", "manifest_sha256", "input_set_sha256"],
+      "properties": {
+        "version": {"$ref": "#/$defs/semver"},
+        "commit": {"$ref": "#/$defs/git_commit"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "input_set_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflow_repository", "workflow_revision", "run_id", "run_attempt"],
+      "properties": {
+        "workflow_repository": {"const": "reallyme/identity"},
+        "workflow_revision": {"$ref": "#/$defs/git_commit"},
+        "run_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "run_attempt": {"type": "integer", "minimum": 1, "maximum": 2147483647}
+      }
+    },
+    "candidate": {
+      "oneOf": [
+        {"$ref": "#/$defs/candidate_commit"},
+        {"$ref": "#/$defs/candidate_release"}
+      ]
+    },
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/component"}
+    },
+    "product_component_bom_sha256": {"$ref": "#/$defs/sha256"},
+    "candidate_cargo_lock_sha256": {"$ref": "#/$defs/sha256"},
+    "source_locks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eudi_sources_sha256",
+        "eudi_legal_sources_sha256",
+        "eudi_publications_sha256",
+        "normative_sources_sha256"
+      ],
+      "properties": {
+        "eudi_sources_sha256": {"$ref": "#/$defs/sha256"},
+        "eudi_legal_sources_sha256": {"$ref": "#/$defs/sha256"},
+        "eudi_publications_sha256": {"$ref": "#/$defs/sha256"},
+        "normative_sources_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_operations",
+        "etsi_requirement_rows",
+        "eu_requirement_rows",
+        "code_and_composed_evidence_rows",
+        "external_evidence_rows",
+        "not_applicable_rows"
+      ],
+      "properties": {
+        "identity_operations": {"const": 8},
+        "etsi_requirement_rows": {"const": 740},
+        "eu_requirement_rows": {"const": 229},
+        "code_and_composed_evidence_rows": {"const": 898},
+        "external_evidence_rows": {"const": 53},
+        "not_applicable_rows": {"const": 18}
+      }
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/lane"}
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contains_sensitive_data",
+        "attestations_satisfied_behavior",
+        "external_evidence_rows_counted_as_code_passes",
+        "legal_conformity_claim",
+        "certification_claim"
+      ],
+      "properties": {
+        "contains_sensitive_data": {"const": false},
+        "attestations_satisfied_behavior": {"const": false},
+        "external_evidence_rows_counted_as_code_passes": {"const": false},
+        "legal_conformity_claim": {"const": false},
+        "certification_claim": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "git_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "candidate_commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "repository", "version", "commit", "source_archive_sha256"],
+      "properties": {
+        "mode": {"const": "candidate"},
+        "repository": {"const": "https://github.com/reallyme/identity"},
+        "version": {"$ref": "#/$defs/semver"},
+        "commit": {"$ref": "#/$defs/git_commit"},
+        "source_archive_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "candidate_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "repository", "version", "release_id", "release_ref", "commit", "source_archive_sha256"],
+      "properties": {
+        "mode": {"const": "published"},
+        "repository": {"const": "https://github.com/reallyme/identity"},
+        "version": {"$ref": "#/$defs/semver"},
+        "release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "release_ref": {
+          "type": "string",
+          "pattern": "^reallyme-identity-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "commit": {"$ref": "#/$defs/git_commit"},
+        "source_archive_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "repository", "release_id", "release_ref", "commit", "source_archive_sha256"],
+      "properties": {
+        "component_id": {"enum": ["ssi", "openid4vci", "openid4vp"]},
+        "repository": {
+          "type": "string",
+          "pattern": "^https://github\\.com/reallyme/(ssi|openid4vci|openid4vp)$"
+        },
+        "release_id": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "release_ref": {
+          "type": "string",
+          "pattern": "^reallyme-(ssi|openid4vci|openid4vp)-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "commit": {"$ref": "#/$defs/git_commit"},
+        "source_archive_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "lane": {
+      "enum": [
+        "normative_trace",
+        "rust_product_boundary",
+        "eudi_openid_composition",
+        "typescript_sdk",
+        "python_sdk",
+        "go_sdk",
+        "kotlin_sdk",
+        "swift_sdk"
+      ]
+    }
+  }
+}

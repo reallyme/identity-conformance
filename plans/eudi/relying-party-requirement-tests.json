@@ -1,0 +1,127 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "schema_version": 1,
+  "plan_id": "eudi-relying-party-requirement-tests-v1",
+  "parent_plan_id": "eudi-relying-party-control-plane-v1",
+  "subject_repository": "reallyme/eudi",
+  "complete": false,
+  "normative_statements": [
+    {
+      "statement_id": "ts6.service_intermediary_binding",
+      "source_id": "eudi-technical-specifications",
+      "source_commit": "cfc383e44294d65cfa6cccbbff6c927f0df91f9a",
+      "source_path": "docs/technical-specifications/ts6-common-set-of-rp-information-to-be-registered.md",
+      "source_sha256": "03b198deb4f8151ef73c755598a399a951163d6d6b3918e03ea56c372009d77c",
+      "clause_locator": "TS6 v1.2.2 section 2 table row 16 (Served Wallet-Relying Parties), including note 3",
+      "start_line": 109,
+      "end_line": 109,
+      "normalization": "utf8_line_range_lf_v1",
+      "statement_sha256": "de509bad9caa9141bf02d6c3e295fc2d4deaa8c97a833d3bbfdb6713cb7b7e56"
+    },
+    {
+      "statement_id": "ts5.signed_wrp_response",
+      "source_id": "eudi-technical-specifications",
+      "source_commit": "cfc383e44294d65cfa6cccbbff6c927f0df91f9a",
+      "source_path": "docs/technical-specifications/api/ts5-openapi31-registrar-api.yml",
+      "source_sha256": "21403779fe5c5b67af9bd51a18a86db47eded4b210b56a8b85285b78a8377a09",
+      "clause_locator": "OpenAPI /paths/~1wrp~1{identifier}/get/responses/200",
+      "start_line": 592,
+      "end_line": 603,
+      "normalization": "utf8_line_range_lf_v1",
+      "statement_sha256": "d250ae462f2c81ffb075a6a4b45f7544acddba93d0be7dd8d6e45b61084b0543"
+    }
+  ],
+  "tests": [
+    {
+      "command_id": "eudi.rp.association.behavior",
+      "assertion_id": "association_is_service_to_service",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:association_is_service_to_service",
+      "evidence_class": "behavior_test",
+      "case_kind": "positive",
+      "normative_statement_ids": ["ts6.service_intermediary_binding"],
+      "package": "reallyme-eudi-qp-app",
+      "features": [],
+      "test_target": "intermediary_association_tests",
+      "test_path": "apps/eudi-qp/tests/intermediary_association_tests.rs",
+      "symbol": "association_is_explicitly_service_to_service"
+    },
+    {
+      "command_id": "eudi.rp.association.invalid_input",
+      "assertion_id": "association_is_service_to_service",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:association_is_service_to_service",
+      "evidence_class": "invalid_input_test",
+      "case_kind": "invalid_input",
+      "normative_statement_ids": ["ts6.service_intermediary_binding"],
+      "package": "reallyme-eudi-qp-app",
+      "features": [],
+      "test_target": "intermediary_association_tests",
+      "test_path": "apps/eudi-qp/tests/intermediary_association_tests.rs",
+      "symbol": "exact_service_self_link_is_rejected"
+    },
+    {
+      "command_id": "eudi.rp.association.round_trip",
+      "assertion_id": "association_is_service_to_service",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:association_is_service_to_service",
+      "evidence_class": "round_trip_test",
+      "case_kind": "round_trip",
+      "normative_statement_ids": ["ts6.service_intermediary_binding"],
+      "package": "reallyme-eudi-qp-app",
+      "features": ["redb-store"],
+      "test_target": "redb_intermediary_association_repository_tests",
+      "test_path": "apps/eudi-qp/tests/redb_intermediary_association_repository_tests.rs",
+      "symbol": "association_round_trips_registration_and_revocation_across_reopen"
+    },
+    {
+      "command_id": "eudi.rp.ts5_signed_envelope.behavior",
+      "assertion_id": "current_ts5_signed_envelope_is_strict",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:current_ts5_signed_envelope_is_strict",
+      "evidence_class": "behavior_test",
+      "case_kind": "positive",
+      "normative_statement_ids": ["ts5.signed_wrp_response"],
+      "package": "reallyme-eudi-qp-app",
+      "features": ["ssi-rp-registration"],
+      "test_target": "ssi_registrar_artifact_tests",
+      "test_path": "apps/eudi-qp/tests/ssi_registrar_artifact_tests.rs",
+      "symbol": "conformance_authenticator_accepts_query_bound_signed_read_shapes"
+    },
+    {
+      "command_id": "eudi.rp.ts5_signed_envelope.invalid_input",
+      "assertion_id": "current_ts5_signed_envelope_is_strict",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:current_ts5_signed_envelope_is_strict",
+      "evidence_class": "invalid_input_test",
+      "case_kind": "invalid_input",
+      "normative_statement_ids": ["ts5.signed_wrp_response"],
+      "package": "reallyme-eudi-qp-app",
+      "features": ["ssi-rp-registration"],
+      "test_target": "ssi_registrar_artifact_tests",
+      "test_path": "apps/eudi-qp/tests/ssi_registrar_artifact_tests.rs",
+      "symbol": "malformed_compact_input_maps_to_a_closed_error_without_echoing_content"
+    },
+    {
+      "command_id": "eudi.rp.ts5_signed_envelope.downgrade",
+      "assertion_id": "current_ts5_signed_envelope_is_strict",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:current_ts5_signed_envelope_is_strict",
+      "evidence_class": "downgrade_test",
+      "case_kind": "downgrade",
+      "normative_statement_ids": ["ts5.signed_wrp_response"],
+      "package": "reallyme-eudi-qp-app",
+      "features": [],
+      "test_target": "registry_observation_pipeline_tests",
+      "test_path": "apps/eudi-qp/tests/registry_observation_pipeline_tests.rs",
+      "symbol": "authenticator_cannot_downgrade_current_envelope_to_legacy_profile"
+    },
+    {
+      "command_id": "eudi.rp.ts5_signed_envelope.oversized_input",
+      "assertion_id": "current_ts5_signed_envelope_is_strict",
+      "requirement_id": "conformance-scope:eudi_relying_party_control_plane:assertion:current_ts5_signed_envelope_is_strict",
+      "evidence_class": "oversized_input_test",
+      "case_kind": "oversized_input",
+      "normative_statement_ids": ["ts5.signed_wrp_response"],
+      "package": "reallyme-eudi-qp-app",
+      "features": [],
+      "test_target": "registrar_boundary_tests",
+      "test_path": "apps/eudi-qp/tests/registrar_boundary_tests.rs",
+      "symbol": "fetched_envelope_rejects_empty_and_oversized_bodies"
+    }
+  ]
+}

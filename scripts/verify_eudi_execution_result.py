@@ -160,7 +160,13 @@ def verify_result(value: dict[str, object]) -> None:
             or check_id in check_ids
             or raw_check["result"] != "passed"
             or raw_check["kind"]
-            not in {"attestation", "binary_probe", "service_probe", "live_probe"}
+            not in {
+                "attestation",
+                "binary_probe",
+                "normative_source_binding",
+                "service_probe",
+                "live_probe",
+            }
         ):
             raise adapter_verifier.AdapterError(adapter_verifier.AdapterErrorReason.INVALID_JSON)
         check_ids.add(check_id)
@@ -171,9 +177,14 @@ def verify_result(value: dict[str, object]) -> None:
         raise adapter_verifier.AdapterError(
             adapter_verifier.AdapterErrorReason.INVALID_JSON
         )
+    required_normative_check_ids = runner.required_normative_check_ids(bundle.adapter)
+    if not required_normative_check_ids.issubset(check_ids):
+        raise adapter_verifier.AdapterError(
+            adapter_verifier.AdapterErrorReason.INVALID_JSON
+        )
     assertion_ids: set[str] = set()
     for raw_assertion in assertions:
-        if not isinstance(raw_assertion, dict) or set(raw_assertion) != {"family_id", "assertion_id", "result", "check_ids"}:
+        if not isinstance(raw_assertion, dict) or set(raw_assertion) != {"family_id", "assertion_id", "result", "check_ids", "evidence_strength"}:
             raise adapter_verifier.AdapterError(adapter_verifier.AdapterErrorReason.INVALID_JSON)
         assertion_id = raw_assertion["assertion_id"]
         referenced = raw_assertion["check_ids"]
@@ -182,6 +193,7 @@ def verify_result(value: dict[str, object]) -> None:
             or IDENTIFIER.fullmatch(assertion_id) is None
             or assertion_id in assertion_ids
             or raw_assertion["result"] != "passed"
+            or raw_assertion["evidence_strength"] != "attestation_only"
             or not isinstance(referenced, list)
             or not referenced
             or len(referenced) != len(set(referenced))

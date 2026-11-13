@@ -10,8 +10,6 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly script_dir
 repository_root="$(cd -- "${script_dir}/.." && pwd)"
 readonly repository_root
-openid4vp_root="$(cd -- "${repository_root}/../openid4vp" && pwd)"
-readonly openid4vp_root
 suite_dir="${OIDF_CONFORMANCE_SUITE_DIR:-${repository_root}/upstream/oidf/openid-conformance-suite}"
 result_root="${OIDF_OPENID4VP_RESULT_DIR:-${repository_root}/results/local/openid4vp-certification}"
 readonly suite_dir result_root
@@ -20,6 +18,10 @@ fail() {
   printf 'OIDF OpenID4VP certification runner: %s\n' "$1" >&2
   exit 78
 }
+
+openid4vp_root="$(cd -- "${OIDF_OPENID4VP_SOURCE_DIR:-${repository_root}/../openid4vp}" && pwd)" || \
+  fail "OpenID4VP adapter source repository is unavailable"
+readonly openid4vp_root
 
 require_file() {
   [[ -f "$1" && -r "$1" && ! -L "$1" ]] || fail "$2"
@@ -78,7 +80,7 @@ profile_expression() {
      | map(select(.id == $profile_id and .expression == $expression))
      | length == 1' \
     "${openid_profile_matrix}" >/dev/null || \
-    fail "selected certification profile is unsupported by the locked OpenID4VP component"
+    fail "selected certification profile is absent from the framework profile matrix"
   printf '%s\n' "${expression}"
 }
 
@@ -110,6 +112,7 @@ require_variable OIDF_VP_WALLET_MDOC_CONFIG \
   "OIDF_VP_WALLET_MDOC_CONFIG is required"
 require_variable OIDF_DEPLOYMENT_MANIFEST "OIDF_DEPLOYMENT_MANIFEST is required"
 require_variable OIDF_PRODUCT_COMPONENT_BOM "OIDF_PRODUCT_COMPONENT_BOM is required"
+require_variable OIDF_PRODUCT_SOURCE_DIR "OIDF_PRODUCT_SOURCE_DIR is required"
 require_variable CONFORMANCE_FRAMEWORK_COMMIT "CONFORMANCE_FRAMEWORK_COMMIT is required"
 require_variable CONFORMANCE_WORKFLOW_COMMIT "CONFORMANCE_WORKFLOW_COMMIT is required"
 require_variable EXAMPLE_VERIFIER_BASE_URL "EXAMPLE_VERIFIER_BASE_URL is required"
@@ -127,8 +130,10 @@ wallet_sd_jwt_config="$(resolve_file "${OIDF_VP_WALLET_SD_JWT_CONFIG}")"
 wallet_mdoc_config="$(resolve_file "${OIDF_VP_WALLET_MDOC_CONFIG}")"
 deployment_manifest="$(resolve_file "${OIDF_DEPLOYMENT_MANIFEST}")"
 product_component_bom="$(resolve_file "${OIDF_PRODUCT_COMPONENT_BOM}")"
+product_source_dir="$(cd -- "${OIDF_PRODUCT_SOURCE_DIR}" && pwd)" || \
+  fail "product source repository is unavailable"
 readonly verifier_config wallet_sd_jwt_config wallet_mdoc_config deployment_manifest
-readonly product_component_bom
+readonly product_component_bom product_source_dir
 require_file "${verifier_config}" "verifier configuration is unavailable"
 require_file "${wallet_sd_jwt_config}" "SD-JWT wallet configuration is unavailable"
 require_file "${wallet_mdoc_config}" "mdoc wallet configuration is unavailable"
@@ -158,10 +163,25 @@ require_public_https_endpoint "${OIDF_WALLET_HARNESS_ENDPOINT}" "wallet harness 
 require_public_https_endpoint "${OIDF_WALLET_HARNESS_HEALTH_ENDPOINT}" \
   "wallet harness health endpoint must be a public HTTPS endpoint"
 
+adapter_component_id="$(jq -er \
+  '[.components[] | select(.adapter_contracts | index("openid4vp"))] | if length == 1 then .[0].component_id else error("OpenID4VP adapter provider must be unique") end' \
+  "${product_component_bom}")" || fail "OpenID4VP adapter provider is invalid"
+product_component_id="$(jq -er \
+  '.product_component_id | select(type == "string" and length > 0)' \
+  "${product_component_bom}")" || fail "product component identity is invalid"
+readonly adapter_component_id product_component_id
+checkout_arguments=(--checkout "${adapter_component_id}=${openid4vp_root}")
+if [[ "${product_component_id}" == "${adapter_component_id}" ]]; then
+  [[ "${product_source_dir}" == "${openid4vp_root}" ]] || \
+    fail "one component cannot be represented by two source checkouts"
+else
+  checkout_arguments+=(--checkout "${product_component_id}=${product_source_dir}")
+fi
+
 cd "${repository_root}"
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --require-release-refs --verify-checkouts
+  --require-release-refs "${checkout_arguments[@]}"
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 python3 scripts/verify_oidf_deployment_manifest.py \
@@ -175,24 +195,28 @@ python3 scripts/verify_oidf_deployment_manifest.py \
   --binding openid4vp_wallet.wallet_harness_health_endpoint "${OIDF_WALLET_HARNESS_HEALTH_ENDPOINT}"
 
 readonly certification_plan="${repository_root}/plans/oidf/certification.json"
-readonly openid_profile_matrix="${openid4vp_root}/conformance/oidf/profile-matrix.json"
-readonly openid_result_assertion="${openid4vp_root}/conformance/scripts/assert_oidf_results.sh"
+mkdir -p "${result_root}"
+runtime_contracts="${result_root}/runtime-contracts"
+python3 scripts/build_oidf_runtime_contracts.py \
+  --product-component-bom "${product_component_bom}" \
+  --output-dir "${runtime_contracts}" \
+  --require-release-refs
+readonly runtime_contracts
+readonly openid_profile_matrix="${runtime_contracts}/openid4vp-profile-matrix.json"
+readonly openid_result_assertion="${repository_root}/scripts/assert_oidf_openid4vp_suite_results.py"
 readonly openid_target_verifier="${openid4vp_root}/conformance/scripts/verify_oidf_certification_target.py"
 readonly openid_matrix_reader="${openid4vp_root}/conformance/scripts/read_oidf_certification_matrix.py"
 readonly openid_wallet_config_verifier="${openid4vp_root}/conformance/scripts/verify_oidf_wallet_config.py"
 readonly verifier_flow_driver="${openid4vp_root}/conformance/scripts/drive_oidf_verifier_flow.py"
 readonly wallet_flow_driver="${openid4vp_root}/conformance/scripts/drive_oidf_wallet_flow.py"
 require_file "${openid_profile_matrix}" "OpenID4VP profile matrix is unavailable"
+require_file "${openid_result_assertion}" "OpenID4VP result assertion is unavailable"
 expected_suite_revision="$(jq -er '.commit' \
   "${repository_root}/upstream/oidf/conformance-suite.lock.json")" || \
   fail "framework suite revision is unavailable"
-component_suite_revision="$(jq -er '.suite.commit' "${openid_profile_matrix}")" || \
-  fail "OpenID4VP suite revision is unavailable"
 checked_suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)" || \
   fail "suite checkout revision is unavailable"
-readonly expected_suite_revision component_suite_revision checked_suite_revision
-[[ "${component_suite_revision}" == "${expected_suite_revision}" ]] || \
-  fail "OpenID4VP suite revision disagrees with the framework release"
+readonly expected_suite_revision checked_suite_revision
 [[ "${checked_suite_revision}" == "${expected_suite_revision}" ]] || \
   fail "suite checkout disagrees with the framework release"
 python3 scripts/verify_oidf_wallet_plan.py --suite-checkout "${suite_dir}"
@@ -284,7 +308,7 @@ done
 # describe the exact checkout and configuration bytes that initiated it.
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --require-release-refs --verify-checkouts
+  --require-release-refs "${checkout_arguments[@]}"
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${verifier_config}")" == "${verifier_config_fingerprint}" ]] || \
   fail "verifier configuration changed during execution"
@@ -299,6 +323,9 @@ scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${openid_profile_matrix}")" == \
   "${profile_matrix_fingerprint}" ]] || \
   fail "OpenID4VP profile matrix changed during execution"
+[[ "$(python3 scripts/hash_oidf_input.py "${result_root}/openid4vp-profile-matrix.json")" == \
+  "${profile_matrix_fingerprint}" ]] || \
+  fail "retained OpenID4VP profile matrix differs from the executed contract"
 
 suite_revision="${checked_suite_revision}"
 readonly suite_revision
@@ -310,6 +337,7 @@ python3 scripts/assert_oidf_openid4vp_pre_submission.py \
   --product-component-bom "${result_root}/product-component-bom.json" \
   --deployment-manifest "${result_root}/deployment-manifest.json" \
   --openid4vp-source-dir "${openid4vp_root}" \
+  --product-source-dir "${product_source_dir}" \
   --result-assertion "${openid_result_assertion}"
 python3 scripts/build_oidf_evidence_index.py \
   --result-root "${result_root}" \

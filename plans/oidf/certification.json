@@ -3,14 +3,8 @@
   "copyright": "Copyright © 2026 ReallyMe Technologies Limited. All rights reserved",
   "license": "MIT OR Apache-2.0",
   "observed_at": "2026-11-09",
-  "required_components": [
-    {"component_id": "openid4vci", "repository": "https://github.com/reallyme/openid4vci"},
-    {"component_id": "openid4vp", "repository": "https://github.com/reallyme/openid4vp"},
-    {"component_id": "wallet", "repository": "https://github.com/reallyme/wallet"},
-    {"component_id": "ssi", "repository": "https://github.com/reallyme/ssi"},
-    {"component_id": "identity", "repository": "https://github.com/reallyme/identity"},
-    {"component_id": "cose", "repository": "https://github.com/reallyme/cose"}
-  ],
+  "required_roles": ["openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"],
+  "required_adapter_contracts": ["openid4vci", "openid4vp"],
   "certification_program": {
     "launched_at": "2026-08-07",
     "openid4vci_version": "1.0 Final",
@@ -78,14 +72,14 @@
         "REVIEW"
       ]
     },
-    "openid4vp_result_policy_authority": "conformance/oidf/profile-matrix.json in the exact locked openid4vp component revision",
+    "openid4vp_result_policy_authority": "plans/oidf/execution/openid4vp-profile-matrix.json in the selected Identity Conformance release",
     "required_completion_assertions": [
       "No :module-list selector is present in the plan expression.",
       "The runner's selected_modules value is empty.",
       "The number of completed module results equals the number of modules returned when the plan was created.",
       "The runner does not emit NOT ALL TESTS FROM PLAN WERE RUN.",
       "OpenID4VCI exports contain only PASSED terminal module results.",
-      "OpenID4VP exports contain PASSED terminal results except REVIEW for exact modules classified by the source-bound result policy in the locked OpenID4VP certification matrix.",
+      "OpenID4VP exports contain PASSED terminal results except REVIEW for exact modules classified by the framework-owned OpenID4VP execution matrix.",
       "No export contains failed, warning, interrupted, incomplete, or unclassified review results.",
       "The exported module inventory and result archive are retained with cryptographic hashes in the release BOM."
     ],

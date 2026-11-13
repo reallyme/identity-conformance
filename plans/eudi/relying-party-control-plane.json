@@ -3,7 +3,7 @@
   "plan_id": "eudi-relying-party-control-plane-v1",
   "authority": "internal_non_certification_evidence",
   "certification_claim": false,
-  "execution_status": "executable",
+  "execution_status": "executable_with_attestation_gaps",
   "taxonomy_program": "eudi_relying_party_control_plane",
   "system_under_test": {
     "component_id": "eudi-relying-party-control-plane",
@@ -55,6 +55,12 @@
     "oversized_input_evidence_required": true,
     "reviewed_redacted_results_required": true,
     "transaction_content_prohibited": true
+  },
+  "evidence_coverage": {
+    "assertion_count": 19,
+    "independently_observed_assertion_count": 0,
+    "attestation_only_assertion_count": 19,
+    "badge_eligible": false
   },
   "assertion_families": [
     {

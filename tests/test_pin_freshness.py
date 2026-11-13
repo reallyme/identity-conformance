@@ -152,6 +152,23 @@ class PinFreshnessTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(FRESHNESS.RETRY_BASE_DELAY_SECONDS)
 
+    def test_publication_request_accepts_html_and_pdf_sources(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"publication"
+
+        with patch.object(
+            FRESHNESS.urllib.request,
+            "urlopen",
+            return_value=response,
+        ) as urlopen:
+            FRESHNESS.fetch_bytes("https://example.test/publication")
+
+        request = urlopen.call_args.args[0]
+        self.assertIn("application/pdf", request.get_header("Accept"))
+        self.assertIn("text/html", request.get_header("Accept"))
+        self.assertTrue(request.get_header("User-agent").startswith("curl/"))
+        self.assertIn("ReallyMe-Identity-Conformance", request.get_header("User-agent"))
+
     def test_transient_publication_failure_exhausts_bounded_attempts(self) -> None:
         transient_error = urllib.error.URLError("temporary failure")
 
@@ -425,6 +442,7 @@ class PinFreshnessTests(unittest.TestCase):
                     "component_id": component,
                     "repository": f"https://github.com/reallyme/{component}",
                     "release_prefix": f"reallyme-{component}-v",
+                    "release_required": component != "identity",
                     "update_strategy": "observe_latest_release",
                 }
                 for component in components
@@ -475,6 +493,7 @@ class PinFreshnessTests(unittest.TestCase):
                     "component_id": component,
                     "repository": f"https://github.com/reallyme/{component}",
                     "release_prefix": f"reallyme-{component}-v",
+                    "release_required": component != "identity",
                     "update_strategy": "observe_latest_release",
                 }
                 for component in components
@@ -510,6 +529,55 @@ class PinFreshnessTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_unpublished_optional_release_is_not_an_outage(self) -> None:
+        components = (
+            "ssi",
+            "identity",
+            "zk",
+            "wallet",
+            "openid4vci",
+            "openid4vp",
+        )
+        inventory = {
+            "$comment": "license",
+            "schema": "reallyme.identity.runtime_target_inventory.v1",
+            "purpose": "runtime-target-discovery-only",
+            "sources": [
+                {
+                    "component_id": component,
+                    "repository": f"https://github.com/reallyme/{component}",
+                    "release_prefix": f"reallyme-{component}-v",
+                    "release_required": component != "identity",
+                    "update_strategy": "observe_latest_release",
+                }
+                for component in components
+            ],
+        }
+
+        def fetcher(url: str) -> object:
+            if "/reallyme/identity/releases/latest" in url:
+                raise FRESHNESS.AuthoritativeNotFoundError(
+                    "GitHub release does not exist"
+                )
+            if url.endswith("/releases/latest"):
+                component = url.split("/repos/reallyme/", maxsplit=1)[1].split(
+                    "/", maxsplit=1
+                )[0]
+                return {
+                    "tag_name": f"reallyme-{component}-v1.0.0",
+                    "draft": False,
+                    "prerelease": False,
+                }
+            return {"object": {"type": "commit", "sha": "a" * 40}}
+
+        with patch.object(FRESHNESS, "read_object", return_value=inventory):
+            observations, unavailable = (
+                FRESHNESS.observe_reallyme_release_sources(fetcher)
+            )
+
+        self.assertEqual(len(observations), 5)
+        self.assertEqual(unavailable, [])
 
     def test_repository_identifier_rejects_extra_path_segments(self) -> None:
         with self.assertRaises(FRESHNESS.FreshnessError):

@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "catalog_id": "reallyme-identity-conformance",
+  "profiles": [
+    {
+      "profile_id": "eu-wallet-engineering",
+      "label": "EU Wallet Engineering",
+      "authority": "european_union",
+      "execution_state": "executable_with_evidence_gaps",
+      "badge_eligible": false,
+      "product_kinds": ["wallet"],
+      "required_capabilities": ["wallet_core"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/eudi-wallet-conformance.yml",
+      "evidence_class": "engineering",
+      "normative_trace": "partial_exact_clause_trace",
+      "assertion_evidence": "mixed_exact_and_candidate_test_inventory",
+      "summary": "Runs the EU Wallet plan, framework probes, source-bound rules, package checks, and candidate tests."
+    },
+    {
+      "profile_id": "oidf-openid4vci-self-assessment",
+      "label": "OIDF OpenID4VCI Self-Assessment",
+      "authority": "openid_foundation",
+      "execution_state": "executable",
+      "badge_eligible": true,
+      "product_kinds": ["identity"],
+      "required_capabilities": ["openid4vci_issuer", "openid4vci_wallet"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/oidf-openid4vci-certification.yml",
+      "evidence_class": "oidf_hosted_self_assessment",
+      "normative_trace": "suite_inventory_trace",
+      "assertion_evidence": "external_suite_observation",
+      "summary": "Runs all ten pinned OpenID4VCI HAIP configurations against the caller deployment."
+    },
+    {
+      "profile_id": "oidf-openid4vp-self-assessment",
+      "label": "OIDF OpenID4VP Self-Assessment",
+      "authority": "openid_foundation",
+      "execution_state": "executable",
+      "badge_eligible": true,
+      "product_kinds": ["identity"],
+      "required_capabilities": ["openid4vp_verifier", "openid4vp_wallet"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/oidf-openid4vp-certification.yml",
+      "evidence_class": "oidf_hosted_self_assessment",
+      "normative_trace": "suite_inventory_trace",
+      "assertion_evidence": "external_suite_observation",
+      "summary": "Runs all six pinned OpenID4VP HAIP configurations against the caller deployment."
+    },
+    {
+      "profile_id": "oidf-full-self-assessment",
+      "label": "OIDF Full Self-Assessment",
+      "authority": "openid_foundation",
+      "execution_state": "executable",
+      "badge_eligible": true,
+      "product_kinds": ["identity"],
+      "required_capabilities": ["openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"],
+      "required_profiles": ["oidf-openid4vci-self-assessment", "oidf-openid4vp-self-assessment"],
+      "workflow": ".github/workflows/identity-product-conformance.yml",
+      "evidence_class": "oidf_hosted_self_assessment",
+      "normative_trace": "suite_inventory_trace",
+      "assertion_evidence": "external_suite_observation",
+      "summary": "Requires the complete OpenID4VCI and OpenID4VP self-assessment profiles for one candidate."
+    },
+    {
+      "profile_id": "oidf-wallet-role-self-assessment",
+      "label": "OIDF Wallet Role Self-Assessment",
+      "authority": "openid_foundation",
+      "execution_state": "external_runner_required",
+      "badge_eligible": false,
+      "product_kinds": [
+        "wallet"
+      ],
+      "required_capabilities": [
+        "openid4vci_wallet",
+        "openid4vp_wallet"
+      ],
+      "required_profiles": [],
+      "workflow": null,
+      "evidence_class": "oidf_hosted_self_assessment",
+      "normative_trace": "suite_inventory_trace",
+      "assertion_evidence": "caller_runner_required",
+      "summary": "Defines the distinct ten-configuration OIDF Wallet run; a caller-owned composed deployment runner is still required."
+    },
+    {
+      "profile_id": "eu-identity-sdk-engineering",
+      "label": "EU Identity SDK Engineering",
+      "authority": "european_union",
+      "execution_state": "executable",
+      "badge_eligible": true,
+      "product_kinds": ["identity"],
+      "required_capabilities": ["eudi_identity_sdk"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/eudi-identity-sdk-conformance.yml",
+      "evidence_class": "engineering",
+      "normative_trace": "exact_requirement_registry_trace",
+      "assertion_evidence": "framework_executed_component_and_sdk_tests",
+      "summary": "Exercises Identity's eight EUDI operations, every supported SDK boundary, and the 969-row standards trace."
+    },
+    {
+      "profile_id": "eu-relying-party-engineering",
+      "label": "EU Relying-Party Engineering",
+      "authority": "european_union",
+      "execution_state": "executable_with_attestation_gaps",
+      "badge_eligible": false,
+      "product_kinds": ["eudi-relying-party"],
+      "required_capabilities": ["eudi_relying_party"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/eudi-relying-party-conformance.yml",
+      "evidence_class": "engineering",
+      "normative_trace": "partial_exact_clause_trace",
+      "assertion_evidence": "source_bound_test_candidates_and_attestation",
+      "summary": "Runs seven source-bound test candidates for two assertions; audited receipts are not yet part of the baseline and all 19 assertions remain non-evidentiary."
+    },
+    {
+      "profile_id": "zk-presentation-proofs",
+      "label": "ZK Presentation Proofs",
+      "authority": "reallyme_engineering",
+      "execution_state": "executable_with_attestation_gaps",
+      "badge_eligible": false,
+      "product_kinds": ["identity", "zk"],
+      "required_capabilities": ["zk_presentations"],
+      "required_profiles": [],
+      "workflow": ".github/workflows/zk-conformance.yml",
+      "evidence_class": "engineering",
+      "normative_trace": "framework_assertion_contract",
+      "assertion_evidence": "candidate_test_inventory_or_linked_observation",
+      "summary": "Runs provider checks and defines 11 linked probes over a 20-row proof matrix; release evidence requires immutable caller bindings."
+    },
+    {
+      "profile_id": "identity-expanded-conformity",
+      "label": "Identity Expanded Conformity",
+      "authority": "mixed",
+      "execution_state": "incomplete",
+      "badge_eligible": false,
+      "product_kinds": ["identity"],
+      "required_capabilities": ["eudi_identity_sdk", "openid4vci_issuer", "openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet", "zk_presentations"],
+      "required_profiles": ["oidf-full-self-assessment", "eu-identity-sdk-engineering", "zk-presentation-proofs"],
+      "workflow": null,
+      "evidence_class": "mixed",
+      "normative_trace": "mixed",
+      "assertion_evidence": "mixed_with_known_gaps",
+      "summary": "Reserved for the combined OIDF, EU Identity SDK, and ZK result after the remaining ZK evidence gaps are executable."
+    }
+  ],
+  "badges": [
+    {
+      "badge_id": "eu-wallet-engineering",
+      "label": "EU Wallet Engineering",
+      "product_kinds": ["wallet"],
+      "execution_state": "incomplete",
+      "required_profiles": ["eu-wallet-engineering"]
+    },
+    {
+      "badge_id": "eu-identity-sdk-engineering",
+      "label": "EU Identity SDK Engineering",
+      "product_kinds": ["identity"],
+      "execution_state": "available",
+      "required_profiles": ["eu-identity-sdk-engineering"]
+    },
+    {
+      "badge_id": "oidf-full-self-assessment",
+      "label": "OIDF Full Self-Assessment",
+      "product_kinds": ["identity"],
+      "execution_state": "available",
+      "required_profiles": ["oidf-openid4vci-self-assessment", "oidf-openid4vp-self-assessment"]
+    },
+    {
+      "badge_id": "identity-expanded-conformity",
+      "label": "Identity Expanded Conformity",
+      "product_kinds": ["identity"],
+      "execution_state": "incomplete",
+      "required_profiles": ["oidf-openid4vci-self-assessment", "oidf-openid4vp-self-assessment", "eu-identity-sdk-engineering", "zk-presentation-proofs"]
+    }
+  ]
+}

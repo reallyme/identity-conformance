@@ -71,9 +71,9 @@ def validate(args: argparse.Namespace) -> None:
     if suite_revision != suite_commit:
         profile_validation.fail("suite_revision_evidence_invalid")
 
-    repository, commit = profile_validation.locked_component(product_bom)
-    if matrix.get("source_repository") != repository:
-        profile_validation.fail("profile_matrix_source_mismatch")
+    _repository, commit = profile_validation.adapter_component(
+        product_bom, "openid4vp"
+    )
     profile_validation.assert_checkout(args.openid4vp_source_dir, commit)
     if not args.result_assertion.is_file() or args.result_assertion.is_symlink():
         profile_validation.fail("result_assertion_unavailable")

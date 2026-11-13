@@ -1,0 +1,148 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/zk-linked-observation-evidence-v1.json",
+  "title": "ReallyMe linked ZK observation evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "plan_id", "profile_id", "candidate_binding", "framework_revision", "workflow_revision", "product_component_bom_sha256", "components", "toolchain_bindings", "probes", "proof_rows", "evidence_policy"],
+  "properties": {
+    "schema": {"const": "reallyme.identity.zk_linked_observation_evidence.v1"},
+    "plan_id": {"const": "zk-presentation-proofs-v1"},
+    "profile_id": {"const": "identity-zk-linked-presentation-proofs-v1"},
+    "candidate_binding": {"enum": ["working_tree_observation", "immutable_release"]},
+    "framework_revision": {"$ref": "#/$defs/git_commit"},
+    "workflow_revision": {"$ref": "#/$defs/git_commit"},
+    "product_component_bom_sha256": {
+      "oneOf": [
+        {"$ref": "#/$defs/sha256"},
+        {"type": "null"}
+      ]
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/component"}
+    },
+    "toolchain_bindings": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/toolchain_binding"}
+    },
+    "probes": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {"$ref": "#/$defs/probe"}
+    },
+    "proof_rows": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/proof_row"}
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_sensitive_data", "raw_process_output_retained", "witness_material_retained", "private_key_material_retained", "raw_proof_material_retained", "machine_local_paths_retained"],
+      "properties": {
+        "contains_sensitive_data": {"const": false},
+        "raw_process_output_retained": {"const": false},
+        "witness_material_retained": {"const": false},
+        "private_key_material_retained": {"const": false},
+        "raw_proof_material_retained": {"const": false},
+        "machine_local_paths_retained": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+    "component_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64},
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_role", "component_id", "repository", "source_commit", "source_tree", "source_state", "working_tree_diff_sha256", "release_id", "release_ref", "release_artifact_sha256", "component_attestation_sha256"],
+      "properties": {
+        "component_role": {"enum": ["zk_provider", "identity_product"]},
+        "component_id": {"$ref": "#/$defs/component_id"},
+        "repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})$"},
+        "source_commit": {"$ref": "#/$defs/git_commit"},
+        "source_tree": {"$ref": "#/$defs/git_commit"},
+        "source_state": {"enum": ["clean", "dirty"]},
+        "working_tree_diff_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "release_id": {"oneOf": [{"type": "integer", "minimum": 1, "maximum": 9223372036854775807}, {"type": "null"}]},
+        "release_ref": {"oneOf": [{"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"}, {"type": "null"}]},
+        "release_artifact_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "component_attestation_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      }
+    },
+    "toolchain_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_id", "version", "sha256"],
+      "properties": {
+        "binding_id": {"enum": ["rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"]},
+        "version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
+      }
+    },
+    "digest_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_id", "sha256"],
+      "properties": {
+        "binding_id": {"$ref": "#/$defs/identifier"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["probe_id", "component_role", "test_selector", "source_commit", "source_tree", "toolchain_binding_ids", "input_digests", "result"],
+      "properties": {
+        "probe_id": {"type": "string", "pattern": "^probe\\.[a-z0-9_.-]+\\.v[1-9][0-9]*$"},
+        "component_role": {"enum": ["zk_provider", "identity_product"]},
+        "test_selector": {"type": "string", "minLength": 1, "maxLength": 256},
+        "source_commit": {"$ref": "#/$defs/git_commit"},
+        "source_tree": {"$ref": "#/$defs/git_commit"},
+        "toolchain_binding_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"]}
+        },
+        "input_digests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/digest_binding"}
+        },
+        "result": {"const": "passed"}
+      }
+    },
+    "proof_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lane", "mode", "stage", "circuit_ref", "artifact_sha256", "verification_key_sha256", "proof_sha256", "public_inputs_sha256", "frozen_request_sha256", "result", "tampered_proof_rejected", "tampered_public_inputs_rejected"],
+      "properties": {
+        "lane": {"enum": ["sha256", "poseidon2"]},
+        "mode": {"enum": ["public", "private"]},
+        "stage": {"enum": ["issuer_envelope", "claim_root", "signed_validity", "selected_claim", "current_state"]},
+        "circuit_ref": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9_./-]+$"},
+        "artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "verification_key_sha256": {"$ref": "#/$defs/sha256"},
+        "proof_sha256": {"$ref": "#/$defs/sha256"},
+        "public_inputs_sha256": {"$ref": "#/$defs/sha256"},
+        "frozen_request_sha256": {"$ref": "#/$defs/sha256"},
+        "result": {"const": "passed"},
+        "tampered_proof_rejected": {"const": true},
+        "tampered_public_inputs_rejected": {"const": true}
+      }
+    }
+  }
+}

@@ -270,7 +270,7 @@ def validate_source_bindings(
     return suite_ref, suite_commit
 
 
-def validate_subject_and_owner(plan: dict[str, object]) -> None:
+def validate_subject_and_selection(plan: dict[str, object]) -> None:
     subject = exact_object(
         plan.get("subject"),
         {
@@ -289,15 +289,20 @@ def validate_subject_and_owner(plan: dict[str, object]) -> None:
         "non_applicable_targets": ["android_application", "ios_application"],
     }:
         raise OidfWalletPlanError(OidfWalletPlanErrorReason.INVALID_PLAN)
-    execution_owner = exact_object(
-        plan.get("execution_owner"),
-        {"repository", "workflow_path", "candidate_component", "candidate_selected_by"},
+    selection = exact_object(
+        plan.get("selection"),
+        {
+            "product_kind",
+            "candidate_role",
+            "candidate_selected_by",
+            "candidate_revision_selected_by",
+        },
     )
-    if execution_owner != {
-        "repository": "https://github.com/reallyme/identity",
-        "workflow_path": ".github/workflows/identity-product-conformance.yml",
-        "candidate_component": "wallet",
+    if selection != {
+        "product_kind": "wallet",
+        "candidate_role": "wallet_core",
         "candidate_selected_by": "product_component_bom",
+        "candidate_revision_selected_by": "caller",
     }:
         raise OidfWalletPlanError(OidfWalletPlanErrorReason.INVALID_PLAN)
 
@@ -305,17 +310,17 @@ def validate_subject_and_owner(plan: dict[str, object]) -> None:
 def validate_component_contract(
     plan: dict[str, object], certification: dict[str, object]
 ) -> None:
-    required_components = plan.get("required_components")
-    if required_components != certification.get("required_components"):
-        raise OidfWalletPlanError(
-            OidfWalletPlanErrorReason.COMPONENT_CONTRACT_MISMATCH
-        )
-    indexed = indexed_objects(
-        required_components,
-        "component_id",
-        OidfWalletPlanErrorReason.COMPONENT_CONTRACT_MISMATCH,
-    )
-    if set(indexed) != {"openid4vci", "openid4vp", "wallet", "ssi", "identity", "cose"}:
+    required_roles = plan.get("required_roles")
+    required_adapter_contracts = plan.get("required_adapter_contracts")
+    certification_roles = certification.get("required_roles")
+    certification_adapters = certification.get("required_adapter_contracts")
+    if (
+        required_roles != ["openid4vci_wallet", "openid4vp_wallet"]
+        or required_adapter_contracts != ["openid4vci", "openid4vp"]
+        or not isinstance(certification_roles, list)
+        or not set(required_roles).issubset(certification_roles)
+        or certification_adapters != required_adapter_contracts
+    ):
         raise OidfWalletPlanError(
             OidfWalletPlanErrorReason.COMPONENT_CONTRACT_MISMATCH
         )
@@ -530,8 +535,9 @@ def validate_paths(
             "certification_claim",
             "subject",
             "source_bindings",
-            "execution_owner",
-            "required_components",
+            "selection",
+            "required_roles",
+            "required_adapter_contracts",
             "required_wallet_roles",
             "profile_count",
             "module_execution_count",
@@ -546,7 +552,7 @@ def validate_paths(
         or plan.get("certification_claim") is not False
     ):
         raise OidfWalletPlanError(OidfWalletPlanErrorReason.INVALID_PLAN)
-    validate_subject_and_owner(plan)
+    validate_subject_and_selection(plan)
     suite_ref, suite_commit = validate_source_bindings(
         plan, certification, suite_lock, snapshot
     )

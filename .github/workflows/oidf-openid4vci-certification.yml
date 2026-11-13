@@ -62,7 +62,7 @@ jobs:
       - name: Clear controlled checkout paths
         run: |
           test -n "${GITHUB_WORKSPACE}"
-          for checkout in identity-conformance openid4vci openid4vp wallet ssi identity cose; do
+          for checkout in identity-conformance openid4vci identity; do
             rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"
           done
 
@@ -106,33 +106,45 @@ jobs:
         id: release-bom
         working-directory: identity-conformance
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.REALLYME_CI_TOKEN }}
         run: |
-          for component in openid4vci openid4vp wallet ssi identity cose; do
-            revision="$(jq -er --arg component "${component}" \
-              '[.components[] | select(.component_id == $component)]
-               | if length == 1 then .[0].commit
-                 else error("component revision must be unique")
-                 end' \
-              "${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json")"
-            release_ref="$(jq -er --arg component "${component}" \
-              '[.components[] | select(.component_id == $component)]
-               | if length == 1 then .[0].release_ref
-                 else error("component release reference must be unique")
-                 end
-               | select(type == "string" and length > 0)' \
-              "${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json")"
+          test -n "${GH_TOKEN}"
+          bom="${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json"
+          while IFS= read -r component; do
+            component_id="$(jq -er '.component_id' <<<"${component}")"
+            repository="$(jq -er '.repository | sub("^https://github.com/"; "")' <<<"${component}")"
+            revision="$(jq -er '.commit' <<<"${component}")"
+            release_id="$(jq -er '.release_id' <<<"${component}")"
+            release_ref="$(jq -er '.release_ref' <<<"${component}")"
+            [[ "${component_id}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+            [[ "${repository}" =~ ^reallyme/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$ ]]
             [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
-            [[ "${release_ref}" =~ ^[A-Za-z0-9._-]+$ ]]
-            if [[ "${component}" != "cose" ]]; then
-              latest_ref="$(gh api "repos/reallyme/${component}/releases/latest" --jq '.tag_name')"
-              [[ "${latest_ref}" =~ ^reallyme-${component}-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
-              latest_commit="$(gh api "repos/reallyme/${component}/commits/${latest_ref}" --jq '.sha')"
-              test "${release_ref}" = "${latest_ref}"
-              test "${revision}" = "${latest_commit}"
+            [[ "${release_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+            [[ "${release_ref}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]
+            release_record="${RUNNER_TEMP}/oidf-openid4vci-inputs/bom-release-${component_id}.json"
+            gh api "repos/${repository}/releases/${release_id}" > "${release_record}"
+            test "$(jq -er '.id | tostring' "${release_record}")" = "${release_id}"
+            test "$(jq -er '.tag_name' "${release_record}")" = "${release_ref}"
+            test "$(jq -er '.draft == false and .prerelease == false' "${release_record}")" = "true"
+            resolved_commit="$(gh api "repos/${repository}/commits/${release_ref}" --jq '.sha')"
+            test "${resolved_commit}" = "${revision}"
+          done < <(jq -cer '.components[]' "${bom}")
+
+          for selection in adapter product; do
+            if [[ "${selection}" == "adapter" ]]; then
+              selector='[.components[] | select(.adapter_contracts | index("openid4vci"))]'
+            else
+              selector="(.product_component_id as \$id | [.components[] | select(.component_id == \$id)])"
             fi
-            printf '%s_commit=%s\n' "${component}" "${revision}" >> "${GITHUB_OUTPUT}"
-            printf '%s_release_ref=%s\n' "${component}" "${release_ref}" >> "${GITHUB_OUTPUT}"
+            component="$(jq -cer "${selector} | if length == 1 then .[0] else error(\"component selection must be unique\") end" "${bom}")"
+            component_id="$(jq -er '.component_id' <<<"${component}")"
+            repository="$(jq -er '.repository | sub("^https://github.com/"; "")' <<<"${component}")"
+            revision="$(jq -er '.commit' <<<"${component}")"
+            {
+              printf '%s_component_id=%s\n' "${selection}" "${component_id}"
+              printf '%s_repository=%s\n' "${selection}" "${repository}"
+              printf '%s_commit=%s\n' "${selection}" "${revision}"
+            } >> "${GITHUB_OUTPUT}"
           done
 
       - name: Require cross-repository checkout credential
@@ -140,57 +152,21 @@ jobs:
           REALLYME_CI_TOKEN: ${{ secrets.REALLYME_CI_TOKEN }}
         run: test -n "${REALLYME_CI_TOKEN}"
 
-      - name: Checkout pinned OpenID4VCI
+      - name: Checkout caller-selected OpenID4VCI adapter
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: reallyme/openid4vci
-          ref: ${{ steps.release-bom.outputs.openid4vci_release_ref }}
+          repository: ${{ steps.release-bom.outputs.adapter_repository }}
+          ref: ${{ steps.release-bom.outputs.adapter_commit }}
           path: openid4vci
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
 
-      - name: Checkout pinned OpenID4VP
+      - name: Checkout caller-selected Identity product
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: reallyme/openid4vp
-          ref: ${{ steps.release-bom.outputs.openid4vp_release_ref }}
-          path: openid4vp
-          token: ${{ secrets.REALLYME_CI_TOKEN }}
-          persist-credentials: false
-
-      - name: Checkout pinned wallet
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: reallyme/wallet
-          ref: ${{ steps.release-bom.outputs.wallet_release_ref }}
-          path: wallet
-          token: ${{ secrets.REALLYME_CI_TOKEN }}
-          persist-credentials: false
-
-      - name: Checkout pinned SSI
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: reallyme/ssi
-          ref: ${{ steps.release-bom.outputs.ssi_release_ref }}
-          path: ssi
-          token: ${{ secrets.REALLYME_CI_TOKEN }}
-          persist-credentials: false
-
-      - name: Checkout pinned Identity
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: reallyme/identity
-          ref: ${{ steps.release-bom.outputs.identity_release_ref }}
+          repository: ${{ steps.release-bom.outputs.product_repository }}
+          ref: ${{ steps.release-bom.outputs.product_commit }}
           path: identity
-          token: ${{ secrets.REALLYME_CI_TOKEN }}
-          persist-credentials: false
-
-      - name: Checkout pinned COSE
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: reallyme/cose
-          ref: ${{ steps.release-bom.outputs.cose_release_ref }}
-          path: cose
           token: ${{ secrets.REALLYME_CI_TOKEN }}
           persist-credentials: false
 
@@ -205,7 +181,7 @@ jobs:
           git -C upstream/oidf/openid-conformance-suite checkout --detach FETCH_HEAD
           test "$(git -C upstream/oidf/openid-conformance-suite rev-parse HEAD)" = "${suite_commit}"
 
-      - name: Verify complete official OIDF Wallet scope
+      - name: Verify official OIDF Wallet inventory
         working-directory: identity-conformance
         run: |
           python3 scripts/verify_oidf_wallet_plan.py \
@@ -350,7 +326,8 @@ jobs:
           bom="${RUNNER_TEMP}/oidf-openid4vci-inputs/product-component-bom.json"
           result="${RUNNER_TEMP}/openid4vci-certification/evidence-index.json"
           release_ref="$(jq -er '.product_release_ref' "${bom}")"
-          product_commit="$(jq -er '[.components[] | select(.component_id == "identity")][0].commit' "${bom}")"
+          product_component_id="$(jq -er '.product_component_id' "${bom}")"
+          product_commit="$(jq -er --arg id "${product_component_id}" '[.components[] | select(.component_id == $id)] | if length == 1 then .[0].commit else error("product component must be unique") end' "${bom}")"
           python3 identity-conformance/scripts/build_product_conformance_statement.py \
             --framework-selection "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json" \
             --result "${result}" \
@@ -389,6 +366,6 @@ jobs:
           done
           rm -rf -- "${input_dir}" "${result_dir}"
           rm -rf -- "${RUNNER_TEMP:?}/identity-conformance-framework-release"
-          for checkout in identity-conformance openid4vci openid4vp wallet ssi identity cose; do
+          for checkout in identity-conformance openid4vci identity; do
             rm -rf -- "${GITHUB_WORKSPACE:?}/${checkout}"
           done

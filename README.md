@@ -11,7 +11,7 @@
 [![Security Policy](https://img.shields.io/badge/security-policy-0f766e)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.2&color=475569)](https://github.com/reallyme/identity-conformance/releases/tag/v0.3.2)
+[![Framework](https://img.shields.io/static/v1?label=Framework&message=v0.3.3&color=475569)](https://github.com/reallyme/identity-conformance/releases/tag/v0.3.3)
 [![EU ARF](https://img.shields.io/static/v1?label=EU%20ARF&message=v3.0.0%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-architecture-and-reference-framework/blob/c64f2cbb19aee37c571c58af66d359c4d5be29c8/docs/annexes/annex-2/annex-2.02-high-level-requirements-by-topic.md)
 [![EU technical specifications](https://img.shields.io/static/v1?label=EU%20technical%20specifications&message=included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-standards-and-technical-specifications/blob/cfc383e44294d65cfa6cccbbff6c927f0df91f9a/docs/technical-specifications/ts3-wallet-unit-attestation.md)
 [![EU FCAF](https://img.shields.io/static/v1?label=EU%20FCAF&message=v0.0.10%20included&color=0f766e)](https://github.com/eu-digital-identity-wallet/eudi-doc-functional-conformance-assessment/blob/944b8f89cc17873c47026a05dfa9d212e89b0ee3/docs/fcaf/suts/wallet_solution/index.md)
@@ -39,6 +39,7 @@ upstream test assets, and ReallyMe component integrations.
 | EU ARF / technical specifications | Validates Wallet configuration boundaries against reviewed EU requirements. |
 | EU FCAF | Verifies the assessment structure and requirement ledger. |
 | EU test assets | Checks pinned Wallet UI, ITB, Age Verification, and RQES test inventories. |
+| Identity SDK | Audits 969 EU and ETSI requirement rows and runs the eight EUDI operations through Rust and every supported SDK. |
 | Wallet / relying party | Executes Wallet code, framework-owned probes, deployment checks, and supported EU requirements. |
 | Zero-knowledge proofs | Validates the public proof adapter and supplied component attestation. |
 
@@ -66,7 +67,7 @@ its own badge. A combined badge requires every profile named by the combined
 plan to pass against the same target and evidence set.
 
 A product badge should name the target, profile, and framework, for example
-`Wallet vX.Y.Z · EU Wallet Engineering · Identity Conformance v0.3.2 ·
+`Wallet vX.Y.Z · EU Wallet Engineering · Identity Conformance v0.3.3 ·
 passing`. It should link to a reviewed product conformance statement, not to
 this repository's CI badge.
 The statement records the product release and commit, framework release and
@@ -97,14 +98,22 @@ results. The two are not interchangeable.
 
 ## Using the framework
 
-Each product repository has one entry workflow:
+Callers select a named profile. The table distinguishes executable pass-badge
+profiles from engineering lanes that still depend on broad attestations.
 
-| Repository | Workflow |
-| --- | --- |
-| `wallet` | EU Wallet conformance |
-| `identity` | Combined OpenID4VCI and OpenID4VP conformance |
-| `zk` | ZK presentation-proof conformance |
-| private EUDI code | EUDI relying-party conformance |
+<!-- BEGIN GENERATED PROFILE CATALOG -->
+| Profile | Applies to | Normative trace | Assertion evidence | Status | Pass badge |
+| --- | --- | --- | --- | --- | --- |
+| [EU Wallet Engineering](.github/workflows/eudi-wallet-conformance.yml) | `wallet` | partial exact clause trace | mixed exact and candidate test inventory | Engineering run; badge unavailable | None |
+| [OIDF OpenID4VCI Self-Assessment](.github/workflows/oidf-openid4vci-certification.yml) | `identity` | suite inventory trace | external suite observation | Executable | OIDF Full Self-Assessment |
+| [OIDF OpenID4VP Self-Assessment](.github/workflows/oidf-openid4vp-certification.yml) | `identity` | suite inventory trace | external suite observation | Executable | OIDF Full Self-Assessment |
+| [OIDF Full Self-Assessment](.github/workflows/identity-product-conformance.yml) | `identity` | suite inventory trace | external suite observation | Executable | OIDF Full Self-Assessment |
+| OIDF Wallet Role Self-Assessment | `wallet` | suite inventory trace | caller runner required | Caller-owned runner required | None |
+| [EU Identity SDK Engineering](.github/workflows/eudi-identity-sdk-conformance.yml) | `identity` | exact requirement registry trace | framework executed component and sdk tests | Executable | EU Identity SDK Engineering |
+| [EU Relying-Party Engineering](.github/workflows/eudi-relying-party-conformance.yml) | `eudi-relying-party` | partial exact clause trace | source bound test candidates and attestation | Engineering run; badge unavailable | None |
+| [ZK Presentation Proofs](.github/workflows/zk-conformance.yml) | `identity`, `zk` | framework assertion contract | candidate test inventory or linked observation | Engineering run; badge unavailable | None |
+| Identity Expanded Conformity | `identity` | mixed | mixed with known gaps | Incomplete | None |
+<!-- END GENERATED PROFILE CATALOG -->
 
 SSI, OpenID4VCI, and OpenID4VP releases are inputs to the composed Identity
 run; they do not need separate framework workflows.
@@ -143,7 +152,7 @@ compatibility; its contents are mode-neutral package evidence. See the
 <!-- BEGIN GENERATED CONFORMANCE SUMMARY -->
 ## Standards baseline
 
-Framework version: **v0.3.2**
+Framework version: **v0.3.3**
 
 | Source | Pinned version | Coverage |
 | --- | --- | --- |

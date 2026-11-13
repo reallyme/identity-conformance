@@ -5,11 +5,11 @@
   "title": "ReallyMe ZK presentation-proof conformance plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_id", "execution_status", "certification_claim", "required_components", "assertions", "evidence_policy"],
+  "required": ["schema_version", "plan_id", "execution_status", "certification_claim", "required_components", "assertions", "evidence_coverage", "linked_observation_contract", "evidence_policy"],
   "properties": {
     "schema_version": {"const": 1},
     "plan_id": {"const": "zk-presentation-proofs-v1"},
-    "execution_status": {"const": "executable"},
+    "execution_status": {"const": "executable_with_attestation_gaps"},
     "certification_claim": {"const": false},
     "required_components": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/component_requirement"}},
     "assertions": {
@@ -26,10 +26,112 @@
         }
       }
     },
+    "evidence_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assertion_count", "exact_assertion_binding_count", "candidate_test_inventory_assertion_count", "badge_eligible"],
+      "properties": {
+        "assertion_count": {"const": 7},
+        "exact_assertion_binding_count": {"const": 0},
+        "candidate_test_inventory_assertion_count": {"const": 7},
+        "badge_eligible": {"const": false}
+      }
+    },
+    "linked_observation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "component_roles", "proof_matrix", "required_toolchain_bindings", "probes", "assertion_bindings"],
+      "properties": {
+        "profile_id": {"const": "identity-zk-linked-presentation-proofs-v1"},
+        "component_roles": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["component_role", "selection"],
+            "properties": {
+              "component_role": {"enum": ["zk_provider", "identity_product"]},
+              "selection": {"enum": ["zk_adapter_contract", "product_component_id"]}
+            }
+          }
+        },
+        "proof_matrix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lanes", "modes", "stages", "row_count"],
+          "properties": {
+            "lanes": {"const": ["sha256", "poseidon2"]},
+            "modes": {"const": ["public", "private"]},
+            "stages": {"const": ["issuer_envelope", "claim_root", "signed_validity", "selected_claim", "current_state"]},
+            "row_count": {"const": 20}
+          }
+        },
+        "required_toolchain_bindings": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"]}
+        },
+        "probes": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {"$ref": "#/$defs/probe_contract"}
+        },
+        "assertion_bindings": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {"$ref": "#/$defs/assertion_binding"}
+        }
+      }
+    },
     "evidence_policy": {"$ref": "#/$defs/evidence_policy"}
   },
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,127}$"},
+    "probe_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["probe_id", "component_role", "test_selector", "required_toolchain_binding_ids", "required_input_binding_ids"],
+      "properties": {
+        "probe_id": {"type": "string", "pattern": "^probe\\.[a-z0-9_.-]+\\.v[1-9][0-9]*$"},
+        "component_role": {"enum": ["zk_provider", "identity_product"]},
+        "test_selector": {"type": "string", "minLength": 1, "maxLength": 256},
+        "required_toolchain_binding_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"]}
+        },
+        "required_input_binding_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      }
+    },
+    "assertion_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assertion_id", "required_probe_ids"],
+      "properties": {
+        "assertion_id": {"$ref": "#/$defs/identifier"},
+        "required_probe_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 11,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^probe\\.[a-z0-9_.-]+\\.v[1-9][0-9]*$"}
+        }
+      }
+    },
     "component_requirement": {
       "type": "object",
       "additionalProperties": false,

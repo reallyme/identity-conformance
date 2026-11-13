@@ -71,28 +71,58 @@ DEPLOYMENT_MANIFEST = load_script(
 INPUT_FINGERPRINT = load_script(
     "hash_oidf_input", "scripts/hash_oidf_input.py"
 )
+OIDF_RUNTIME_CONTRACTS = load_script(
+    "build_oidf_runtime_contracts", "scripts/build_oidf_runtime_contracts.py"
+)
 
 
 def valid_product_bom() -> dict[str, object]:
+    definitions = [
+        (
+            "openid4vci-adapter",
+            "openid4vci",
+            ["openid4vci_issuer", "openid4vci_wallet"],
+            ["openid4vci"],
+        ),
+        (
+            "openid4vp-adapter",
+            "openid4vp",
+            ["openid4vp_verifier", "openid4vp_wallet"],
+            ["openid4vp"],
+        ),
+        (
+            "identity",
+            "identity",
+            ["openid4vci_wallet", "openid4vp_verifier", "openid4vp_wallet"],
+            [],
+        ),
+        ("wallet-library", "wallet", [], []),
+        ("ssi-library", "ssi", [], []),
+        ("cose-library", "cose", [], []),
+    ]
     components: list[dict[str, object]] = []
-    for index, (component_id, policy) in enumerate(PRODUCT_BOM.COMPONENTS.items(), 1):
-        release_version = "1.0.0-rc.1" if component_id == "identity" else "1.0.0"
+    for index, (component_id, repository, roles, adapters) in enumerate(
+        definitions, 1
+    ):
+        version = "1.0.0-rc.1" if component_id == "identity" else "1.0.0"
         components.append(
             {
                 "component_id": component_id,
-                "repository": policy.repository,
+                "repository": f"https://github.com/reallyme/{repository}",
                 "commit": f"{index:x}" * 40,
-                "release_ref": f"{policy.release_prefix}{release_version}",
-                "release_artifact_sha256": f"{index:x}" * 64,
-                "component_attestation_sha256": f"{index + 6:x}" * 64,
-                "roles": sorted(policy.roles),
+                "release_id": index,
+                "release_ref": f"reallyme-{repository}-v{version}",
+                "roles": roles,
+                "adapter_contracts": adapters,
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 3,
         "purpose": "reallyme-product-conformance-bom",
         "product_id": "identity",
         "product_version": "1.0.0-rc.1",
+        "product_component_id": "identity",
+        "product_release_id": 3,
         "product_release_ref": "reallyme-identity-v1.0.0-rc.1",
         "components": components,
     }
@@ -146,6 +176,16 @@ def valid_deployment_manifest() -> dict[str, object]:
         item["component_id"]: item for item in valid_product_bom()["components"]
     }
 
+    def component_id_for_repository(repository: str) -> str:
+        matches = [
+            component_id
+            for component_id, component in components.items()
+            if component["repository"] == repository
+        ]
+        if len(matches) != 1:
+            raise RuntimeError("test BOM repository identity is ambiguous")
+        return matches[0]
+
     def deployment(
         component_id: str, endpoints: dict[str, str], digest_character: str
     ) -> dict[str, object]:
@@ -173,7 +213,9 @@ def valid_deployment_manifest() -> dict[str, object]:
         "environment": "preproduction",
         "roles": {
             "openid4vci_issuer": deployment(
-                "openid4vci",
+                component_id_for_repository(
+                    "https://github.com/reallyme/openid4vci"
+                ),
                 {"issuer_base_url": "https://issuer.reallyme.com/"}, "a"
             ),
             "openid4vci_wallet": deployment(
@@ -366,17 +408,119 @@ class ManifestContractTests(unittest.TestCase):
         components = PRODUCT_BOM.validate_bom(
             self.product_bom, require_release_refs=True
         )
-        self.assertEqual(set(components), set(PRODUCT_BOM.COMPONENTS))
+        self.assertEqual(len(components), 6)
+        PRODUCT_BOM.verify_plan_requirements(
+            REPOSITORY_ROOT / "plans/oidf/certification.json", components
+        )
 
     def test_product_bom_rejects_duplicate_component(self) -> None:
         changed = copy.deepcopy(self.product_bom)
         changed["components"][1] = copy.deepcopy(changed["components"][0])
         self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
 
-    def test_product_bom_rejects_missing_component(self) -> None:
+    def test_product_bom_accepts_a_changed_dependency_inventory(self) -> None:
         changed = copy.deepcopy(self.product_bom)
         changed["components"].pop()
+        components = PRODUCT_BOM.validate_bom(changed, require_release_refs=True)
+        PRODUCT_BOM.verify_plan_requirements(
+            REPOSITORY_ROOT / "plans/oidf/certification.json", components
+        )
+
+    def test_product_bom_rejects_missing_product_component(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"] = [
+            component
+            for component in changed["components"]
+            if component["component_id"] != "identity"
+        ]
         self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
+
+    def test_product_bom_rejects_missing_required_adapter(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["components"][0]["adapter_contracts"] = []
+        components = PRODUCT_BOM.validate_bom(changed)
+        self.assert_rejected(
+            lambda: PRODUCT_BOM.verify_plan_requirements(
+                REPOSITORY_ROOT / "plans/oidf/certification.json", components
+            )
+        )
+
+    def test_product_bom_accepts_new_caller_versions_without_framework_change(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        changed["product_version"] = "2.4.0"
+        changed["product_release_ref"] = "reallyme-identity-v2.4.0"
+        for index, component in enumerate(changed["components"], 10):
+            component["commit"] = f"{index:x}"[-1] * 40
+            repository = component["repository"].rsplit("/", 1)[1]
+            component["release_ref"] = f"reallyme-{repository}-v2.4.{index}"
+        identity = next(
+            component
+            for component in changed["components"]
+            if component["component_id"] == "identity"
+        )
+        identity["release_ref"] = "reallyme-identity-v2.4.0"
+        components = PRODUCT_BOM.validate_bom(changed, require_release_refs=True)
+        PRODUCT_BOM.verify_plan_requirements(
+            REPOSITORY_ROOT / "plans/oidf/certification.json", components
+        )
+
+    def test_runtime_contracts_use_framework_inventory_and_caller_adapter(self) -> None:
+        changed = copy.deepcopy(self.product_bom)
+        adapter = next(
+            component
+            for component in changed["components"]
+            if "openid4vci" in component["adapter_contracts"]
+        )
+        adapter["component_id"] = "issuance-adapter-next"
+        adapter["repository"] = "https://github.com/reallyme/issuance-adapter-next"
+        adapter["release_ref"] = "reallyme-issuance-adapter-next-v9.1.0"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bom = root / "product-component-bom.json"
+            bom.write_text(json.dumps(changed), encoding="utf-8")
+            output = root / "runtime-contracts"
+            OIDF_RUNTIME_CONTRACTS.build(bom, output)
+            matrix = json.loads(
+                (output / "openid4vci-profile-matrix.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            wallet_profiles = [
+                profile
+                for profile in matrix["profiles"]
+                if profile["entity_under_test"] == "wallet"
+            ]
+            self.assertEqual(
+                matrix["source_repository"],
+                "https://github.com/reallyme/issuance-adapter-next",
+            )
+            self.assertEqual(len(matrix["profiles"]), 10)
+            self.assertEqual(
+                {profile["expected_module_count"] for profile in wallet_profiles},
+                {23},
+            )
+            vp_matrix = json.loads(
+                (output / "openid4vp-profile-matrix.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                vp_matrix["suite"]["commit"], self.suite_lock["commit"]
+            )
+
+    def test_runtime_contracts_reject_tampered_openid4vp_inventory(self) -> None:
+        matrix = OIDF_RUNTIME_CONTRACTS.load_object(
+            OIDF_RUNTIME_CONTRACTS.OPENID4VP_MATRIX
+        )
+        changed = copy.deepcopy(matrix)
+        changed["profiles"][0]["expected_groups"][0]["modules"].pop()
+        snapshot = OIDF_RUNTIME_CONTRACTS.load_object(
+            OIDF_RUNTIME_CONTRACTS.CERTIFICATION_SNAPSHOT
+        )
+        with self.assertRaises(OIDF_RUNTIME_CONTRACTS.ContractError):
+            OIDF_RUNTIME_CONTRACTS.validate_openid4vp_matrix(
+                changed, self.certification, snapshot, self.suite_lock
+            )
 
     def test_product_bom_rejects_ambiguous_repository_identity(self) -> None:
         changed = copy.deepcopy(self.product_bom)
@@ -388,9 +532,9 @@ class ManifestContractTests(unittest.TestCase):
         changed["components"][0]["commit"] = "not-a-commit"
         self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
 
-    def test_product_bom_rejects_invalid_attestation_digest(self) -> None:
+    def test_product_bom_rejects_invalid_release_id(self) -> None:
         changed = copy.deepcopy(self.product_bom)
-        changed["components"][0]["component_attestation_sha256"] = "0" * 63
+        changed["components"][0]["release_id"] = 0
         self.assert_rejected(lambda: PRODUCT_BOM.validate_bom(changed))
 
     def test_product_bom_requires_release_refs_for_certification(self) -> None:
@@ -413,6 +557,7 @@ class ManifestContractTests(unittest.TestCase):
         reordered["components"].reverse()
         for component in reordered["components"]:
             component["roles"].reverse()
+            component["adapter_contracts"].reverse()
         self.assertEqual(first, PRODUCT_BOM.canonical_digest(reordered))
 
     def test_product_checkout_rejects_release_ref_commit_mismatch(self) -> None:
@@ -423,12 +568,12 @@ class ManifestContractTests(unittest.TestCase):
             component = PRODUCT_BOM.Component(
                 "openid4vci",
                 "https://github.com/reallyme/openid4vci",
-                "component",
+                "openid4vci",
                 "1" * 40,
+                1,
                 "reallyme-openid4vci-v1.0.0",
-                "2" * 64,
-                "3" * 64,
                 frozenset({"openid4vci_issuer", "openid4vci_wallet"}),
+                frozenset({"openid4vci"}),
             )
 
             def git_output(_checkout: Path, arguments: list[str]) -> str:
@@ -438,7 +583,8 @@ class ManifestContractTests(unittest.TestCase):
                 with redirect_stderr(io.StringIO()):
                     with self.assertRaises(SystemExit) as raised:
                         PRODUCT_BOM.verify_checkouts(
-                            root, {component.component_id: component}
+                            {component.component_id: component},
+                            {component.component_id: checkout},
                         )
             self.assertEqual(raised.exception.code, PRODUCT_BOM.EXIT_CONFIGURATION)
 
@@ -798,9 +944,10 @@ class ManifestContractTests(unittest.TestCase):
                     {
                         "components": [
                             {
-                                "component_id": "openid4vci",
+                                "component_id": "issuance-adapter",
                                 "repository": "https://github.com/reallyme/openid4vci",
                                 "commit": openid_commit,
+                                "adapter_contracts": ["openid4vci"],
                             }
                         ]
                     }
@@ -1000,7 +1147,8 @@ class ManifestContractTests(unittest.TestCase):
                 next(
                     component["release_ref"]
                     for component in index["components"]
-                    if component["component_id"] == "wallet"
+                    if component["repository"]
+                    == "https://github.com/reallyme/wallet"
                 ),
                 "reallyme-wallet-v1.0.0",
             )
@@ -1236,7 +1384,7 @@ class ManifestContractTests(unittest.TestCase):
         openid4vci = next(
             item
             for item in self.product_bom["components"]
-            if item["component_id"] == "openid4vci"
+            if item["repository"] == "https://github.com/reallyme/openid4vci"
         )
         verifier = manifest["roles"]["openid4vp_verifier"]
         verifier["source_repository"] = openid4vci["repository"]
@@ -1316,12 +1464,22 @@ class ManifestContractTests(unittest.TestCase):
 
     def test_deployment_manifest_accepts_bound_zk_capability(self) -> None:
         changed = valid_deployment_manifest()
-        _plan, adapter = DEPLOYMENT_MANIFEST.zk_adapter_validator.load_contract()
-        component = adapter["component_requirement"]
+        changed_bom = copy.deepcopy(self.product_bom)
+        changed_bom["components"].append(
+            {
+                "component_id": "proof-system",
+                "repository": "https://github.com/reallyme/zk",
+                "commit": "f" * 40,
+                "release_id": 7,
+                "release_ref": "reallyme-zk-v1.0.0",
+                "roles": [],
+                "adapter_contracts": ["zk"],
+            }
+        )
         changed["capabilities"]["zk_presentations"] = {
             "enabled": True,
             "plan_id": "zk-presentation-proofs-v1",
-            "source_repository": component["repository"],
+            "source_repository": "https://github.com/reallyme/zk",
             "source_commit": "f" * 40,
             "release_artifact": {
                 "artifact_id": "zk-release-bundle",
@@ -1331,6 +1489,7 @@ class ManifestContractTests(unittest.TestCase):
             "component_attestation_sha256": "9" * 64,
         }
         DEPLOYMENT_MANIFEST.validate_manifest(changed)
+        DEPLOYMENT_MANIFEST.verify_component_bindings(changed, changed_bom)
 
     def test_deployment_manifest_accepts_caller_selected_zk_commit(self) -> None:
         changed = valid_deployment_manifest()

@@ -100,7 +100,7 @@ profile_expression() {
      | map(select(.id == $profile_id and .expression == $expression))
      | length == 1' \
     "${openid_profile_matrix}" >/dev/null || \
-    fail "selected rehearsal profile is unsupported by the locked OpenID4VP component"
+    fail "selected rehearsal profile is absent from the framework profile matrix"
 }
 
 require_validated_profile() {
@@ -207,16 +207,28 @@ require_file "${product_component_bom}" "product component BOM is unavailable"
 [[ -d "${suite_dir}" ]] || fail "pinned conformance suite checkout is unavailable"
 [[ ! -e "${result_root}" ]] || fail "result directory already exists"
 
+adapter_component_id="$(jq -er \
+  '[.components[] | select(.adapter_contracts | index("openid4vp"))] | if length == 1 then .[0].component_id else error("OpenID4VP adapter provider must be unique") end' \
+  "${product_component_bom}")" || fail "OpenID4VP adapter provider is invalid"
+readonly adapter_component_id
+checkout_arguments=(--checkout "${adapter_component_id}=${openid4vp_root}")
+
 cd "${repository_root}"
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --verify-checkouts
+  "${checkout_arguments[@]}"
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 
 readonly certification_plan="${repository_root}/plans/oidf/certification.json"
-readonly openid_profile_matrix="${openid4vp_root}/conformance/oidf/profile-matrix.json"
-readonly openid_result_assertion="${openid4vp_root}/conformance/scripts/assert_oidf_results.sh"
+mkdir -p "${result_root}"
+runtime_contracts="${result_root}/runtime-contracts"
+python3 scripts/build_oidf_runtime_contracts.py \
+  --product-component-bom "${product_component_bom}" \
+  --output-dir "${runtime_contracts}"
+readonly runtime_contracts
+readonly openid_profile_matrix="${runtime_contracts}/openid4vp-profile-matrix.json"
+readonly openid_result_assertion="${repository_root}/scripts/assert_oidf_openid4vp_suite_results.py"
 readonly openid_target_verifier="${openid4vp_root}/conformance/scripts/verify_oidf_certification_target.py"
 readonly openid_matrix_reader="${openid4vp_root}/conformance/scripts/read_oidf_certification_matrix.py"
 readonly openid_wallet_config_verifier="${openid4vp_root}/conformance/scripts/verify_oidf_wallet_config.py"
@@ -314,7 +326,7 @@ done
 # still describe the exact code and configuration bytes that initiated it.
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --verify-checkouts
+  "${checkout_arguments[@]}"
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${verifier_config}")" == \
   "${verifier_config_fingerprint}" ]] || fail "verifier configuration changed during execution"
@@ -329,6 +341,9 @@ scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${openid_profile_matrix}")" == \
   "${profile_matrix_fingerprint}" ]] || \
   fail "OpenID4VP profile matrix changed during execution"
+[[ "$(python3 scripts/hash_oidf_input.py "${result_root}/openid4vp-profile-matrix.json")" == \
+  "${profile_matrix_fingerprint}" ]] || \
+  fail "retained OpenID4VP profile matrix differs from the executed contract"
 
 suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)"
 readonly suite_revision

@@ -1,0 +1,405 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-identity-sdk-plan-v1.json",
+  "title": "ReallyMe EUDI Identity SDK conformance plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$comment",
+    "schema_version",
+    "plan_id",
+    "authority",
+    "certification_claim",
+    "execution_status",
+    "system_under_test",
+    "candidate_contract",
+    "ownership",
+    "sources",
+    "requirement_registry",
+    "operations",
+    "execution_lanes",
+    "evidence_classes",
+    "evidence_policy",
+    "evidence_coverage"
+  ],
+  "properties": {
+    "$comment": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "plan_id": {
+      "const": "eudi-identity-sdk-v1"
+    },
+    "authority": {
+      "const": "internal_non_certification_evidence"
+    },
+    "certification_claim": {
+      "const": false
+    },
+    "execution_status": {
+      "const": "executable"
+    },
+    "system_under_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_id",
+        "repository",
+        "adapter_contract"
+      ],
+      "properties": {
+        "component_id": {
+          "const": "identity"
+        },
+        "repository": {
+          "const": "https://github.com/reallyme/identity"
+        },
+        "adapter_contract": {
+          "const": "candidate-owned-identity-operation-boundary"
+        }
+      }
+    },
+    "candidate_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selection",
+        "reference_baseline_fallback",
+        "dependency_release_ids_required",
+        "dependency_release_refs_required",
+        "required_components"
+      ],
+      "properties": {
+        "selection": {"const": "caller_product_component_bom"},
+        "reference_baseline_fallback": {"const": false},
+        "dependency_release_ids_required": {"const": true},
+        "dependency_release_refs_required": {"const": true},
+        "required_components": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["component_id", "repository"],
+            "properties": {
+              "component_id": {"enum": ["identity", "ssi", "openid4vci", "openid4vp"]},
+              "repository": {
+                "type": "string",
+                "pattern": "^https://github\\.com/reallyme/(identity|ssi|openid4vci|openid4vp)$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_responsibility",
+        "semantic_component_roles",
+        "hosted_lifecycle_profile"
+      ],
+      "properties": {
+        "identity_responsibility": {
+          "const": "product_composition_dispatch_wire_and_sdk_parity"
+        },
+        "semantic_component_roles": {
+          "const": [
+            "openid4vci",
+            "openid4vp",
+            "ssi"
+          ]
+        },
+        "hosted_lifecycle_profile": {
+          "const": "eudi-relying-party-control-plane-v1"
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "legal",
+        "standards",
+        "technical_specifications"
+      ],
+      "properties": {
+        "legal": {
+          "$ref": "#/$defs/unique_strings"
+        },
+        "standards": {
+          "$ref": "#/$defs/unique_strings"
+        },
+        "technical_specifications": {
+          "$ref": "#/$defs/unique_strings"
+        }
+      }
+    },
+    "requirement_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "etsi_rows",
+        "eu_rows",
+        "code_and_composed_evidence_rows",
+        "external_evidence_rows",
+        "not_applicable_rows",
+        "framework_audit"
+      ],
+      "properties": {
+        "etsi_rows": {
+          "const": 740
+        },
+        "eu_rows": {
+          "const": 229
+        },
+        "code_and_composed_evidence_rows": {
+          "const": 898
+        },
+        "external_evidence_rows": {
+          "const": 53
+        },
+        "not_applicable_rows": {
+          "const": 18
+        },
+        "framework_audit": {
+          "const": "scripts/audit_etsi_eaa_pid_trace.py"
+        }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "semantic_owner_role",
+          "source_refs"
+        ],
+        "properties": {
+          "operation_id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "semantic_owner_role": {
+            "enum": [
+              "openid4vci",
+              "openid4vp",
+              "ssi"
+            ]
+          },
+          "source_refs": {
+            "$ref": "#/$defs/unique_strings"
+          }
+        }
+      }
+    },
+    "execution_lanes": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lane_id",
+          "runner",
+          "required",
+          "state"
+        ],
+        "properties": {
+          "lane_id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "runner": {
+            "enum": [
+              "framework",
+              "github_hosted_linux",
+              "github_hosted_macos"
+            ]
+          },
+          "required": {
+            "const": true
+          },
+          "state": {
+            "enum": [
+              "executable",
+              "workflow_pending"
+            ]
+          }
+        }
+      }
+    },
+    "evidence_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "normative_specifications",
+        "reference_implementation_parity",
+        "external_legal_and_certification"
+      ],
+      "properties": {
+        "normative_specifications": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "required_for_engineering_pass", "evidence"],
+          "properties": {
+            "status": {"const": "executed"},
+            "required_for_engineering_pass": {"const": true},
+            "evidence": {
+              "const": [
+                "normative_trace",
+                "rust_product_boundary",
+                "eudi_openid_composition"
+              ]
+            }
+          }
+        },
+        "reference_implementation_parity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "required_for_engineering_pass", "reason", "targets"],
+          "properties": {
+            "status": {"const": "separate_deployed_interoperability_profile"},
+            "required_for_engineering_pass": {"const": false},
+            "reason": {"const": "no_equivalent_eu_identity_sdk_boundary"},
+            "targets": {
+              "const": [
+                {
+                  "scope_id": "identity_eudi_operations",
+                  "status": "not_applicable",
+                  "source_refs": [],
+                  "reason": "no_official_executable_oracle_for_catalogue_requirement_or_pid_validation"
+                },
+                {
+                  "scope_id": "openid4vci_composition",
+                  "status": "external_runner_required",
+                  "source_refs": ["eudi-pid-issuer", "eudi-issuer-wallet-tester", "eudi-itb"],
+                  "reason": "deployed_reference_issuer_and_test_services_required"
+                },
+                {
+                  "scope_id": "openid4vp_verifier_composition",
+                  "status": "external_runner_required",
+                  "source_refs": ["eudi-verifier-endpoint", "eudi-web-verifier", "eudi-itb"],
+                  "reason": "deployed_reference_verifier_and_test_services_required"
+                },
+                {
+                  "scope_id": "openid4vp_wallet_composition",
+                  "status": "not_applicable",
+                  "source_refs": ["eudi-android-wallet-core", "eudi-android-wallet-ui", "eudi-ios-wallet-kit", "eudi-ios-wallet-ui"],
+                  "reason": "identity_sdk_candidate_contains_no_android_or_ios_wallet_application"
+                }
+              ]
+            }
+          }
+        },
+        "external_legal_and_certification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "required_for_engineering_pass",
+            "external_evidence_rows",
+            "legal_conformity_claim",
+            "certification_claim"
+          ],
+          "properties": {
+            "status": {"const": "external_evidence_required"},
+            "required_for_engineering_pass": {"const": false},
+            "external_evidence_rows": {"const": 53},
+            "legal_conformity_claim": {"const": false},
+            "certification_claim": {"const": false}
+          }
+        }
+      }
+    },
+    "evidence_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "immutable_candidate_required_for_badge",
+        "exact_component_revisions_required",
+        "framework_executes_tests",
+        "attestations_satisfy_behavior",
+        "external_evidence_rows_are_code_passes",
+        "legal_conformity_claim",
+        "certification_claim"
+      ],
+      "properties": {
+        "immutable_candidate_required_for_badge": {
+          "const": true
+        },
+        "exact_component_revisions_required": {
+          "const": true
+        },
+        "framework_executes_tests": {
+          "const": true
+        },
+        "attestations_satisfy_behavior": {
+          "const": false
+        },
+        "external_evidence_rows_are_code_passes": {
+          "const": false
+        },
+        "legal_conformity_claim": {
+          "const": false
+        },
+        "certification_claim": {
+          "const": false
+        }
+      }
+    },
+    "evidence_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_operation_count",
+        "required_lane_count",
+        "executable_lane_count",
+        "pending_lane_count",
+        "badge_eligible"
+      ],
+      "properties": {
+        "identity_operation_count": {
+          "const": 8
+        },
+        "required_lane_count": {
+          "const": 8
+        },
+        "executable_lane_count": {
+          "const": 8
+        },
+        "pending_lane_count": {
+          "const": 0
+        },
+        "badge_eligible": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,127}$"
+    },
+    "unique_strings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    }
+  }
+}

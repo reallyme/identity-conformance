@@ -54,6 +54,19 @@ class ReallyMeReleaseSourceTests(unittest.TestCase):
         with self.assertRaises(VERIFIER.ReleaseSourceError):
             VERIFIER.verify_inventory(changed)
 
+    def test_only_unpublished_identity_may_omit_a_release(self) -> None:
+        value = VERIFIER.load_inventory()
+        identity = next(
+            source
+            for source in value["sources"]
+            if source["component_id"] == "identity"
+        )
+        self.assertIs(identity["release_required"], False)
+        changed = copy.deepcopy(value)
+        changed["sources"][0]["release_required"] = False
+        with self.assertRaises(VERIFIER.ReleaseSourceError):
+            VERIFIER.verify_inventory(changed)
+
 
 if __name__ == "__main__":
     unittest.main()

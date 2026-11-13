@@ -65,7 +65,7 @@
               "properties": {
                 "enabled": {"const": true},
                 "plan_id": {"const": "zk-presentation-proofs-v1"},
-                "source_repository": {"const": "https://github.com/reallyme/zk"},
+                "source_repository": {"type": "string", "pattern": "^https://github\\.com/reallyme/[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})$"},
                 "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
                 "release_artifact": {"$ref": "#/$defs/zkArtifact"},
                 "component_attestation_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}

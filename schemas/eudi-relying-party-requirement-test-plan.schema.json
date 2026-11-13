@@ -1,0 +1,81 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-relying-party-requirement-test-plan-v1.json",
+  "title": "ReallyMe EUDI relying-party requirement test plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema_version", "plan_id", "parent_plan_id", "subject_repository", "complete", "normative_statements", "tests"],
+  "properties": {
+    "$comment": {"type": "string", "minLength": 1},
+    "schema_version": {"const": 1},
+    "plan_id": {"const": "eudi-relying-party-requirement-tests-v1"},
+    "parent_plan_id": {"const": "eudi-relying-party-control-plane-v1"},
+    "subject_repository": {"const": "reallyme/eudi"},
+    "complete": {"const": false},
+    "normative_statements": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/normative_statement"}
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {"$ref": "#/$defs/test"}
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]*$"},
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safe_path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"},
+    "normative_statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement_id", "source_id", "source_commit", "source_path", "source_sha256", "clause_locator", "start_line", "end_line", "normalization", "statement_sha256"],
+      "properties": {
+        "statement_id": {"$ref": "#/$defs/identifier"},
+        "source_id": {"const": "eudi-technical-specifications"},
+        "source_commit": {"$ref": "#/$defs/git_commit"},
+        "source_path": {"$ref": "#/$defs/safe_path"},
+        "source_sha256": {"$ref": "#/$defs/sha256"},
+        "clause_locator": {"type": "string", "minLength": 1, "maxLength": 512},
+        "start_line": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "end_line": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "normalization": {"const": "utf8_line_range_lf_v1"},
+        "statement_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_id", "assertion_id", "requirement_id", "evidence_class", "case_kind", "normative_statement_ids", "package", "features", "test_target", "test_path", "symbol"],
+      "properties": {
+        "command_id": {"$ref": "#/$defs/identifier"},
+        "assertion_id": {"enum": ["association_is_service_to_service", "current_ts5_signed_envelope_is_strict"]},
+        "requirement_id": {"type": "string", "pattern": "^conformance-scope:eudi_relying_party_control_plane:assertion:[a-z][a-z0-9_]*$"},
+        "evidence_class": {"enum": ["behavior_test", "downgrade_test", "invalid_input_test", "oversized_input_test", "round_trip_test"]},
+        "case_kind": {"enum": ["positive", "downgrade", "invalid_input", "oversized_input", "round_trip"]},
+        "normative_statement_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "package": {"const": "reallyme-eudi-qp-app"},
+        "features": {
+          "type": "array",
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"enum": ["redb-store", "ssi-rp-registration"]}
+        },
+        "test_target": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "test_path": {"type": "string", "pattern": "^apps/eudi-qp/tests/[a-z][a-z0-9_]*\\.rs$"},
+        "symbol": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+      }
+    }
+  }
+}

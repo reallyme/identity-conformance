@@ -85,27 +85,34 @@ jobs:
           python3 identity-conformance/scripts/verify_zk_deployment_manifest.py \
             --manifest "${input_dir}/deployment.json"
 
-      - name: Resolve latest published ZK release
+      - name: Resolve the caller-selected ZK release
         id: source
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           commit="$(jq -er '.component.commit' "${RUNNER_TEMP}/zk-conformance-inputs/deployment.json")"
+          release_id="$(jq -er '.component.release_id' "${RUNNER_TEMP}/zk-conformance-inputs/deployment.json")"
           selected_ref="$(jq -er '.component.release_ref' "${RUNNER_TEMP}/zk-conformance-inputs/deployment.json")"
           [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
-          latest_ref="$(gh api 'repos/reallyme/zk/releases/latest' --jq '.tag_name')"
-          [[ "${latest_ref}" =~ ^reallyme-zk-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
-          latest_commit="$(gh api "repos/reallyme/zk/commits/${latest_ref}" --jq '.sha')"
-          test "${selected_ref}" = "${latest_ref}"
-          test "${commit}" = "${latest_commit}"
-          printf 'commit=%s\n' "${latest_commit}" >> "${GITHUB_OUTPUT}"
-          printf 'release_ref=%s\n' "${latest_ref}" >> "${GITHUB_OUTPUT}"
+          [[ "${release_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${selected_ref}" =~ ^reallyme-zk-v[A-Za-z0-9][A-Za-z0-9._-]{0,96}$ ]]
+          release="$(gh api "repos/reallyme/zk/releases/${release_id}")"
+          test "$(jq -er '.id | tostring' <<<"${release}")" = "${release_id}"
+          test "$(jq -er '.tag_name' <<<"${release}")" = "${selected_ref}"
+          jq -e '.draft == false and .prerelease == false' <<<"${release}" >/dev/null
+          resolved_commit="$(gh api "repos/reallyme/zk/commits/${selected_ref}" --jq '.sha')"
+          test "${commit}" = "${resolved_commit}"
+          {
+            printf 'commit=%s\n' "${commit}"
+            printf 'release_id=%s\n' "${release_id}"
+            printf 'release_ref=%s\n' "${selected_ref}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Checkout exact ZK source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: reallyme/zk
-          ref: ${{ steps.source.outputs.release_ref }}
+          ref: ${{ steps.source.outputs.commit }}
           path: components/zk
           fetch-depth: 0
           persist-credentials: false
@@ -144,42 +151,21 @@ jobs:
           python3 identity-conformance/scripts/verify_zk_execution_result.py \
             --result "${result}"
 
-      - name: Build product conformance statement
-        env:
-          WORKFLOW_REPOSITORY: ${{ github.repository }}
-          WORKFLOW_REVISION: ${{ github.sha }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
-          FRAMEWORK_RELEASE_TAG: ${{ steps.framework-release.outputs.tag }}
+      - name: Report engineering-only coverage
         run: |
-          manifest="${RUNNER_TEMP}/zk-conformance-inputs/deployment.json"
           result="${RUNNER_TEMP}/zk-conformance-result.json"
-          release_ref="$(jq -er '.component.release_ref' "${manifest}")"
-          product_commit="$(jq -er '.component.commit' "${manifest}")"
-          python3 identity-conformance/scripts/build_product_conformance_statement.py \
-            --framework-selection "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json" \
-            --result "${result}" \
-            --plan-id zk-presentation-proofs-v1 \
-            --product-id zk \
-            --product-release-ref "${release_ref}" \
-            --product-repository https://github.com/reallyme/zk \
-            --product-commit "${product_commit}" \
-            --workflow-repository "${WORKFLOW_REPOSITORY}" \
-            --workflow-revision "${WORKFLOW_REVISION}" \
-            --run-id "${RUN_ID}" \
-            --run-attempt "${RUN_ATTEMPT}" \
-            --output "${RUNNER_TEMP}/product-conformance-statement.json"
-          printf '## Passed\n\nZK release: **%s**\n\nIdentity Conformance: **%s**\n' \
-            "${release_ref}" "${FRAMEWORK_RELEASE_TAG}" \
+          test "$(jq -er '.coverage.release_evidence_eligible' "${result}")" = "false"
+          printf '%s\n' \
+            '## Engineering result only' \
+            '' \
+            'This run does not earn a pass badge. Immutable linked Identity/ZK observations are still required.' \
             >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Upload validated ZK result
+      - name: Upload validated ZK engineering result
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zk-conformance-${{ github.sha }}
-          path: |
-            ${{ runner.temp }}/zk-conformance-result.json
-            ${{ runner.temp }}/product-conformance-statement.json
+          path: ${{ runner.temp }}/zk-conformance-result.json
           if-no-files-found: error
           retention-days: 7
 
@@ -197,7 +183,6 @@ jobs:
           rm -rf -- \
             "${input_dir}" \
             "${result}" \
-            "${RUNNER_TEMP:?}/product-conformance-statement.json" \
             "${RUNNER_TEMP:?}/identity-conformance-framework-release" \
             "${GITHUB_WORKSPACE:?}/identity-conformance" \
             "${GITHUB_WORKSPACE:?}/components"

@@ -10,8 +10,6 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly script_dir
 repository_root="$(cd -- "${script_dir}/.." && pwd)"
 readonly repository_root
-openid4vci_root="$(cd -- "${repository_root}/../openid4vci" && pwd)"
-readonly openid4vci_root
 suite_dir="${OIDF_CONFORMANCE_SUITE_DIR:-${repository_root}/upstream/oidf/openid-conformance-suite}"
 default_result_root="${repository_root}/results/local/openid4vci-certification"
 result_root="${OIDF_OPENID4VCI_RESULT_DIR:-${default_result_root}}"
@@ -21,6 +19,10 @@ fail() {
   printf 'OIDF OpenID4VCI certification runner: %s\n' "$1" >&2
   exit 78
 }
+
+openid4vci_root="$(cd -- "${OIDF_OPENID4VCI_SOURCE_DIR:-${repository_root}/../openid4vci}" && pwd)" || \
+  fail "OpenID4VCI adapter source repository is unavailable"
+readonly openid4vci_root
 
 require_file() {
   [[ -f "$1" && -r "$1" && ! -L "$1" ]] || fail "$2"
@@ -169,10 +171,34 @@ require_public_https_endpoint "${OPENID4VCI_WALLET_HARNESS_ENDPOINT}" \
 require_public_https_endpoint "${OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT}" \
   "wallet harness health check must be a public HTTPS endpoint"
 
+adapter_component_id="$(jq -er \
+  '[.components[] | select(.adapter_contracts | index("openid4vci"))] | if length == 1 then .[0].component_id else error("OpenID4VCI adapter provider must be unique") end' \
+  "${product_component_bom}")" || fail "OpenID4VCI adapter provider is invalid"
+wallet_source_repository="$(jq -er \
+  '.roles.openid4vci_wallet.source_repository | select(type == "string" and length > 0)' \
+  "${deployment_manifest}")" || fail "wallet source repository is missing from the deployment manifest"
+wallet_source_commit="$(jq -er \
+  '.roles.openid4vci_wallet.source_commit | select(type == "string" and test("^[0-9a-f]{40}$"))' \
+  "${deployment_manifest}")" || fail "wallet source commit is missing from the deployment manifest"
+wallet_component_id="$(jq -er \
+  --arg repository "${wallet_source_repository}" \
+  --arg commit "${wallet_source_commit}" \
+  '[.components[] | select(.repository == $repository and .commit == $commit)] | if length == 1 then .[0].component_id else error("wallet source component must be unique") end' \
+  "${product_component_bom}")" || fail "wallet source component is invalid"
+readonly adapter_component_id wallet_source_repository wallet_source_commit
+readonly wallet_component_id
+checkout_arguments=(--checkout "${adapter_component_id}=${openid4vci_root}")
+if [[ "${wallet_component_id}" == "${adapter_component_id}" ]]; then
+  [[ "${wallet_source_repository_dir}" == "${openid4vci_root}" ]] || \
+    fail "one component cannot be represented by two source checkouts"
+else
+  checkout_arguments+=(--checkout "${wallet_component_id}=${wallet_source_repository_dir}")
+fi
+
 cd "${repository_root}"
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --require-release-refs --verify-checkouts
+  --require-release-refs "${checkout_arguments[@]}"
 scripts/verify_oidf_manifests.py
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 python3 scripts/verify_oidf_deployment_manifest.py \
@@ -183,27 +209,32 @@ python3 scripts/verify_oidf_deployment_manifest.py \
   --binding openid4vci_wallet.wallet_harness_health_endpoint "${OPENID4VCI_WALLET_HARNESS_HEALTH_ENDPOINT}"
 
 readonly certification_plan="${repository_root}/plans/oidf/certification.json"
-readonly openid_profile_matrix="${openid4vci_root}/conformance/oidf/profile-matrix.json"
-readonly suite_contract="${openid4vci_root}/conformance/oidf/suite-contract.json"
-readonly module_inventory="${openid4vci_root}/conformance/oidf/certification-module-inventory.json"
+mkdir -p "${result_root}"
+runtime_contracts="${result_root}/runtime-contracts"
+python3 scripts/build_oidf_runtime_contracts.py \
+  --product-component-bom "${product_component_bom}" \
+  --output-dir "${runtime_contracts}" \
+  --require-release-refs
+readonly runtime_contracts
+readonly openid_profile_matrix="${runtime_contracts}/openid4vci-profile-matrix.json"
+readonly suite_contract="${runtime_contracts}/openid4vci-suite-contract.json"
+readonly module_inventory="${runtime_contracts}/openid4vci-module-inventory.json"
+readonly openid_result_assertion="${repository_root}/scripts/assert_oidf_openid4vci_suite_results.py"
 readonly issuer_runner="${openid4vci_root}/scripts/conformance/run_oidf_oid4vci_issuer.sh"
 readonly wallet_runner="${openid4vci_root}/scripts/conformance/run_oidf_oid4vci_wallet.sh"
 require_file "${certification_plan}" "certification plan is unavailable"
 require_file "${openid_profile_matrix}" "OpenID4VCI profile matrix is unavailable"
 require_file "${suite_contract}" "OpenID4VCI suite contract is unavailable"
 require_file "${module_inventory}" "OpenID4VCI module inventory is unavailable"
+require_file "${openid_result_assertion}" "OpenID4VCI result assertion is unavailable"
 [[ -x "${issuer_runner}" ]] || fail "issuer certification runner is unavailable"
 [[ -x "${wallet_runner}" ]] || fail "wallet certification runner is unavailable"
 expected_suite_revision="$(jq -er '.commit' \
   "${repository_root}/upstream/oidf/conformance-suite.lock.json")" || \
   fail "framework suite revision is unavailable"
-component_suite_revision="$(jq -er '.commit' "${suite_contract}")" || \
-  fail "OpenID4VCI suite revision is unavailable"
 checked_suite_revision="$(git -C "${suite_dir}" rev-parse HEAD)" || \
   fail "suite checkout revision is unavailable"
-readonly expected_suite_revision component_suite_revision checked_suite_revision
-[[ "${component_suite_revision}" == "${expected_suite_revision}" ]] || \
-  fail "OpenID4VCI suite revision disagrees with the framework release"
+readonly expected_suite_revision checked_suite_revision
 [[ "${checked_suite_revision}" == "${expected_suite_revision}" ]] || \
   fail "suite checkout disagrees with the framework release"
 python3 scripts/verify_oidf_wallet_plan.py --suite-checkout "${suite_dir}"
@@ -211,6 +242,8 @@ issuer_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${issuer_config
 wallet_config_fingerprint="$(python3 scripts/hash_oidf_input.py "${wallet_config}")"
 plan_fingerprint="$(python3 scripts/hash_oidf_input.py "${certification_plan}")"
 profile_matrix_fingerprint="$(python3 scripts/hash_oidf_input.py "${openid_profile_matrix}")"
+suite_contract_fingerprint="$(python3 scripts/hash_oidf_input.py "${suite_contract}")"
+module_inventory_fingerprint="$(python3 scripts/hash_oidf_input.py "${module_inventory}")"
 issuer_binary_fingerprint="$(python3 scripts/hash_oidf_input.py --artifact "${issuer_binary}")"
 wallet_binary_fingerprint="$(python3 scripts/hash_oidf_input.py --artifact "${wallet_binary}")"
 expected_issuer_binary_digest="$(jq -er \
@@ -251,16 +284,13 @@ wallet_deployment_artifact_fingerprint="$(python3 scripts/hash_oidf_input.py \
 [[ "${wallet_deployment_artifact_fingerprint%%:*}" == \
   "${expected_wallet_binary_digest}" ]] || \
   fail "wallet deployment artifact does not match the deployment manifest"
-wallet_source_repository="$(jq -er \
-  '.roles.openid4vci_wallet.source_repository | select(type == "string" and length > 0)' \
-  "${deployment_manifest}")" || fail "wallet source repository is missing from the deployment manifest"
 readonly issuer_config_fingerprint wallet_config_fingerprint plan_fingerprint
-readonly profile_matrix_fingerprint issuer_binary_fingerprint wallet_binary_fingerprint
+readonly profile_matrix_fingerprint suite_contract_fingerprint
+readonly module_inventory_fingerprint issuer_binary_fingerprint wallet_binary_fingerprint
 readonly expected_issuer_binary_digest expected_wallet_binary_digest
 readonly issuer_artifact_kind wallet_artifact_kind
 readonly issuer_deployment_artifact wallet_deployment_artifact
 readonly issuer_deployment_artifact_fingerprint wallet_deployment_artifact_fingerprint
-readonly wallet_source_repository
 
 suite_revision="${checked_suite_revision}"
 readonly suite_revision
@@ -270,6 +300,7 @@ cp "${product_component_bom}" "${result_root}/product-component-bom.json"
 cp "${certification_plan}" "${result_root}/certification-plan.json"
 cp "${openid_profile_matrix}" "${result_root}/openid4vci-profile-matrix.json"
 cp "${suite_contract}" "${result_root}/openid4vci-suite-contract.json"
+cp "${module_inventory}" "${result_root}/openid4vci-module-inventory.json"
 python3 scripts/verify_oidf_deployment_manifest.py \
   --manifest "${result_root}/deployment-manifest.json" \
   --product-component-bom "${result_root}/product-component-bom.json" \
@@ -297,6 +328,9 @@ for profile_id in "${issuer_profiles[@]}"; do
     OIDF_CONFORMANCE_MODE=hosted \
     CONFORMANCE_RESULTS_DIR="${result_root}/issuer" \
     OIDF_PROFILE_MATRIX="${openid_profile_matrix}" \
+    OIDF_SUITE_CONTRACT="${suite_contract}" \
+    OIDF_MODULE_INVENTORY="${module_inventory}" \
+    OIDF_RESULT_ASSERTION="${openid_result_assertion}" \
     OIDF_ISSUER_PLAN_EXPRESSION="${plan_expression}" \
     OIDF_ALIAS="reallyme-${profile_id}" \
     OPENID4VCI_SOURCE_REPOSITORY_DIR="${openid4vci_root}" \
@@ -312,6 +346,9 @@ for profile_id in "${wallet_profiles[@]}"; do
     OIDF_CONFORMANCE_MODE=hosted \
     CONFORMANCE_RESULTS_DIR="${result_root}/wallet" \
     OIDF_PROFILE_MATRIX="${openid_profile_matrix}" \
+    OIDF_SUITE_CONTRACT="${suite_contract}" \
+    OIDF_MODULE_INVENTORY="${module_inventory}" \
+    OIDF_RESULT_ASSERTION="${openid_result_assertion}" \
     OIDF_WALLET_PLAN_EXPRESSION="${plan_expression}" \
     OIDF_WALLET_CONFIG_FILE="${wallet_config}" \
     OPENID4VCI_SOURCE_REPOSITORY_DIR="${openid4vci_root}" \
@@ -329,7 +366,7 @@ done
 # present when execution began.
 python3 scripts/verify_product_component_bom.py \
   --bom "${product_component_bom}" --plan plans/oidf/certification.json \
-  --require-release-refs --verify-checkouts
+  --require-release-refs "${checkout_arguments[@]}"
 scripts/verify_oidf_certification_parameters.py "${suite_dir}"
 [[ "$(python3 scripts/hash_oidf_input.py "${issuer_config}")" == "${issuer_config_fingerprint}" ]] || \
   fail "issuer configuration changed during execution"
@@ -339,6 +376,16 @@ scripts/verify_oidf_certification_parameters.py "${suite_dir}"
   fail "certification plan changed during execution"
 [[ "$(python3 scripts/hash_oidf_input.py "${openid_profile_matrix}")" == "${profile_matrix_fingerprint}" ]] || \
   fail "OpenID4VCI profile matrix changed during execution"
+[[ "$(python3 scripts/hash_oidf_input.py "${suite_contract}")" == "${suite_contract_fingerprint}" ]] || \
+  fail "OpenID4VCI suite contract changed during execution"
+[[ "$(python3 scripts/hash_oidf_input.py "${module_inventory}")" == "${module_inventory_fingerprint}" ]] || \
+  fail "OpenID4VCI module inventory changed during execution"
+[[ "$(python3 scripts/hash_oidf_input.py "${result_root}/openid4vci-profile-matrix.json")" == "${profile_matrix_fingerprint}" ]] || \
+  fail "retained OpenID4VCI profile matrix differs from the executed contract"
+[[ "$(python3 scripts/hash_oidf_input.py "${result_root}/openid4vci-suite-contract.json")" == "${suite_contract_fingerprint}" ]] || \
+  fail "retained OpenID4VCI suite contract differs from the executed contract"
+[[ "$(python3 scripts/hash_oidf_input.py "${result_root}/openid4vci-module-inventory.json")" == "${module_inventory_fingerprint}" ]] || \
+  fail "retained OpenID4VCI module inventory differs from the executed contract"
 [[ "$(python3 scripts/hash_oidf_input.py --artifact "${issuer_binary}")" == "${issuer_binary_fingerprint}" ]] || \
   fail "issuer binary changed during execution"
 [[ "$(python3 scripts/hash_oidf_input.py --artifact "${wallet_binary}")" == "${wallet_binary_fingerprint}" ]] || \
@@ -358,9 +405,9 @@ python3 scripts/assert_oidf_openid4vci_pre_submission.py \
   --wallet-binary "${wallet_binary}" \
   --issuer-deployment-artifact "${issuer_deployment_artifact}" \
   --wallet-deployment-artifact "${wallet_deployment_artifact}" \
-  --result-assertion "${openid4vci_root}/scripts/conformance/assert_oidf_results.sh" \
+  --result-assertion "${openid_result_assertion}" \
   --wallet-assertion "${openid4vci_root}/scripts/conformance/assert_oidf_wallet_implementation_evidence.py" \
-  --module-inventory "${module_inventory}"
+  --module-inventory "${result_root}/openid4vci-module-inventory.json"
 python3 scripts/build_oidf_openid4vci_evidence_index.py \
   --result-root "${result_root}" \
   --framework-revision "${CONFORMANCE_FRAMEWORK_COMMIT}" \

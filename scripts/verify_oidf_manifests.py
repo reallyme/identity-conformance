@@ -35,14 +35,13 @@ REALLYME_REPOSITORY = re.compile(
     r"^https://github\.com/reallyme/[A-Za-z0-9_.-]+$"
 )
 GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
-OIDF_REQUIRED_COMPONENTS = [
-    {"component_id": "openid4vci", "repository": "https://github.com/reallyme/openid4vci"},
-    {"component_id": "openid4vp", "repository": "https://github.com/reallyme/openid4vp"},
-    {"component_id": "wallet", "repository": "https://github.com/reallyme/wallet"},
-    {"component_id": "ssi", "repository": "https://github.com/reallyme/ssi"},
-    {"component_id": "identity", "repository": "https://github.com/reallyme/identity"},
-    {"component_id": "cose", "repository": "https://github.com/reallyme/cose"},
+OIDF_REQUIRED_ROLES = [
+    "openid4vci_issuer",
+    "openid4vci_wallet",
+    "openid4vp_verifier",
+    "openid4vp_wallet",
 ]
+OIDF_REQUIRED_ADAPTER_CONTRACTS = ["openid4vci", "openid4vp"]
 
 
 def fail(message: str) -> NoReturn:
@@ -127,9 +126,11 @@ def verify_plan_runs(
         fail(f"{context} plan coverage does not match the approved matrix")
 
 
-def verify_required_components(manifest: dict[str, object], context: str) -> None:
-    if manifest.get("required_components") != OIDF_REQUIRED_COMPONENTS:
-        fail(f"{context} required component contract is invalid")
+def verify_caller_contract(manifest: dict[str, object], context: str) -> None:
+    if manifest.get("required_roles") != OIDF_REQUIRED_ROLES:
+        fail(f"{context} required role contract is invalid")
+    if manifest.get("required_adapter_contracts") != OIDF_REQUIRED_ADAPTER_CONTRACTS:
+        fail(f"{context} required adapter contract is invalid")
 
 
 def verify_vp_wallet_credential_types(
@@ -163,7 +164,7 @@ def verify_vp_wallet_credential_types(
 def verify_certification_manifest(
     manifest: dict[str, object], suite_lock: dict[str, object]
 ) -> None:
-    verify_required_components(manifest, "certification")
+    verify_caller_contract(manifest, "certification")
     verify_suite_target(manifest, suite_lock, "certification")
     verify_plan_runs(
         manifest,
@@ -260,17 +261,17 @@ def verify_certification_manifest(
     }:
         fail("certification evidence has an invalid protocol result policy")
     if contract.get("openid4vp_result_policy_authority") != (
-        "conformance/oidf/profile-matrix.json in the exact locked "
-        "openid4vp component revision"
+        "plans/oidf/execution/openid4vp-profile-matrix.json in the selected "
+        "Identity Conformance release"
     ):
-        fail("OpenID4VP review results must bind to the locked component matrix")
+        fail("OpenID4VP review results must bind to the framework execution matrix")
 
 
 def verify_engineering_manifest(
     manifest: dict[str, object], suite_lock: dict[str, object],
     expected_lock: str = SUITE_LOCK_RELATIVE_PATH,
 ) -> None:
-    verify_required_components(manifest, "engineering")
+    verify_caller_contract(manifest, "engineering")
     verify_suite_target(manifest, suite_lock, "engineering", expected_lock)
     if manifest.get("scope") != "non_certification_final_engineering":
         fail("engineering matrix has an invalid evidence scope")

@@ -221,20 +221,22 @@ def supported_profiles(matrix: dict[str, object]) -> dict[str, dict[str, object]
     return supported
 
 
-def component(
-    product_bom: dict[str, object], component_id: str
+def adapter_component(
+    product_bom: dict[str, object], adapter_contract: str
 ) -> tuple[str, str]:
     matches: list[tuple[str, str]] = []
     for raw_item in require_array(product_bom.get("components"), "product_bom_invalid"):
         item = require_object(raw_item, "product_bom_invalid")
-        if item.get("component_id") == component_id:
-            repository = require_string(
-                item.get("repository"), "product_bom_invalid"
-            )
-            commit = require_string(item.get("commit"), "product_bom_invalid")
-            if GIT_COMMIT.fullmatch(commit) is None:
-                fail("product_bom_invalid")
-            matches.append((repository, commit))
+        contracts = require_array(
+            item.get("adapter_contracts"), "product_bom_invalid"
+        )
+        if adapter_contract not in contracts:
+            continue
+        repository = require_string(item.get("repository"), "product_bom_invalid")
+        commit = require_string(item.get("commit"), "product_bom_invalid")
+        if GIT_COMMIT.fullmatch(commit) is None:
+            fail("product_bom_invalid")
+        matches.append((repository, commit))
     if len(matches) != 1:
         fail("product_bom_invalid")
     return matches[0]
@@ -447,9 +449,9 @@ def validate(args: argparse.Namespace) -> None:
         fail("suite_contract_invalid")
     selected = selected_profiles(plan)
     supported = supported_profiles(matrix)
-    source_repository, source_commit = component(product_bom, "openid4vci")
-    if matrix.get("source_repository") != source_repository:
-        fail("profile_matrix_source_mismatch")
+    source_repository, source_commit = adapter_component(
+        product_bom, "openid4vci"
+    )
     issuer_deployment = deployment_role(deployment, "openid4vci_issuer")
     wallet_deployment = deployment_role(deployment, "openid4vci_wallet")
     if (

@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -85,6 +86,26 @@ class OidfWalletPlanTests(unittest.TestCase):
         self.assertEqual(
             summary.suite_commit,
             "23353b36957d6466010de767c812d2c91ed37638",
+        )
+
+    def test_wallet_contract_uses_roles_instead_of_component_repositories(self) -> None:
+        plan = self.read_json("plans/oidf/wallet.json")
+        self.assertNotIn("required_components", plan)
+        self.assertEqual(
+            plan["required_roles"],
+            ["openid4vci_wallet", "openid4vp_wallet"],
+        )
+        self.assertEqual(
+            plan["required_adapter_contracts"],
+            ["openid4vci", "openid4vp"],
+        )
+
+    def test_unknown_required_adapter_contract_is_rejected(self) -> None:
+        plan = self.read_json("plans/oidf/wallet.json")
+        plan["required_adapter_contracts"] = ["openid4vci", "substituted"]
+        self.write_json("plans/oidf/wallet.json", plan)
+        self.assert_reason(
+            VERIFIER.OidfWalletPlanErrorReason.COMPONENT_CONTRACT_MISMATCH
         )
 
     def test_suite_commit_substitution_is_rejected(self) -> None:
@@ -239,6 +260,8 @@ class OidfWalletPlanTests(unittest.TestCase):
     def test_wrong_suite_checkout_revision_is_rejected(self) -> None:
         checkout = self.root / "suite-checkout"
         checkout.mkdir()
+        environment = os.environ.copy()
+        environment.pop("GIT_INDEX_FILE", None)
         commands = (
             ("git", "init"),
             ("git", "config", "user.name", "ReallyMe Test"),
@@ -248,6 +271,7 @@ class OidfWalletPlanTests(unittest.TestCase):
             completed = subprocess.run(
                 command,
                 cwd=checkout,
+                env=environment,
                 check=False,
                 capture_output=True,
                 text=True,
@@ -260,6 +284,7 @@ class OidfWalletPlanTests(unittest.TestCase):
             completed = subprocess.run(
                 command,
                 cwd=checkout,
+                env=environment,
                 check=False,
                 capture_output=True,
                 text=True,

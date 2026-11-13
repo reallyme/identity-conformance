@@ -2,7 +2,7 @@
   "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
   "schema_version": 1,
   "plan_id": "zk-presentation-proofs-v1",
-  "execution_status": "executable",
+  "execution_status": "executable_with_attestation_gaps",
   "certification_claim": false,
   "required_components": [
     {
@@ -19,6 +19,55 @@
     {"assertion_id": "artifact_substitution_rejection", "required_checks": ["cargo.reallyme-zk-artifacts", "attestation.security"]},
     {"assertion_id": "provider_release_quality", "required_checks": ["attestation.format", "attestation.lint", "attestation.integration"]}
   ],
+  "evidence_coverage": {
+    "assertion_count": 7,
+    "exact_assertion_binding_count": 0,
+    "candidate_test_inventory_assertion_count": 7,
+    "badge_eligible": false
+  },
+  "linked_observation_contract": {
+    "profile_id": "identity-zk-linked-presentation-proofs-v1",
+    "component_roles": [
+      {"component_role": "zk_provider", "selection": "zk_adapter_contract"},
+      {"component_role": "identity_product", "selection": "product_component_id"}
+    ],
+    "proof_matrix": {
+      "lanes": ["sha256", "poseidon2"],
+      "modes": ["public", "private"],
+      "stages": ["issuer_envelope", "claim_root", "signed_validity", "selected_claim", "current_state"],
+      "row_count": 20
+    },
+    "required_toolchain_bindings": [
+      "rustc",
+      "nargo",
+      "bb",
+      "libbb_external",
+      "bn254_g1",
+      "bn254_g2"
+    ],
+    "probes": [
+      {"probe_id": "probe.zk.fresh-proof-matrix.v1", "component_role": "zk_provider", "test_selector": "scripts/test-persona-credential-evidence-linked-proofs.py", "required_toolchain_binding_ids": ["rustc", "nargo", "bb", "libbb_external", "bn254_g1", "bn254_g2"], "required_input_binding_ids": ["proof_matrix_manifest", "zk_candidate_tree"]},
+      {"probe_id": "probe.zk.witness-parity.current-state.v1", "component_role": "zk_provider", "test_selector": "circuits::persona_credential_evidence_v1_current_state::tests::compiled_prepared_status_witness_matches_noir_in_both_lanes", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["zk_candidate_tree"]},
+      {"probe_id": "probe.zk.witness-parity.issuer-envelope.v1", "component_role": "zk_provider", "test_selector": "circuits::persona_credential_evidence_v1_issuer_envelope::tests::compiled_issuer_envelope_witness_matches_noir_in_both_lanes", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["zk_candidate_tree"]},
+      {"probe_id": "probe.zk.witness-parity.claim-root.v1", "component_role": "zk_provider", "test_selector": "circuits::persona_credential_evidence_v1_claim_root::tests::compiled_claim_root_witness_matches_noir_in_both_lanes", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["zk_candidate_tree"]},
+      {"probe_id": "probe.zk.witness-parity.signed-validity.v1", "component_role": "zk_provider", "test_selector": "circuits::persona_credential_evidence_v1_signed_validity::tests::compiled_signed_validity_witness_matches_noir_in_both_lanes", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["zk_candidate_tree"]},
+      {"probe_id": "probe.zk.witness-parity.selected-claim.v1", "component_role": "zk_provider", "test_selector": "circuits::persona_credential_evidence_v1_claim::tests::compiled_prepared_claim_witness_matches_noir_in_both_lanes", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["zk_candidate_tree"]},
+      {"probe_id": "probe.zk.frozen-mobile-request-parity.v1", "component_role": "zk_provider", "test_selector": "demo_prepared_requests_match_current_noir_witnesses", "required_toolchain_binding_ids": ["rustc", "nargo"], "required_input_binding_ids": ["frozen_request_manifest", "zk_candidate_tree"]},
+      {"probe_id": "probe.zk.native-linked-backend.v1", "component_role": "zk_provider", "test_selector": "fresh_prepared_proofs_verify_through_linked_library", "required_toolchain_binding_ids": ["rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"], "required_input_binding_ids": ["proof_matrix_manifest", "zk_candidate_tree"]},
+      {"probe_id": "probe.identity.openid4vp-prepared-boundary.v1", "component_role": "identity_product", "test_selector": "linked_tests::fresh_linked_proofs_cross_openid4vp_prepared_boundary", "required_toolchain_binding_ids": ["rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"], "required_input_binding_ids": ["identity_candidate_tree", "proof_matrix_manifest"]},
+      {"probe_id": "probe.identity.wallet-record-presentation.v1", "component_role": "identity_product", "test_selector": "select_inventory_presentations::mixed_record_tests::prepared_live_source::selected_ssi_vci_record_builds_signed_native_persona_credential_evidence_presentation", "required_toolchain_binding_ids": ["rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"], "required_input_binding_ids": ["identity_candidate_tree", "proof_matrix_manifest"]},
+      {"probe_id": "probe.zk.mobile-ffi-exact-candidate.v1", "component_role": "zk_provider", "test_selector": "dispatch::tests::mobile_package_verifies_prepared_proofs_from_exact_candidate", "required_toolchain_binding_ids": ["rustc", "bb", "libbb_external", "bn254_g1", "bn254_g2"], "required_input_binding_ids": ["proof_matrix_manifest", "release_index", "zk_candidate_tree"]}
+    ],
+    "assertion_bindings": [
+      {"assertion_id": "toolchain_identity", "required_probe_ids": ["probe.zk.fresh-proof-matrix.v1"]},
+      {"assertion_id": "artifact_identity", "required_probe_ids": ["probe.zk.fresh-proof-matrix.v1", "probe.zk.mobile-ffi-exact-candidate.v1"]},
+      {"assertion_id": "canonical_vectors", "required_probe_ids": ["probe.zk.witness-parity.current-state.v1", "probe.zk.witness-parity.issuer-envelope.v1", "probe.zk.witness-parity.claim-root.v1", "probe.zk.witness-parity.signed-validity.v1", "probe.zk.witness-parity.selected-claim.v1", "probe.zk.frozen-mobile-request-parity.v1"]},
+      {"assertion_id": "malicious_proof_rejection", "required_probe_ids": ["probe.zk.fresh-proof-matrix.v1", "probe.zk.native-linked-backend.v1", "probe.zk.mobile-ffi-exact-candidate.v1"]},
+      {"assertion_id": "request_binding", "required_probe_ids": ["probe.zk.native-linked-backend.v1", "probe.identity.openid4vp-prepared-boundary.v1", "probe.identity.wallet-record-presentation.v1"]},
+      {"assertion_id": "artifact_substitution_rejection", "required_probe_ids": ["probe.zk.fresh-proof-matrix.v1", "probe.zk.mobile-ffi-exact-candidate.v1"]},
+      {"assertion_id": "provider_release_quality", "required_probe_ids": ["probe.zk.native-linked-backend.v1", "probe.zk.mobile-ffi-exact-candidate.v1", "probe.identity.openid4vp-prepared-boundary.v1", "probe.identity.wallet-record-presentation.v1"]}
+    ]
+  },
   "evidence_policy": {
     "contains_sensitive_data": false,
     "raw_process_output_retained": false,

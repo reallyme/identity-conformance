@@ -1,0 +1,672 @@
+# SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Product · Identity · EU SDK
+run-name: Identity EU SDK ${{ inputs.target_mode }} · ${{ inputs.target_commit }}
+
+on:
+  workflow_call:
+    inputs:
+      framework_commit:
+        description: Exact published identity-conformance release commit
+        required: true
+        type: string
+      target_mode:
+        description: candidate or published
+        required: true
+        type: string
+      target_commit:
+        description: Exact Identity commit under test
+        required: true
+        type: string
+      target_version:
+        description: Identity semantic version at the selected commit
+        required: true
+        type: string
+      candidate_artifact_name:
+        description: Same-run artifact containing product-component-bom.json
+        required: true
+        type: string
+      release_id:
+        description: Exact GitHub release database ID; published mode only
+        required: false
+        default: ""
+        type: string
+      release_ref:
+        description: Exact Identity release tag; published mode only
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: eudi-identity-sdk-${{ inputs.target_commit }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: EU Identity SDK · Linux and JVM
+    runs-on: ubuntu-26.04
+    timeout-minutes: 240
+    outputs:
+      candidate_commit: ${{ steps.revisions.outputs.candidate_commit }}
+      candidate_cargo_lock_sha256: ${{ steps.source-bindings.outputs.candidate_cargo_lock_sha256 }}
+      candidate_source_archive_sha256: ${{ steps.source-bindings.outputs.identity_source_archive_sha256 }}
+      ssi_source_archive_sha256: ${{ steps.source-bindings.outputs.ssi_source_archive_sha256 }}
+      openid4vci_source_archive_sha256: ${{ steps.source-bindings.outputs.openid4vci_source_archive_sha256 }}
+      openid4vp_source_archive_sha256: ${{ steps.source-bindings.outputs.openid4vp_source_archive_sha256 }}
+      framework_version: ${{ steps.framework-release.outputs.version }}
+      framework_manifest_sha256: ${{ steps.framework-release.outputs.manifest_sha256 }}
+      framework_input_set_sha256: ${{ steps.framework-release.outputs.input_set_sha256 }}
+      product_component_bom_sha256: ${{ steps.revisions.outputs.product_component_bom_sha256 }}
+    steps:
+      - name: Require the Identity caller and exact framework commit
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          RELEASE_REF: ${{ inputs.release_ref }}
+          TARGET_COMMIT: ${{ inputs.target_commit }}
+          TARGET_MODE: ${{ inputs.target_mode }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          [[ "${GITHUB_REPOSITORY}" == "reallyme/identity" ]]
+          [[ "${FRAMEWORK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${TARGET_MODE}" =~ ^(candidate|published)$ ]]
+          [[ "${TARGET_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${TARGET_VERSION}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          if [[ "${TARGET_MODE}" == "candidate" ]]; then
+            test -z "${RELEASE_ID}"
+            test -z "${RELEASE_REF}"
+          else
+            [[ "${RELEASE_ID}" =~ ^[1-9][0-9]{0,18}$ ]]
+            test "${RELEASE_REF}" = "reallyme-identity-v${TARGET_VERSION}"
+          fi
+
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+          pip-version: "26.2.2"
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          check-latest: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: "1.99.0"
+          targets: wasm32-unknown-unknown
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.24.x"
+
+      - name: Install Java
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate Gradle wrappers
+        uses: gradle/actions/wrapper-validation@7296c772c13d12d9871528814b51fb2143c138ef # v6.4.1
+
+      - name: Verify the selected published framework release
+        id: framework-release
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity-conformance/scripts/prepare_published_framework_release.sh \
+            identity-conformance "${FRAMEWORK_COMMIT}"
+          python3 identity-conformance/scripts/verify_eudi_identity_sdk_plan.py
+          printf 'manifest_sha256=%s\n' \
+            "$(jq -er '.manifest_sha256' "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json")" \
+            >> "${GITHUB_OUTPUT}"
+          printf 'input_set_sha256=%s\n' \
+            "$(jq -er '.input_set_sha256' "${RUNNER_TEMP}/identity-conformance-framework-release/selection.json")" \
+            >> "${GITHUB_OUTPUT}"
+
+      - name: Download the caller-selected candidate BOM
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.candidate_artifact_name }}
+          path: ${{ runner.temp }}/eudi-identity-sdk-inputs
+          digest-mismatch: error
+
+      - name: Validate and resolve the caller-selected candidate BOM
+        id: revisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          RELEASE_REF: ${{ inputs.release_ref }}
+          TARGET_COMMIT: ${{ inputs.target_commit }}
+          TARGET_MODE: ${{ inputs.target_mode }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          input_dir="${RUNNER_TEMP}/eudi-identity-sdk-inputs"
+          shopt -s dotglob nullglob
+          entries=("${input_dir}"/*)
+          test "${#entries[@]}" -eq 1
+          bom="${input_dir}/product-component-bom.json"
+          test -f "${bom}"
+          test ! -L "${bom}"
+          selection="${RUNNER_TEMP}/eudi-identity-sdk-candidate-selection.json"
+          verifier_arguments=(
+            --bom "${bom}"
+            --target-mode "${TARGET_MODE}"
+            --target-commit "${TARGET_COMMIT}"
+            --target-version "${TARGET_VERSION}"
+            --target-release-ref "${RELEASE_REF}"
+            --output "${selection}"
+          )
+          if [[ "${TARGET_MODE}" == "published" ]]; then
+            verifier_arguments+=(--target-release-id "${RELEASE_ID}")
+          fi
+          python3 identity-conformance/scripts/verify_identity_candidate_bom.py \
+            "${verifier_arguments[@]}"
+          {
+            printf 'candidate_commit=%s\n' "${TARGET_COMMIT}"
+            printf 'product_component_bom_sha256=%s\n' \
+              "$(jq -er '.product_component_bom_sha256' "${selection}")"
+          } >> "${GITHUB_OUTPUT}"
+          for component in ssi openid4vci openid4vp; do
+            repository="$(jq -er --arg component "${component}" \
+              '[.dependencies[] | select(.component_id == $component)] \
+               | if length == 1 then .[0].repository else error("dependency must be unique") end' \
+              "${selection}")"
+            test "${repository}" = "https://github.com/reallyme/${component}"
+            release_ref="$(jq -er --arg component "${component}" \
+              '[.dependencies[] | select(.component_id == $component)] \
+               | if length == 1 then .[0].release_ref else error("dependency must be unique") end' \
+              "${selection}")"
+            release_id="$(jq -er --arg component "${component}" \
+              '[.dependencies[] | select(.component_id == $component)] \
+               | if length == 1 then .[0].release_id else error("dependency must be unique") end' \
+              "${selection}")"
+            commit="$(jq -er --arg component "${component}" \
+              '[.dependencies[] | select(.component_id == $component)] \
+               | if length == 1 then .[0].commit else error("dependency must be unique") end' \
+              "${selection}")"
+            [[ "${commit}" =~ ^[0-9a-f]{40}$ ]]
+            [[ "${release_id}" =~ ^[1-9][0-9]{0,18}$ ]]
+            release_record="${RUNNER_TEMP}/${component}-release-record.json"
+            gh api "repos/reallyme/${component}/releases/${release_id}" > "${release_record}"
+            test "$(jq -er '.id | tostring' "${release_record}")" = "${release_id}"
+            test "$(jq -er '.tag_name' "${release_record}")" = "${release_ref}"
+            test "$(jq -er '.draft == false and .prerelease == false' "${release_record}")" = "true"
+            resolved_commit="$(gh api "repos/reallyme/${component}/commits/${release_ref}" --jq '.sha')"
+            test "${resolved_commit}" = "${commit}"
+            {
+              printf '%s_release_ref=%s\n' "${component}" "${release_ref}"
+              printf '%s_release_id=%s\n' "${component}" "${release_id}"
+              printf '%s_commit=%s\n' "${component}" "${commit}"
+            } >> "${GITHUB_OUTPUT}"
+          done
+
+      - name: Verify the published Identity target
+        if: inputs.target_mode == 'published'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          RELEASE_REF: ${{ inputs.release_ref }}
+          TARGET_COMMIT: ${{ inputs.target_commit }}
+        run: |
+          release_record="${RUNNER_TEMP}/identity-release-record.json"
+          gh api "repos/reallyme/identity/releases/${RELEASE_ID}" > "${release_record}"
+          test "$(jq -er '.id | tostring' "${release_record}")" = "${RELEASE_ID}"
+          test "$(jq -er '.tag_name' "${release_record}")" = "${RELEASE_REF}"
+          test "$(jq -er '.draft == false and .prerelease == false' "${release_record}")" = "true"
+          test "$(gh api "repos/reallyme/identity/commits/${RELEASE_REF}" --jq '.sha')" = "${TARGET_COMMIT}"
+
+      - name: Checkout the exact Identity candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity
+          ref: ${{ inputs.target_commit }}
+          path: identity
+          persist-credentials: false
+
+      - name: Checkout caller-selected SSI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/ssi
+          ref: ${{ steps.revisions.outputs.ssi_commit }}
+          path: components/ssi
+          persist-credentials: false
+
+      - name: Checkout caller-selected OpenID4VCI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vci
+          ref: ${{ steps.revisions.outputs.openid4vci_commit }}
+          path: components/openid4vci
+          persist-credentials: false
+
+      - name: Checkout caller-selected OpenID4VP source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/openid4vp
+          ref: ${{ steps.revisions.outputs.openid4vp_commit }}
+          path: components/openid4vp
+          persist-credentials: false
+
+      - name: Verify exact checkout revisions
+        id: source-bindings
+        env:
+          CANDIDATE_COMMIT: ${{ steps.revisions.outputs.candidate_commit }}
+          OPENID4VCI_COMMIT: ${{ steps.revisions.outputs.openid4vci_commit }}
+          OPENID4VP_COMMIT: ${{ steps.revisions.outputs.openid4vp_commit }}
+          SSI_COMMIT: ${{ steps.revisions.outputs.ssi_commit }}
+        run: |
+          test "$(git -C identity rev-parse HEAD)" = "${CANDIDATE_COMMIT}"
+          test "$(git -C components/ssi rev-parse HEAD)" = "${SSI_COMMIT}"
+          test "$(git -C components/openid4vci rev-parse HEAD)" = "${OPENID4VCI_COMMIT}"
+          test "$(git -C components/openid4vp rev-parse HEAD)" = "${OPENID4VP_COMMIT}"
+          test -z "$(git -C identity status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C components/ssi status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C components/openid4vci status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C components/openid4vp status --porcelain=v1 --untracked-files=all)"
+          cargo_lock_sha256="$(sha256sum identity/Cargo.lock | awk '{print $1}')"
+          [[ "${cargo_lock_sha256}" =~ ^[0-9a-f]{64}$ ]]
+          printf 'candidate_cargo_lock_sha256=%s\n' "${cargo_lock_sha256}" >> "${GITHUB_OUTPUT}"
+          for component_path in \
+            identity=identity \
+            ssi=components/ssi \
+            openid4vci=components/openid4vci \
+            openid4vp=components/openid4vp; do
+            component="${component_path%%=*}"
+            checkout="${component_path#*=}"
+            source_archive_sha256="$(git -C "${checkout}" archive --format=tar HEAD | sha256sum | awk '{print $1}')"
+            [[ "${source_archive_sha256}" =~ ^[0-9a-f]{64}$ ]]
+            printf '%s_source_archive_sha256=%s\n' \
+              "${component}" "${source_archive_sha256}" >> "${GITHUB_OUTPUT}"
+          done
+
+      - name: Bind Identity dependencies to caller-selected component releases
+        env:
+          OPENID4VCI_RELEASE_REF: ${{ steps.revisions.outputs.openid4vci_release_ref }}
+          OPENID4VP_RELEASE_REF: ${{ steps.revisions.outputs.openid4vp_release_ref }}
+          SSI_RELEASE_REF: ${{ steps.revisions.outputs.ssi_release_ref }}
+        run: |
+          python3 identity-conformance/scripts/verify_identity_release_dependencies.py \
+            --cargo-toml identity/Cargo.toml \
+            --identity-package-toml identity/crates/identity/Cargo.toml \
+            --python-pyproject identity/packages/python/pyproject.toml \
+            --identity-version "${{ inputs.target_version }}" \
+            --ssi-release-ref "${SSI_RELEASE_REF}" \
+            --openid4vci-release-ref "${OPENID4VCI_RELEASE_REF}" \
+            --openid4vp-release-ref "${OPENID4VP_RELEASE_REF}"
+
+      - name: Audit every ETSI and EU requirement trace row
+        env:
+          OPENID4VCI_COMMIT: ${{ steps.revisions.outputs.openid4vci_commit }}
+          OPENID4VP_COMMIT: ${{ steps.revisions.outputs.openid4vp_commit }}
+          SSI_COMMIT: ${{ steps.revisions.outputs.ssi_commit }}
+        run: |
+          jq -n \
+            --arg ssi "${SSI_COMMIT}" \
+            --arg openid4vci "${OPENID4VCI_COMMIT}" \
+            --arg openid4vp "${OPENID4VP_COMMIT}" \
+            '{
+              schema: "reallyme.identity.trace_source_selection.v1",
+              purpose: "caller-selected-product-sources",
+              sources: [
+                {component_id: "ssi", repository: "https://github.com/reallyme/ssi", commit: $ssi},
+                {component_id: "openid4vci", repository: "https://github.com/reallyme/openid4vci", commit: $openid4vci},
+                {component_id: "openid4vp", repository: "https://github.com/reallyme/openid4vp", commit: $openid4vp}
+              ]
+            }' > "${RUNNER_TEMP}/identity-eu-trace-sources.json"
+          python3 identity-conformance/scripts/audit_etsi_eaa_pid_trace.py \
+            --source-selection "${RUNNER_TEMP}/identity-eu-trace-sources.json" \
+            --source-root "${GITHUB_WORKSPACE}/components"
+
+      - name: Execute the Rust EUDI product boundary
+        working-directory: identity
+        run: |
+          cargo test --locked -p reallyme-identity \
+            --test eudi_catalogue_facade_tests \
+            --test eudi_requirement_facade_tests \
+            --test eudi_pid_facade_tests
+          cargo test --locked -p reallyme-identity-dispatch \
+            --test eudi_catalogue_dispatch_tests \
+            --test eudi_requirement_dispatch_tests \
+            --test eudi_pid_dispatch_tests
+          cargo test --locked -p reallyme-identity-operation-codec \
+            --test eudi_catalogue_codec_tests \
+            --test eudi_requirement_codec_tests \
+            --test eudi_pid_codec_tests
+          cargo test --locked -p reallyme-identity-ffi \
+            --test identity_operation_tests
+          cargo test --locked -p reallyme-identity-wasm identity_operation_tests
+
+      - name: Execute EUDI OpenID composition tests
+        working-directory: identity
+        run: |
+          cargo test --locked \
+            -p reallyme-identity-oidf-openid4vci-wallet-host
+          cargo test --locked \
+            -p reallyme-identity-oidf-openid4vp-verifier-host
+          cargo test --locked \
+            -p reallyme-identity-oidf-openid4vp-wallet-harness
+          cargo test --locked \
+            -p reallyme-identity-oidf-openid4vp-wallet-host
+
+      - name: Execute the TypeScript EUDI SDK tests
+        working-directory: identity/packages/ts
+        run: |
+          npm ci
+          npm run build
+          node --test \
+            test/eudi-catalogue.test.mjs \
+            test/eudi-contract.test.mjs \
+            test/eudi-pid.test.mjs \
+            test/eudi-requirements.test.mjs
+
+      - name: Execute the Python EUDI SDK tests
+        working-directory: identity
+        run: |
+          test "$(python3 -m pip --version | awk '{print $2}')" = "26.2.2"
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --require-hashes \
+            --requirement "${GITHUB_WORKSPACE}/identity-conformance/scripts/eudi-identity-sdk-python-requirements.lock"
+          python3 -m build --wheel --no-isolation packages/python --outdir dist
+          python3 -m pip install --no-deps dist/reallyme_identity-*.whl
+          python3 -m pytest packages/python/tests/test_eudi.py
+
+      - name: Execute the Go EUDI SDK tests
+        working-directory: identity/packages/go
+        run: go test ./...
+
+      - name: Execute the Kotlin and JNI EUDI SDK tests
+        working-directory: identity/packages/kotlin
+        run: >-
+          ./gradlew --no-daemon test
+          --tests '*EudiTest*'
+          --tests '*EudiJniTest*'
+
+  swift:
+    name: EU Identity SDK · Swift
+    needs: linux
+    runs-on: macos-26
+    timeout-minutes: 180
+    steps:
+      - name: Checkout the exact tested Identity release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity
+          ref: ${{ needs.linux.outputs.candidate_commit }}
+          path: identity
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: "1.99.0"
+          components: llvm-tools
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          check-latest: true
+
+      - name: Verify the exact candidate checkout
+        env:
+          CANDIDATE_COMMIT: ${{ needs.linux.outputs.candidate_commit }}
+        run: |
+          test "$(git -C identity rev-parse HEAD)" = "${CANDIDATE_COMMIT}"
+          test -z "$(git -C identity status --porcelain=v1 --untracked-files=all)"
+
+      - name: Execute Swift EUDI tests through the source FFI
+        working-directory: identity
+        env:
+          REALLYME_IDENTITY_FFI_LIBRARY_PATH: ${{ github.workspace }}/identity/target/debug/libreallyme_identity_ffi.dylib
+          REALLYME_IDENTITY_SWIFTPM_RUNTIME_FFI: "1"
+        run: |
+          cargo build --locked -p reallyme-identity-ffi
+          touch .reallyme-identity-runtime-ffi
+          swift test --filter Eudi
+
+      - name: Execute Swift EUDI tests through the packaged XCFramework
+        working-directory: identity
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          scripts/build/build_swift_xcframework.sh
+          checksum="$(cat build/swift/ReallyMeCore.xcframework.checksum)"
+          node scripts/release-readiness/prepare_swift_binary_manifest.mjs \
+            "${TARGET_VERSION}" "${checksum}" \
+            --local-artifact-path build/swift/ReallyMeCore.xcframework
+          rm .reallyme-identity-runtime-ffi
+          swift package reset
+          swift test --filter Eudi
+
+  result:
+    name: EU Identity SDK · Passed
+    needs:
+      - linux
+      - swift
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout identity-conformance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: reallyme/identity-conformance
+          ref: ${{ inputs.framework_commit }}
+          path: identity-conformance
+          persist-credentials: false
+
+      - name: Install latest Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Download the caller-selected candidate BOM
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.candidate_artifact_name }}
+          path: ${{ runner.temp }}/eudi-identity-sdk-result-inputs
+          digest-mismatch: error
+
+      - name: Write the disclosure-safe execution result
+        env:
+          FRAMEWORK_COMMIT: ${{ inputs.framework_commit }}
+          FRAMEWORK_VERSION: ${{ needs.linux.outputs.framework_version }}
+          FRAMEWORK_MANIFEST_SHA256: ${{ needs.linux.outputs.framework_manifest_sha256 }}
+          FRAMEWORK_INPUT_SET_SHA256: ${{ needs.linux.outputs.framework_input_set_sha256 }}
+          PRODUCT_COMPONENT_BOM_SHA256: ${{ needs.linux.outputs.product_component_bom_sha256 }}
+          CANDIDATE_COMMIT: ${{ needs.linux.outputs.candidate_commit }}
+          CANDIDATE_CARGO_LOCK_SHA256: ${{ needs.linux.outputs.candidate_cargo_lock_sha256 }}
+          CANDIDATE_SOURCE_ARCHIVE_SHA256: ${{ needs.linux.outputs.candidate_source_archive_sha256 }}
+          SSI_SOURCE_ARCHIVE_SHA256: ${{ needs.linux.outputs.ssi_source_archive_sha256 }}
+          OPENID4VCI_SOURCE_ARCHIVE_SHA256: ${{ needs.linux.outputs.openid4vci_source_archive_sha256 }}
+          OPENID4VP_SOURCE_ARCHIVE_SHA256: ${{ needs.linux.outputs.openid4vp_source_archive_sha256 }}
+          WORKFLOW_REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REVISION: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          RELEASE_REF: ${{ inputs.release_ref }}
+          TARGET_MODE: ${{ inputs.target_mode }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          [[ "${CANDIDATE_CARGO_LOCK_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${CANDIDATE_SOURCE_ARCHIVE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${SSI_SOURCE_ARCHIVE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${OPENID4VCI_SOURCE_ARCHIVE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${OPENID4VP_SOURCE_ARCHIVE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${FRAMEWORK_MANIFEST_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${FRAMEWORK_INPUT_SET_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+          [[ "${WORKFLOW_REVISION}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${RUN_ID}" =~ ^[1-9][0-9]{0,18}$ ]]
+          [[ "${RUN_ATTEMPT}" =~ ^[1-9][0-9]{0,9}$ ]]
+          test "${WORKFLOW_REPOSITORY}" = "reallyme/identity"
+          input_dir="${RUNNER_TEMP}/eudi-identity-sdk-result-inputs"
+          shopt -s dotglob nullglob
+          entries=("${input_dir}"/*)
+          test "${#entries[@]}" -eq 1
+          bom="${input_dir}/product-component-bom.json"
+          test -f "${bom}"
+          test ! -L "${bom}"
+          selection="${RUNNER_TEMP}/eudi-identity-sdk-result-selection.json"
+          verifier_arguments=(
+            --bom "${bom}"
+            --target-mode "${TARGET_MODE}"
+            --target-commit "${CANDIDATE_COMMIT}"
+            --target-version "${TARGET_VERSION}"
+            --target-release-ref "${RELEASE_REF}"
+            --output "${selection}"
+          )
+          if [[ "${TARGET_MODE}" == "published" ]]; then
+            verifier_arguments+=(--target-release-id "${RELEASE_ID}")
+          fi
+          python3 identity-conformance/scripts/verify_identity_candidate_bom.py \
+            "${verifier_arguments[@]}"
+          test "$(jq -er '.product_component_bom_sha256' "${selection}")" = \
+            "${PRODUCT_COMPONENT_BOM_SHA256}"
+          components="$(jq -cS \
+            --arg ssi "${SSI_SOURCE_ARCHIVE_SHA256}" \
+            --arg openid4vci "${OPENID4VCI_SOURCE_ARCHIVE_SHA256}" \
+            --arg openid4vp "${OPENID4VP_SOURCE_ARCHIVE_SHA256}" \
+            '.dependencies | map(. + {source_archive_sha256: \
+              (if .component_id == "ssi" then $ssi \
+               elif .component_id == "openid4vci" then $openid4vci \
+               elif .component_id == "openid4vp" then $openid4vp \
+               else error("unexpected dependency") end)}) | sort_by(.component_id)' \
+            "${selection}")"
+          eudi_sources_sha256="$(sha256sum identity-conformance/upstream/eudi/sources.lock.json | awk '{print $1}')"
+          eudi_legal_sources_sha256="$(sha256sum identity-conformance/upstream/eudi/legal-sources.lock.json | awk '{print $1}')"
+          eudi_publications_sha256="$(sha256sum identity-conformance/references/eudi-publications.lock.json | awk '{print $1}')"
+          normative_sources_sha256="$(sha256sum identity-conformance/references/normative-sources.lock.json | awk '{print $1}')"
+          for digest in \
+            "${eudi_sources_sha256}" \
+            "${eudi_legal_sources_sha256}" \
+            "${eudi_publications_sha256}" \
+            "${normative_sources_sha256}"; do
+            [[ "${digest}" =~ ^[0-9a-f]{64}$ ]]
+          done
+          jq -n \
+            --arg created_at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --arg framework_commit "${FRAMEWORK_COMMIT}" \
+            --arg framework_version "${FRAMEWORK_VERSION}" \
+            --arg framework_manifest_sha256 "${FRAMEWORK_MANIFEST_SHA256}" \
+            --arg framework_input_set_sha256 "${FRAMEWORK_INPUT_SET_SHA256}" \
+            --arg candidate_cargo_lock_sha256 "${CANDIDATE_CARGO_LOCK_SHA256}" \
+            --arg candidate_source_archive_sha256 "${CANDIDATE_SOURCE_ARCHIVE_SHA256}" \
+            --arg product_component_bom_sha256 "${PRODUCT_COMPONENT_BOM_SHA256}" \
+            --arg workflow_repository "${WORKFLOW_REPOSITORY}" \
+            --arg workflow_revision "${WORKFLOW_REVISION}" \
+            --argjson run_id "${RUN_ID}" \
+            --argjson run_attempt "${RUN_ATTEMPT}" \
+            --arg eudi_sources_sha256 "${eudi_sources_sha256}" \
+            --arg eudi_legal_sources_sha256 "${eudi_legal_sources_sha256}" \
+            --arg eudi_publications_sha256 "${eudi_publications_sha256}" \
+            --arg normative_sources_sha256 "${normative_sources_sha256}" \
+            --arg candidate_commit "${CANDIDATE_COMMIT}" \
+            --arg release_id "${RELEASE_ID}" \
+            --arg release_ref "${RELEASE_REF}" \
+            --arg target_mode "${TARGET_MODE}" \
+            --arg target_version "${TARGET_VERSION}" \
+            --argjson components "${components}" \
+            '{
+              schema: "reallyme.identity.eudi_identity_sdk_execution_result.v1",
+              plan_id: "eudi-identity-sdk-v1",
+              result: "passed",
+              created_at: $created_at,
+              framework: {
+                version: $framework_version,
+                commit: $framework_commit,
+                manifest_sha256: $framework_manifest_sha256,
+                input_set_sha256: $framework_input_set_sha256
+              },
+              execution: {
+                workflow_repository: $workflow_repository,
+                workflow_revision: $workflow_revision,
+                run_id: $run_id,
+                run_attempt: $run_attempt
+              },
+              candidate: ({
+                mode: $target_mode,
+                repository: "https://github.com/reallyme/identity",
+                version: $target_version,
+                commit: $candidate_commit,
+                source_archive_sha256: $candidate_source_archive_sha256
+              } + if $target_mode == "published" then {
+                release_id: ($release_id | tonumber),
+                release_ref: $release_ref
+              } else {} end),
+              components: $components,
+              product_component_bom_sha256: $product_component_bom_sha256,
+              candidate_cargo_lock_sha256: $candidate_cargo_lock_sha256,
+              source_locks: {
+                eudi_sources_sha256: $eudi_sources_sha256,
+                eudi_legal_sources_sha256: $eudi_legal_sources_sha256,
+                eudi_publications_sha256: $eudi_publications_sha256,
+                normative_sources_sha256: $normative_sources_sha256
+              },
+              coverage: {
+                identity_operations: 8,
+                etsi_requirement_rows: 740,
+                eu_requirement_rows: 229,
+                code_and_composed_evidence_rows: 898,
+                external_evidence_rows: 53,
+                not_applicable_rows: 18
+              },
+              lanes: [
+                "normative_trace",
+                "rust_product_boundary",
+                "eudi_openid_composition",
+                "typescript_sdk",
+                "python_sdk",
+                "go_sdk",
+                "kotlin_sdk",
+                "swift_sdk"
+              ],
+              evidence_policy: {
+                contains_sensitive_data: false,
+                attestations_satisfied_behavior: false,
+                external_evidence_rows_counted_as_code_passes: false,
+                legal_conformity_claim: false,
+                certification_claim: false
+              }
+            }' > eudi-identity-sdk-result.json
+
+      - name: Validate the execution result
+        run: |
+          python3 identity-conformance/scripts/verify_eudi_identity_sdk_execution_result.py \
+            --result eudi-identity-sdk-result.json \
+            --product-component-bom "${RUNNER_TEMP}/eudi-identity-sdk-result-inputs/product-component-bom.json"
+
+      - name: Assemble the retained result bundle
+        run: |
+          bundle="${RUNNER_TEMP}/eudi-identity-sdk-result"
+          mkdir "${bundle}"
+          cp eudi-identity-sdk-result.json "${bundle}/execution-result.json"
+          cp "${RUNNER_TEMP}/eudi-identity-sdk-result-inputs/product-component-bom.json" \
+            "${bundle}/product-component-bom.json"
+
+      - name: Upload the execution result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: eudi-identity-sdk-${{ inputs.target_commit }}
+          path: ${{ runner.temp }}/eudi-identity-sdk-result
+          if-no-files-found: error
+          retention-days: 30
