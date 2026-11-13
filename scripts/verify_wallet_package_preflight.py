@@ -36,11 +36,11 @@ REQUIRED_STEPS = tuple(
     )
 )
 PREREQUISITE_POLICIES: dict[
-    str, tuple[str, str, dict[str, tuple[str, ...]]]
+    str, tuple[str, frozenset[str], dict[str, tuple[str, ...]]]
 ] = {
     "fuzz": (
         ".github/workflows/fuzz.yml",
-        "workflow_dispatch",
+        frozenset({"workflow_dispatch"}),
         {
             "fuzz target build": (
                 "Build fuzz targets",
@@ -67,7 +67,7 @@ PREREQUISITE_POLICIES: dict[
     ),
     "protobuf_ci": (
         ".github/workflows/protobuf-ci.yml",
-        "push",
+        frozenset({"push", "workflow_dispatch"}),
         {
             "schema, generation, hardening": (
                 "Validate schema and locked sources",
@@ -77,7 +77,7 @@ PREREQUISITE_POLICIES: dict[
     ),
     "rust_ci": (
         ".github/workflows/rust-ci.yml",
-        "push",
+        frozenset({"push", "workflow_dispatch"}),
         {
             "published crates on Rust 1.99": (
                 "Check published crates at the declared MSRV",
@@ -220,13 +220,15 @@ def verify_prerequisite_run(
     expected_commit: str,
     expected_run_id: int,
     expected_path: str,
-    expected_event: str,
+    expected_events: frozenset[str],
 ) -> None:
+    event = run.get("event")
     if (
         run.get("id") != expected_run_id
         or run.get("head_sha") != expected_commit
         or run.get("head_branch") != "main"
-        or run.get("event") != expected_event
+        or not isinstance(event, str)
+        or event not in expected_events
         or run.get("run_attempt") != 1
         or run.get("status") != "completed"
         or run.get("conclusion") != "success"
@@ -422,7 +424,7 @@ def verify(
         raise WalletPreflightError(
             WalletPreflightErrorReason.PREREQUISITE_MISMATCH
         )
-    for prerequisite_id, (workflow_path, expected_event, required_jobs) in (
+    for prerequisite_id, (workflow_path, expected_events, required_jobs) in (
         PREREQUISITE_POLICIES.items()
     ):
         expected_run_id = expected_run_ids[prerequisite_id]
@@ -441,7 +443,7 @@ def verify(
             expected_commit,
             expected_run_id,
             workflow_path,
-            expected_event,
+            expected_events,
         )
         verify_prerequisite_jobs(
             prerequisite_jobs[prerequisite_id],
