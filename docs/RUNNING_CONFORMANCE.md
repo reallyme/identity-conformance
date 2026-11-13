@@ -20,7 +20,7 @@ part of the composed Identity run.
 Choose a published Identity Conformance release and resolve its tag once:
 
 ```sh
-gh api repos/reallyme/identity-conformance/commits/v0.3.1 --jq .sha
+gh api repos/reallyme/identity-conformance/commits/v0.3.2 --jq .sha
 ```
 
 Use the returned full commit in both the reusable-workflow reference and the
@@ -81,7 +81,7 @@ with the product release and link the badge to it. Badge text should name the
 product release, lane, and framework release. For example:
 
 ```text
-Wallet vX.Y.Z · EU Wallet Engineering · Identity Conformance v0.3.1 · passing
+Wallet vX.Y.Z · EU Wallet Engineering · Identity Conformance v0.3.2 · passing
 ```
 
 Do not use the framework's own green CI badges as product pass badges. They show

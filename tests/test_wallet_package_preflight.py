@@ -113,7 +113,7 @@ def valid_prerequisite_runs() -> dict[str, dict[str, object]]:
             "id": PREREQUISITE_RUN_IDS[prerequisite_id],
             "head_sha": COMMIT,
             "head_branch": "main",
-            "event": policy[1],
+            "event": sorted(policy[1])[0],
             "run_attempt": 1,
             "status": "completed",
             "conclusion": "success",
@@ -200,6 +200,50 @@ class WalletReleasePreflightTests(unittest.TestCase):
                 rust_ci_run_id=33,
             ),
         )
+
+    def test_accepts_manual_protobuf_and_rust_prerequisites(self) -> None:
+        runs = valid_prerequisite_runs()
+        runs["protobuf_ci"]["event"] = "workflow_dispatch"
+        runs["rust_ci"]["event"] = "workflow_dispatch"
+        self.assertEqual(
+            VERIFIER.verify(
+                valid_result(),
+                valid_run(),
+                valid_jobs(),
+                runs,
+                valid_prerequisite_jobs(),
+                COMMIT,
+            ),
+            VERIFIER.PackageEvidenceIdentity(
+                preflight_run_id=RUN_ID,
+                preflight_job_id=JOB_ID,
+                fuzz_run_id=31,
+                protobuf_ci_run_id=32,
+                rust_ci_run_id=33,
+            ),
+        )
+
+    def test_rejects_malformed_or_unsupported_prerequisite_events(self) -> None:
+        invalid_events: tuple[object, ...] = (
+            None,
+            1,
+            [],
+            {},
+            "schedule",
+            "pull_request",
+        )
+        for prerequisite_id in VERIFIER.PREREQUISITE_POLICIES:
+            for event in invalid_events:
+                with self.subTest(prerequisite_id=prerequisite_id, event=event):
+                    runs = valid_prerequisite_runs()
+                    runs[prerequisite_id]["event"] = event
+                    self.assert_reason(
+                        valid_result(),
+                        valid_run(),
+                        valid_jobs(),
+                        VERIFIER.WalletPreflightErrorReason.PREREQUISITE_MISMATCH,
+                        prerequisite_runs=runs,
+                    )
 
     def test_required_steps_are_derived_from_release_bundle_policy(self) -> None:
         expected = tuple(
