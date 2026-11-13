@@ -1,0 +1,86 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://really.me/schemas/identity-conformance/wallet-conformance-statement-v1.json",
+  "title": "ReallyMe Wallet conformance statement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$comment", "schema", "result", "certification_claim", "profile", "product", "target", "coverage", "package_evidence", "framework", "execution", "badge"],
+  "properties": {
+    "$comment": {"type": "string"},
+    "schema": {"const": "reallyme.identity.wallet_conformance_statement.v1"},
+    "result": {"const": "passed"},
+    "certification_claim": {"const": false},
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "authority"],
+      "properties": {
+        "plan_id": {"const": "eudi-wallet-engineering-v1"},
+        "authority": {"const": "internal_engineering"}
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_id", "repository", "commit", "candidate_sha256"],
+      "properties": {
+        "product_id": {"const": "wallet"},
+        "repository": {"const": "https://github.com/reallyme/wallet"},
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "candidate_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "target": {"$ref": "eudi-wallet-deployment-manifest.schema.json#/$defs/target"},
+    "coverage": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/coverage"},
+    "package_evidence": {"$ref": "eudi-wallet-execution-result.schema.json#/properties/package_evidence"},
+    "publication_evidence": {"$ref": "wallet-publication-evidence.schema.json"},
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_version", "release_tag", "release_url", "repository_commit", "manifest_sha256", "input_set_sha256"],
+      "properties": {
+        "release_version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "release_tag": {"type": "string", "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "release_url": {"type": "string", "pattern": "^https://github\\.com/reallyme/identity-conformance/releases/tag/v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "repository_commit": {"$ref": "#/$defs/gitCommit"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "input_set_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflow_repository", "workflow_revision", "run_id", "run_attempt", "result_sha256"],
+      "properties": {
+        "workflow_repository": {"const": "reallyme/wallet"},
+        "workflow_revision": {"$ref": "#/$defs/gitCommit"},
+        "run_id": {"type": "integer", "minimum": 1},
+        "run_attempt": {"type": "integer", "minimum": 1},
+        "result_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "badge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "status", "framework_version", "plan_id"],
+      "properties": {
+        "label": {"const": "EU Wallet Engineering"},
+        "status": {"const": "passed"},
+        "framework_version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "plan_id": {"const": "eudi-wallet-engineering-v1"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"target": {"properties": {"mode": {"const": "published"}}, "required": ["mode"]}}},
+      "then": {"required": ["publication_evidence"]},
+      "else": {"not": {"required": ["publication_evidence"]}}
+    }
+  ],
+  "$defs": {
+    "gitCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

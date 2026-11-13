@@ -7,20 +7,20 @@ This adapter runs every Wallet workspace test, with every feature enabled,
 against an exact Wallet source revision. The result records the discovered test
 count and inventory digest. It also proves that each executable case declared
 in `conformance/eudi/test-cases.json` was present in Cargo's test inventory.
-The release bundle and component attestation must describe the same revision.
+The package bundle and component attestation must describe the same revision.
 The runner opens the bundle and independently checks its exact file set,
 preflight records, Cargo lock, public crate inventory, crate digests, and each
 crate's embedded source revision. It then verifies GitHub provenance for the
 preflight manifest and every crate, and checks the exact Rust CI, protobuf, and
-manually dispatched fuzz workflow run named by the release manifest. That run
+manually dispatched fuzz workflow run named by the preflight manifest. That run
 must complete all four time-boxed Wallet fuzz campaigns; the shorter push smoke
-run is not release evidence.
+run is not package evidence.
 
-The deployment manifest selects the Wallet release by release tag and commit.
-The source checkout, release artifact, and attestation must all name that
-commit. The selected tag must be the latest published Wallet release. A missing
-or different release is an error; the framework does not substitute a reference
-Wallet version.
+The deployment manifest selects a candidate or published target by exact
+version, commit, and preflight run. Candidate mode does not use GitHub release
+or crates.io metadata. Published mode also requires an exact release ID and tag
+and verifies the release assets, publication ledger, and registry checksums.
+The framework never selects a Wallet version for the caller.
 
 Source locks, normative ledgers, and component attestations are reported
 separately from code execution. They are not counted as executed tests. The
@@ -45,14 +45,15 @@ secrets.
 
 ## GitHub-hosted execution
 
-The workflow runs on GitHub's `ubuntu-26.04` runner. The caller supplies
-`framework_commit` and `candidate_artifact_name`. That artifact must come from
+The workflow runs on GitHub's `ubuntu-26.04` runner. The caller supplies the
+framework commit, conformance profile, target mode, target commit, target
+version, preflight run ID, and artifact name. The artifact must come from
 the same workflow run and contain `deployment.json`, `wallet-release`, and
 `wallet-attestation.json`. The framework checks the inputs, checks out the
 selected Wallet commit, runs the plan, and checks the result. It does not need a
 self-hosted runner, preinstalled files, or publishing credentials.
 
-Wallet prepares its release inputs and verifies their signed provenance. The
+Wallet prepares its package inputs and verifies their signed provenance. The
 framework checks the component identity, digests, framework locks, and result.
 Unverified metadata must not be used to create an attestation.
 
@@ -87,6 +88,11 @@ jobs:
     uses: reallyme/identity-conformance/.github/workflows/eudi-wallet-conformance.yml@FRAMEWORK_COMMIT
     with:
       framework_commit: FRAMEWORK_COMMIT
+      conformance_profile: eudi-wallet-engineering-v1
+      target_mode: candidate
+      target_commit: ${{ github.sha }}
+      target_version: ${{ needs.prepare-conformance-candidate.outputs.version }}
+      preflight_run_id: ${{ needs.prepare-conformance-candidate.outputs.preflight_run_id }}
       candidate_artifact_name: eudi-wallet-candidate-${{ github.sha }}
 ```
 

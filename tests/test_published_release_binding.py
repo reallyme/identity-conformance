@@ -40,6 +40,10 @@ STATEMENT = load_script(
     "build_product_conformance_statement",
     "scripts/build_product_conformance_statement.py",
 )
+WALLET_STATEMENT = load_script(
+    "build_wallet_conformance_statement_for_binding_tests",
+    "scripts/build_wallet_conformance_statement.py",
+)
 WALLET_EXECUTION_FIXTURE = load_script(
     "wallet_execution_fixture_for_statement_tests",
     "tests/test_eudi_wallet_conformance.py",
@@ -53,10 +57,10 @@ def write_json(path: Path, value: object) -> None:
 def framework_selection(commit: str = "a" * 40) -> dict[str, object]:
     return {
         "schema": "reallyme.identity.published_framework_selection.v1",
-        "release_version": "0.3.0",
-        "release_tag": "v0.3.0",
+        "release_version": "0.3.1",
+        "release_tag": "v0.3.1",
         "release_url": (
-            "https://github.com/reallyme/identity-conformance/releases/tag/v0.3.0"
+            "https://github.com/reallyme/identity-conformance/releases/tag/v0.3.1"
         ),
         "repository_commit": commit,
         "manifest_sha256": "b" * 64,
@@ -294,14 +298,11 @@ class ProductConformanceStatementTests(unittest.TestCase):
         return result
 
     def build_wallet_statement(self, result: dict[str, object]) -> dict[str, object]:
-        return STATEMENT.build_statement(
+        return WALLET_STATEMENT.build_statement(
             framework_selection(),
+            result,
             (json.dumps(result) + "\n").encode("utf-8"),
             "eudi-wallet-engineering-v1",
-            "wallet",
-            "reallyme-wallet-v1.0.0",
-            "https://github.com/reallyme/wallet",
-            "1" * 40,
             "reallyme/wallet",
             "f" * 40,
             123,
@@ -310,48 +311,48 @@ class ProductConformanceStatementTests(unittest.TestCase):
 
     def test_statement_binds_product_and_framework_releases(self) -> None:
         statement = self.build_wallet_statement(self.wallet_result())
-        self.assertEqual(statement["product"]["release_version"], "1.0.0")
+        self.assertEqual(statement["target"]["version"], "1.0.0")
         self.assertEqual(
             statement["product"]["candidate_sha256"],
             self.wallet_result()["candidate_sha256"],
         )
-        self.assertEqual(statement["framework"]["release_tag"], "v0.3.0")
+        self.assertEqual(statement["framework"]["release_tag"], "v0.3.1")
         self.assertFalse(statement["certification_claim"])
         self.assertEqual(
             statement["coverage"]["declared_cases"]["non_executable"], 8
         )
-        self.assertEqual(statement["release_evidence"]["preflight_run_id"], 41)
-        self.assertEqual(statement["release_evidence"]["fuzz_run_id"], 31)
+        self.assertEqual(statement["package_evidence"]["preflight_run_id"], 41)
+        self.assertEqual(statement["package_evidence"]["fuzz_run_id"], 31)
 
     def test_failed_result_is_rejected(self) -> None:
         result = self.wallet_result()
         result["result"] = "failed"
-        with self.assertRaises(STATEMENT.StatementError) as raised:
+        with self.assertRaises(WALLET_STATEMENT.WalletStatementError) as raised:
             self.build_wallet_statement(result)
         self.assertIs(
             raised.exception.reason,
-            STATEMENT.StatementErrorReason.RESULT_INVALID,
+            WALLET_STATEMENT.WalletStatementErrorReason.INVALID_RESULT,
         )
 
-    def test_substituted_product_release_is_rejected(self) -> None:
+    def test_substituted_product_commit_is_rejected(self) -> None:
         result = self.wallet_result()
         changed = copy.deepcopy(result)
-        changed["component"]["release_ref"] = "reallyme-wallet-v1.0.1"
-        with self.assertRaises(STATEMENT.StatementError) as raised:
+        changed["target"]["commit"] = "9" * 40
+        with self.assertRaises(WALLET_STATEMENT.WalletStatementError) as raised:
             self.build_wallet_statement(changed)
         self.assertIs(
             raised.exception.reason,
-            STATEMENT.StatementErrorReason.RESULT_INVALID,
+            WALLET_STATEMENT.WalletStatementErrorReason.INVALID_RESULT,
         )
 
     def test_wallet_statement_rejects_result_with_failed_execution_check(self) -> None:
         result = self.wallet_result()
         result["checks"][0]["result"] = "failed"
-        with self.assertRaises(STATEMENT.StatementError) as raised:
+        with self.assertRaises(WALLET_STATEMENT.WalletStatementError) as raised:
             self.build_wallet_statement(result)
         self.assertIs(
             raised.exception.reason,
-            STATEMENT.StatementErrorReason.RESULT_INVALID,
+            WALLET_STATEMENT.WalletStatementErrorReason.INVALID_RESULT,
         )
 
     def test_oidf_index_must_bind_the_same_identity_release(self) -> None:

@@ -64,9 +64,56 @@ def valid_attestation() -> dict[str, object]:
     }
 
 
+def valid_wallet_attestation(mode: str = "candidate") -> dict[str, object]:
+    value = valid_attestation()
+    value["schema"] = "reallyme.identity.wallet_component_attestation.v2"
+    value["component"] = {
+        "component_id": "wallet",
+        "repository": "https://github.com/reallyme/wallet",
+        "source_commit": "e" * 40,
+    }
+    del value["release"]
+    value["target"] = {
+        "mode": mode,
+        "version": "0.1.2",
+        "commit": "e" * 40,
+        "preflight_run_id": 123,
+    }
+    if mode == "published":
+        value["target"].update(
+            {"release_id": 456, "release_ref": "reallyme-wallet-v0.1.2"}
+        )
+    value["artifacts"] = [
+        {
+            "artifact_id": "wallet-package-bundle",
+            "kind": "archive",
+            "sha256": "b" * 64,
+        }
+    ]
+    return value
+
+
 class ComponentAttestationTests(unittest.TestCase):
     def test_valid_attestation_is_accepted(self) -> None:
         VERIFIER.verify_attestation(valid_attestation())
+
+    def test_wallet_candidate_attestation_is_accepted_without_release_claim(self) -> None:
+        VERIFIER.verify_attestation(valid_wallet_attestation())
+
+    def test_wallet_published_attestation_requires_frozen_release_identity(self) -> None:
+        VERIFIER.verify_attestation(valid_wallet_attestation("published"))
+
+    def test_wallet_candidate_cannot_contain_release_identity(self) -> None:
+        changed = valid_wallet_attestation()
+        changed["target"]["release_id"] = 456
+        with self.assertRaises(VERIFIER.AttestationError):
+            VERIFIER.verify_attestation(changed)
+
+    def test_wallet_release_ref_must_match_target_version(self) -> None:
+        changed = valid_wallet_attestation("published")
+        changed["target"]["release_ref"] = "reallyme-wallet-v9.9.9"
+        with self.assertRaises(VERIFIER.AttestationError):
+            VERIFIER.verify_attestation(changed)
 
     def test_duplicate_artifact_identifier_is_rejected(self) -> None:
         changed = valid_attestation()

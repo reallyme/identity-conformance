@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-"""Validate the closed inventory of ReallyMe release-based conformance inputs."""
+"""Validate ReallyMe repositories that callers may select at run time."""
 
 from __future__ import annotations
 
@@ -54,8 +54,8 @@ def load_inventory(path: Path = INVENTORY) -> dict[str, object]:
 def verify_inventory(value: dict[str, object]) -> None:
     if (
         set(value) != {"$comment", "schema", "purpose", "sources"}
-        or value.get("schema") != "reallyme.identity.release_source_inventory.v1"
-        or value.get("purpose") != "latest-published-release-conformance-inputs"
+        or value.get("schema") != "reallyme.identity.runtime_target_inventory.v1"
+        or value.get("purpose") != "runtime-target-discovery-only"
         or not isinstance(value.get("$comment"), str)
         or not isinstance(value.get("sources"), list)
     ):
@@ -78,7 +78,7 @@ def verify_inventory(value: dict[str, object]) -> None:
             or not isinstance(source["release_prefix"], str)
             or RELEASE_PREFIX.fullmatch(source["release_prefix"]) is None
             or not source["release_prefix"].startswith(f"reallyme-{component_id}-v")
-            or source["update_strategy"] != "latest_release"
+            or source["update_strategy"] != "observe_latest_release"
         ):
             raise ReleaseSourceError("release source entry is invalid")
         observed.add(component_id)
@@ -92,7 +92,7 @@ def main() -> int:
     except ReleaseSourceError as error:
         print(f"error: {error}", file=sys.stderr)
         return 65
-    print("ReallyMe latest-release source inventory valid (6 repositories)")
+    print("ReallyMe runtime target discovery inventory valid (6 repositories)")
     return 0
 
 

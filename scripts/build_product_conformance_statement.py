@@ -26,7 +26,6 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import strict_json  # noqa: E402
-import verify_eudi_wallet_execution_result as wallet_result_validator  # noqa: E402
 import verify_product_component_bom as product_bom_validator  # noqa: E402
 
 
@@ -370,33 +369,7 @@ def build_statement(
     candidate_sha256: object
     coverage: dict[str, object]
     composition: list[dict[str, object]] | None = None
-    release_evidence: dict[str, object] | None = None
-    component = result.get("component")
-    if result.get("result") == "passed":
-        try:
-            wallet_result_validator.verify_result(result)
-        except wallet_result_validator.runner.EudiWalletRunnerError as error:
-            raise StatementError(StatementErrorReason.RESULT_INVALID) from error
-        if (
-            result.get("framework_revision") != framework_commit
-            or result.get("plan_id") != plan_id
-            or not isinstance(component, dict)
-            or component.get("component_id") != product_id
-            or component.get("release_ref") != product_release_ref
-            or component.get("repository") != product_repository
-            or component.get("commit") != product_commit
-        ):
-            raise StatementError(StatementErrorReason.RESULT_INVALID)
-        candidate_sha256 = result.get("candidate_sha256")
-        raw_coverage = result.get("coverage")
-        raw_release_evidence = result.get("release_evidence")
-        if not isinstance(raw_coverage, dict) or not isinstance(
-            raw_release_evidence, dict
-        ):
-            raise StatementError(StatementErrorReason.RESULT_INVALID)
-        coverage = raw_coverage
-        release_evidence = raw_release_evidence
-    elif (
+    if (
         result.get("schema_version") == 3
         and result.get("protocol") in {"openid4vci", "openid4vp"}
     ):
@@ -489,8 +462,6 @@ def build_statement(
     }
     if composition is not None:
         statement["composition"] = composition
-    if release_evidence is not None:
-        statement["release_evidence"] = release_evidence
     return statement
 
 

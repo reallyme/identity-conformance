@@ -3,14 +3,14 @@
 A Wallet claim must identify the release, framework, plan, and evidence. A
 green framework workflow or a source inventory is not a product result.
 
-## Evidence expected for a Wallet release
+## Evidence expected for a Wallet target
 
 | Question | Required evidence |
 | --- | --- |
-| Which code was tested? | Immutable Wallet release reference and commit, candidate artifact digest, Cargo lock, source-lock digests, and the complete product BOM where applicable. |
+| Which code was tested? | Caller-selected Wallet version and commit, target mode, preflight run, package-bundle digest, Cargo lock, and source-lock digests. Published mode also records the immutable release ID and tag. |
 | Which framework was used? | Published Identity Conformance release and commit, release-manifest digest, and framework input-set digest. |
 | What ran? | Result file, workflow revision and run identifier, discovered test inventory and digest, and counts for executed, passed, failed, ignored, and filtered tests. |
-| Was the candidate substituted? | Deployment manifest, artifact digest, attestation digest, source checkout revision, and post-run revalidation of every mutable input. The framework opens the release bundle, verifies every preflight record and crate digest, matches the Cargo lock, checks each crate's embedded source revision, and verifies GitHub provenance for the manifest and every crate. |
+| Was the candidate substituted? | Deployment manifest, package-bundle digest, attestation digest, source checkout revision, and revalidation of every input. The framework opens the bundle, verifies every preflight record and crate digest, matches the Cargo lock, checks each crate's embedded source revision, and verifies GitHub provenance for the manifest and every crate. |
 | Did the release gates really run? | Live GitHub records for the exact preflight, Rust CI, protobuf, and manually dispatched fuzz runs. The fuzz run must complete four five-minute campaigns: protobuf decoding, protobuf JSON, identifiers, and the Wallet state machine. The framework checks the commit, workflow, event, attempt, jobs, and required steps. These run identifiers are included in the public statement. |
 | Which EU rules were checked? | Rule identifiers, pinned source commits, extracted implementation values, operators, expected values, and per-rule results. |
 | What remains incomplete? | The result preserves counts for implemented, partial, delegated, operational, executable, and fixture-only areas. A passing engineering lane does not promote incomplete areas to implemented. |
@@ -28,8 +28,8 @@ binding, flow resumption after uncertain delivery, and lifecycle enforcement.
 Component attestations and source inventories are recorded separately and do
 not count as executed tests.
 
-The result reports incomplete coverage explicitly. At the current Wallet
-revision, the EU minimums include implemented, partial, delegated, operational,
+The result reports incomplete coverage explicitly. The EU minimums include
+implemented, partial, delegated, operational,
 and fixture-seeded areas. It lists every incomplete minimum with its stated
 limitations and every fixture-only case by identifier. These details remain
 visible in the public product statement after a passing run.
@@ -50,7 +50,7 @@ must agree.
 `reallyme/wallet` is a cross-platform core library. It does not ship an Android
 or iOS application. The EUDI Wallet UI suite and the EU Android and iOS
 reference apps are therefore not application tests for this release. Their
-source inventories remain pinned so a future app can select them without
+source inventories remain framework-pinned so a future app can select them without
 changing their status into a core-library pass.
 
 The EU Interoperability Test Bed is applicable only to a composed deployed

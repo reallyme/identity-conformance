@@ -3,8 +3,4 @@
 
 schema: reallyme.identity.conformance_artifact_map.v1
 repository: reallyme/identity-conformance
-artifacts:
-  specialized-audit:etsi_eaa_pid_requirement_trace:
-    artifact_id: etsi-eaa-pid-requirement-trace
-    kind: etsi_eaa_pid_requirement_trace
-    path: references/etsi-eaa-pid/requirement-trace.json
+artifacts: {}

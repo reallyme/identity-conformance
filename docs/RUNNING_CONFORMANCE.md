@@ -20,7 +20,7 @@ part of the composed Identity run.
 Choose a published Identity Conformance release and resolve its tag once:
 
 ```sh
-gh api repos/reallyme/identity-conformance/commits/v0.3.0 --jq .sha
+gh api repos/reallyme/identity-conformance/commits/v0.3.1 --jq .sha
 ```
 
 Use the returned full commit in both the reusable-workflow reference and the
@@ -39,6 +39,11 @@ jobs:
     uses: reallyme/identity-conformance/.github/workflows/eudi-wallet-conformance.yml@FRAMEWORK_COMMIT
     with:
       framework_commit: FRAMEWORK_COMMIT
+      conformance_profile: eudi-wallet-engineering-v1
+      target_mode: candidate
+      target_commit: ${{ github.sha }}
+      target_version: ${{ needs.prepare-conformance-candidate.outputs.version }}
+      preflight_run_id: ${{ needs.prepare-conformance-candidate.outputs.preflight_run_id }}
       candidate_artifact_name: eudi-wallet-candidate-${{ github.sha }}
 ```
 
@@ -65,15 +70,18 @@ EU job cannot produce an OIDF Wallet result by itself.
 
 ## Results and badges
 
-A successful product run uploads `product-conformance-statement.json`. The
-statement records the scope that actually ran. EU statements retain incomplete
+A successful Wallet run uploads `wallet-conformance-statement.json`; the other
+product lanes upload their applicable statements. Each statement records the
+scope that actually ran. Callers select a named framework profile, not a list
+of individual checks. A profile pass earns only that profile's badge. EU
+statements retain incomplete
 and fixture-only counts; OIDF statements list the exact roles, profiles, module
 executions, and suite revision. After disclosure review, publish that statement
 with the product release and link the badge to it. Badge text should name the
 product release, lane, and framework release. For example:
 
 ```text
-Wallet v0.4.0 · EU Wallet engineering · Identity Conformance v0.3.0 · passing
+Wallet vX.Y.Z · EU Wallet Engineering · Identity Conformance v0.3.1 · passing
 ```
 
 Do not use the framework's own green CI badges as product pass badges. They show

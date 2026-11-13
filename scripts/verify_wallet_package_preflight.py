@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-"""Verify the Wallet release preflight through independent GitHub API records."""
+"""Verify the Wallet package preflight through independent GitHub API records."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 
 import strict_json  # noqa: E402
-import verify_wallet_release_bundle as wallet_release_bundle  # noqa: E402
+import verify_wallet_package_bundle as wallet_package_bundle  # noqa: E402
 
 
 MAX_INPUT_BYTES = 4 * 1024 * 1024
@@ -31,7 +31,7 @@ GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 REQUIRED_STEPS = tuple(
     dict.fromkeys(
         step
-        for steps in wallet_release_bundle.EXPECTED_EVIDENCE_STEPS.values()
+        for steps in wallet_package_bundle.EXPECTED_EVIDENCE_STEPS.values()
         for step in steps
     )
 )
@@ -122,7 +122,7 @@ class WalletPreflightError(Exception):
 
 
 @dataclass(frozen=True)
-class ReleaseEvidenceIdentity:
+class PackageEvidenceIdentity:
     preflight_run_id: int
     preflight_job_id: int
     fuzz_run_id: int
@@ -131,7 +131,7 @@ class ReleaseEvidenceIdentity:
 
 
 def fail(reason: WalletPreflightErrorReason) -> NoReturn:
-    print(f"Wallet release preflight verification failed: {reason.value}", file=sys.stderr)
+    print(f"Wallet package preflight verification failed: {reason.value}", file=sys.stderr)
     raise SystemExit(65)
 
 
@@ -158,20 +158,23 @@ def positive_identifier(value: object) -> int:
 
 def result_identity(
     result: dict[str, object], expected_commit: str
-) -> ReleaseEvidenceIdentity:
+) -> PackageEvidenceIdentity:
     component = result.get("component")
-    evidence = result.get("release_evidence")
+    target = result.get("target")
+    evidence = result.get("package_evidence")
     if (
         GIT_COMMIT.fullmatch(expected_commit) is None
         or not isinstance(component, dict)
         or component.get("component_id") != "wallet"
         or component.get("repository") != "https://github.com/reallyme/wallet"
         or component.get("commit") != expected_commit
+        or not isinstance(target, dict)
+        or target.get("commit") != expected_commit
         or not isinstance(evidence, dict)
     ):
         raise WalletPreflightError(WalletPreflightErrorReason.RESULT_MISMATCH)
     try:
-        identity = ReleaseEvidenceIdentity(
+        identity = PackageEvidenceIdentity(
             preflight_run_id=positive_identifier(evidence.get("preflight_run_id")),
             preflight_job_id=positive_identifier(evidence.get("preflight_job_id")),
             fuzz_run_id=positive_identifier(evidence.get("fuzz_run_id")),
@@ -190,6 +193,8 @@ def result_identity(
             identity.rust_ci_run_id,
         }
     ) != 4:
+        raise WalletPreflightError(WalletPreflightErrorReason.RESULT_MISMATCH)
+    if target.get("preflight_run_id") != identity.preflight_run_id:
         raise WalletPreflightError(WalletPreflightErrorReason.RESULT_MISMATCH)
     return identity
 
@@ -396,7 +401,7 @@ def verify(
     prerequisite_runs: dict[str, dict[str, object]],
     prerequisite_jobs: dict[str, dict[str, object]],
     expected_commit: str,
-) -> ReleaseEvidenceIdentity:
+) -> PackageEvidenceIdentity:
     identity = result_identity(result, expected_commit)
     verify_run(run, expected_commit, identity.preflight_run_id)
     verify_jobs(
@@ -480,7 +485,7 @@ def main() -> int:
     except WalletPreflightError as error:
         fail(error.reason)
     print(
-        "Wallet release preflight and prerequisite runs verified "
+        "Wallet package preflight and prerequisite runs verified "
         f"for run {identity.preflight_run_id} job {identity.preflight_job_id}"
     )
     return 0

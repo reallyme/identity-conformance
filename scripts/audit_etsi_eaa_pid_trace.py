@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import subprocess
 import sys
@@ -27,12 +26,6 @@ import strict_json  # noqa: E402
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-TRACE_SOURCE_LOCK_PATH = (
-    REPOSITORY_ROOT / "references" / "reallyme" / "trace-sources.lock.json"
-)
-DEFAULT_OUTPUT_PATH = (
-    REPOSITORY_ROOT / "references" / "etsi-eaa-pid" / "requirement-trace.json"
-)
 TRACE_RELATIVE_PATH = Path(
     "crates/eudi/etsi-eaa-conformance/requirements/requirement-trace.tsv"
 )
@@ -107,14 +100,16 @@ NOT_APPLICABLE_DISPOSITION = "not_applicable"
 IDENTIFIER = re.compile(r"^[^\x00-\x1f\x7f]{1,512}$")
 SYMBOL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
-RELEASE_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-TRACE_SOURCE_ROOT_ENVIRONMENT = "IDENTITY_CONFORMANCE_TRACE_SOURCE_ROOT"
+EXPECTED_COMPONENT_REPOSITORIES = {
+    "openid4vci": "https://github.com/reallyme/openid4vci",
+    "openid4vp": "https://github.com/reallyme/openid4vp",
+    "ssi": "https://github.com/reallyme/ssi",
+}
 
 
 class Component(NamedTuple):
     component_id: str
     checkout: Path
-    release_ref: str
     commit: str
 
 
@@ -145,11 +140,7 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-def trace_source_root() -> Path | None:
-    raw_root = os.environ.get(TRACE_SOURCE_ROOT_ENVIRONMENT)
-    if raw_root is None:
-        return None
-    root = Path(raw_root)
+def checked_source_root(root: Path) -> Path:
     if not root.is_absolute() or root.is_symlink():
         raise AuditError("trace source root is invalid")
     try:
@@ -161,56 +152,53 @@ def trace_source_root() -> Path | None:
     return resolved
 
 
-def load_components(path: Path = TRACE_SOURCE_LOCK_PATH) -> dict[str, Component]:
+def load_components(path: Path, source_root: Path) -> dict[str, Component]:
     try:
         value = strict_json.loads(read_regular_file(path).decode("utf-8"))
     except (UnicodeError, strict_json.StrictJsonError) as error:
         raise AuditError("trace source lock is invalid") from error
     if (
         not isinstance(value, dict)
-        or value.get("schema_version") != 2
-        or value.get("purpose") != "etsi-eaa-pid-trace-source-lock"
+        or set(value) != {"schema", "purpose", "sources"}
+        or value.get("schema") != "reallyme.identity.trace_source_selection.v1"
+        or value.get("purpose") != "caller-selected-product-sources"
         or not isinstance(value.get("sources"), list)
     ):
         raise AuditError("trace source lock has an invalid source inventory")
 
-    component_root = trace_source_root()
+    component_root = checked_source_root(source_root)
     components: dict[str, Component] = {}
     for raw in value["sources"]:
-        if not isinstance(raw, dict):
+        if not isinstance(raw, dict) or set(raw) != {
+            "component_id",
+            "repository",
+            "commit",
+        }:
             raise AuditError("trace source lock entry is invalid")
         component_id = raw.get("component_id")
-        relative_checkout = raw.get("local_checkout")
-        release_ref = raw.get("release_ref")
-        update_strategy = raw.get("update_strategy")
+        repository = raw.get("repository")
         commit = raw.get("commit")
         if (
             not isinstance(component_id, str)
-            or not isinstance(relative_checkout, str)
-            or not isinstance(release_ref, str)
-            or RELEASE_REF.fullmatch(release_ref) is None
-            or update_strategy != "latest_release"
+            or repository != EXPECTED_COMPONENT_REPOSITORIES.get(component_id)
             or not isinstance(commit, str)
             or COMMIT.fullmatch(commit) is None
             or component_id in components
         ):
             raise AuditError("trace source lock entry is invalid")
-        if component_root is None:
-            checkout = (REPOSITORY_ROOT / relative_checkout).resolve()
-        else:
-            checkout_candidate = component_root / component_id
-            if checkout_candidate.is_symlink():
-                raise AuditError("trace source checkout is invalid")
-            try:
-                checkout = checkout_candidate.resolve(strict=True)
-                checkout.relative_to(component_root)
-            except (OSError, ValueError) as error:
-                raise AuditError("trace source checkout is unavailable") from error
-            if not checkout.is_dir():
-                raise AuditError("trace source checkout is invalid")
-        components[component_id] = Component(
-            component_id, checkout, release_ref, commit
-        )
+        checkout_candidate = component_root / component_id
+        if checkout_candidate.is_symlink():
+            raise AuditError("trace source checkout is invalid")
+        try:
+            checkout = checkout_candidate.resolve(strict=True)
+            checkout.relative_to(component_root)
+        except (OSError, ValueError) as error:
+            raise AuditError("trace source checkout is unavailable") from error
+        if not checkout.is_dir():
+            raise AuditError("trace source checkout is invalid")
+        components[component_id] = Component(component_id, checkout, commit)
+    if set(components) != set(EXPECTED_COMPONENT_REPOSITORIES):
+        raise AuditError("trace source selection is incomplete")
     return components
 
 
@@ -412,8 +400,11 @@ def build_artifact(
     if not required_components.issubset(components):
         raise AuditError("trace source lock omits a trace owner")
     ssi = components["ssi"]
-    if verify_component_revision and git_head(ssi.checkout) != ssi.commit:
-        raise AuditError("SSI checkout does not match the pinned component revision")
+    if verify_component_revision and any(
+        git_head(component.checkout) != component.commit
+        for component in components.values()
+    ):
+        raise AuditError("checkout does not match the caller-selected revision")
 
     trace_path = ssi.checkout / TRACE_RELATIVE_PATH
     index_path = ssi.checkout / INDEX_RELATIVE_PATH
@@ -477,6 +468,10 @@ def build_artifact(
         "source_integrity": {
             "ssi_repository": "https://github.com/reallyme/ssi",
             "ssi_commit": ssi.commit,
+            "component_commits": {
+                component_id: component.commit
+                for component_id, component in sorted(components.items())
+            },
             "trace_path": TRACE_RELATIVE_PATH.as_posix(),
             "trace_sha256": sha256_bytes(trace_raw),
             "index_sha256": sha256_bytes(read_regular_file(index_path)),
@@ -513,10 +508,14 @@ def serialized_artifact(artifact: dict[str, object]) -> bytes:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
+    parser.add_argument("--source-selection", required=True, type=Path)
+    parser.add_argument("--source-root", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
-        artifact = build_artifact(load_components())
+        artifact = build_artifact(
+            load_components(args.source_selection, args.source_root)
+        )
         content = serialized_artifact(artifact)
         output = args.output.resolve()
         if args.check:

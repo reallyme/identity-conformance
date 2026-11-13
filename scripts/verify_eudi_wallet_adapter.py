@@ -55,7 +55,7 @@ EXPECTED_ASSERTIONS = {
         "source.cargo-lock",
         "source.wallet-sources-lock",
         "source.eudi-test-cases",
-        "artifact.wallet-release-bundle",
+        "artifact.wallet-package-bundle",
     ],
     "upstream_reference_binding": [
         "source.reference-implementation-lock",

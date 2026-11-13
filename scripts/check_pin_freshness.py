@@ -39,7 +39,6 @@ EUDI_SOURCES = REPOSITORY_ROOT / "upstream/eudi/sources.lock.json"
 EUDI_PUBLICATIONS = REPOSITORY_ROOT / "references/eudi-publications.lock.json"
 OIDF_SPECIFICATIONS = REPOSITORY_ROOT / "upstream/oidf/specifications.lock.json"
 PIN_POLICY = REPOSITORY_ROOT / "references/pin-policy.json"
-TRACE_SOURCES = REPOSITORY_ROOT / "references/reallyme/trace-sources.lock.json"
 REALLYME_RELEASE_SOURCES = (
     REPOSITORY_ROOT / "references/reallyme/release-sources.json"
 )
@@ -449,50 +448,10 @@ def check_oidf(fetcher: FetchJson) -> list[CheckResult]:
     ]
 
 
-def check_reallyme_trace_releases(fetcher: FetchJson) -> list[CheckResult]:
-    lock = read_object(TRACE_SOURCES)
-    sources = required_list(lock.get("sources"), "ReallyMe trace sources")
-    results: list[CheckResult] = []
-    observed_components: set[str] = set()
-    for raw_source in sources:
-        if not isinstance(raw_source, dict):
-            raise FreshnessError("ReallyMe trace source is invalid")
-        component_id = required_string(
-            raw_source.get("component_id"), "ReallyMe component id"
-        )
-        if component_id in observed_components:
-            raise FreshnessError("ReallyMe trace source is duplicated")
-        observed_components.add(component_id)
-        if raw_source.get("update_strategy") != "latest_release":
-            raise FreshnessError("ReallyMe trace source policy is invalid")
-        repository = github_repository_from_url(
-            raw_source.get("repository"), "ReallyMe component repository"
-        )
-        expected_repository = f"reallyme/{component_id}"
-        if repository != expected_repository:
-            raise FreshnessError("ReallyMe component repository identity is invalid")
-        results.extend(
-            check_github_release(
-                f"reallyme.trace.{component_id}",
-                repository,
-                required_string(
-                    raw_source.get("release_ref"), "ReallyMe component release"
-                ),
-                required_string(
-                    raw_source.get("commit"), "ReallyMe component release commit"
-                ),
-                fetcher,
-            )
-        )
-    if observed_components != {"openid4vci", "openid4vp", "ssi"}:
-        raise FreshnessError("ReallyMe trace source inventory is invalid")
-    return results
-
-
 def observe_reallyme_release_sources(
     fetcher: FetchJson,
 ) -> tuple[list[ReleaseSourceObservation], list[UnavailableCheck]]:
-    """Resolve latest release inputs without turning them into framework pins."""
+    """Report convenient caller targets without changing the framework baseline."""
 
     inventory = read_object(REALLYME_RELEASE_SOURCES)
     try:
@@ -1120,13 +1079,6 @@ def run_checks(
         release_source_observations.extend(observations)
         unavailable_checks.extend(unavailable_releases)
 
-    collect_check_group(
-        "reallyme_trace_releases",
-        lambda: (check_reallyme_trace_releases(fetcher), []),
-        results,
-        manual_sources,
-        unavailable_checks,
-    )
     collect_check_group(
         "oidf_suite",
         lambda: (check_oidf(fetcher), []),

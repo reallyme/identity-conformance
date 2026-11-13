@@ -407,48 +407,6 @@ class PinFreshnessTests(unittest.TestCase):
         self.assertEqual(results[1].observed, observed_commit)
         self.assertEqual(results[1].status, "stale")
 
-    def test_reallyme_trace_sources_follow_latest_releases(self) -> None:
-        commit = "a" * 40
-        lock = {
-            "sources": [
-                {
-                    "component_id": "openid4vci",
-                    "repository": "https://github.com/reallyme/openid4vci",
-                    "release_ref": "reallyme-openid4vci-v1.0.0",
-                    "update_strategy": "latest_release",
-                    "commit": commit,
-                },
-                {
-                    "component_id": "openid4vp",
-                    "repository": "https://github.com/reallyme/openid4vp",
-                    "release_ref": "reallyme-openid4vp-v1.0.0",
-                    "update_strategy": "latest_release",
-                    "commit": commit,
-                },
-                {
-                    "component_id": "ssi",
-                    "repository": "https://github.com/reallyme/ssi",
-                    "release_ref": "reallyme-ssi-v1.0.0",
-                    "update_strategy": "latest_release",
-                    "commit": commit,
-                },
-            ]
-        }
-
-        def fetcher(url: str) -> object:
-            if url.endswith("/releases/latest"):
-                repository = url.split("/repos/", maxsplit=1)[1].split(
-                    "/releases/", maxsplit=1
-                )[0]
-                component = repository.split("/", maxsplit=1)[1]
-                return {"tag_name": f"reallyme-{component}-v1.0.0"}
-            return {"object": {"type": "commit", "sha": commit}}
-
-        with patch.object(FRESHNESS, "read_object", return_value=lock):
-            results = FRESHNESS.check_reallyme_trace_releases(fetcher)
-        self.assertTrue(results)
-        self.assertTrue(all(result.status == "current" for result in results))
-
     def test_reallyme_release_sources_record_latest_release_commits(self) -> None:
         components = (
             "ssi",
@@ -460,14 +418,14 @@ class PinFreshnessTests(unittest.TestCase):
         )
         inventory = {
             "$comment": "license",
-            "schema": "reallyme.identity.release_source_inventory.v1",
-            "purpose": "latest-published-release-conformance-inputs",
+            "schema": "reallyme.identity.runtime_target_inventory.v1",
+            "purpose": "runtime-target-discovery-only",
             "sources": [
                 {
                     "component_id": component,
                     "repository": f"https://github.com/reallyme/{component}",
                     "release_prefix": f"reallyme-{component}-v",
-                    "update_strategy": "latest_release",
+                    "update_strategy": "observe_latest_release",
                 }
                 for component in components
             ],
@@ -510,14 +468,14 @@ class PinFreshnessTests(unittest.TestCase):
         )
         inventory = {
             "$comment": "license",
-            "schema": "reallyme.identity.release_source_inventory.v1",
-            "purpose": "latest-published-release-conformance-inputs",
+            "schema": "reallyme.identity.runtime_target_inventory.v1",
+            "purpose": "runtime-target-discovery-only",
             "sources": [
                 {
                     "component_id": component,
                     "repository": f"https://github.com/reallyme/{component}",
                     "release_prefix": f"reallyme-{component}-v",
-                    "update_strategy": "latest_release",
+                    "update_strategy": "observe_latest_release",
                 }
                 for component in components
             ],

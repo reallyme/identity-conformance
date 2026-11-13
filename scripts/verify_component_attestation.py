@@ -62,6 +62,7 @@ class AttestationErrorReason(Enum):
     INVALID_JSON = "invalid_json"
     INVALID_COMPONENT = "invalid_component"
     INVALID_RELEASE = "invalid_release"
+    INVALID_TARGET = "invalid_target"
     INVALID_ARTIFACT = "invalid_artifact"
     INVALID_DEPENDENCY_LOCK = "invalid_dependency_lock"
     INVALID_TOOLCHAIN = "invalid_toolchain"
@@ -88,13 +89,15 @@ def exact_object(
 
 
 def verify_attestation(value: dict[str, object]) -> None:
+    schema = value.get("schema")
+    identity_key = "release" if schema == "reallyme.identity.component_attestation.v1" else "target"
     exact_object(
         value,
         {
             "schema",
             "classification",
             "component",
-            "release",
+            identity_key,
             "artifacts",
             "dependency_lock",
             "toolchain",
@@ -105,7 +108,11 @@ def verify_attestation(value: dict[str, object]) -> None:
         AttestationErrorReason.INVALID_JSON,
     )
     if (
-        value["schema"] != "reallyme.identity.component_attestation.v1"
+        schema
+        not in {
+            "reallyme.identity.component_attestation.v1",
+            "reallyme.identity.wallet_component_attestation.v2",
+        }
         or value["classification"] != "internal"
         or not isinstance(value["created_at"], str)
         or TIMESTAMP.fullmatch(value["created_at"]) is None
@@ -125,22 +132,55 @@ def verify_attestation(value: dict[str, object]) -> None:
         or GIT_COMMIT.fullmatch(component["source_commit"]) is None
     ):
         raise AttestationError(AttestationErrorReason.INVALID_COMPONENT)
-    release = exact_object(
-        value["release"],
-        {"version", "source_ref"},
-        AttestationErrorReason.INVALID_RELEASE,
-    )
-    if (
-        not isinstance(release["version"], str)
-        or SEMVER.fullmatch(release["version"]) is None
-        or not isinstance(release["source_ref"], str)
-        or SOURCE_REF.fullmatch(release["source_ref"]) is None
-        or ".." in release["source_ref"]
-        or release["source_ref"].startswith("/")
-        or release["source_ref"].endswith("/")
-        or "//" in release["source_ref"]
-    ):
-        raise AttestationError(AttestationErrorReason.INVALID_RELEASE)
+    if schema == "reallyme.identity.component_attestation.v1":
+        release = exact_object(
+            value["release"],
+            {"version", "source_ref"},
+            AttestationErrorReason.INVALID_RELEASE,
+        )
+        if (
+            not isinstance(release["version"], str)
+            or SEMVER.fullmatch(release["version"]) is None
+            or not isinstance(release["source_ref"], str)
+            or SOURCE_REF.fullmatch(release["source_ref"]) is None
+            or ".." in release["source_ref"]
+            or release["source_ref"].startswith("/")
+            or release["source_ref"].endswith("/")
+            or "//" in release["source_ref"]
+        ):
+            raise AttestationError(AttestationErrorReason.INVALID_RELEASE)
+    else:
+        target = value.get("target")
+        if not isinstance(target, dict):
+            raise AttestationError(AttestationErrorReason.INVALID_TARGET)
+        mode = target.get("mode")
+        target_keys = {"mode", "version", "commit", "preflight_run_id"}
+        if mode == "published":
+            target_keys.update({"release_id", "release_ref"})
+        target = exact_object(
+            target,
+            target_keys,
+            AttestationErrorReason.INVALID_TARGET,
+        )
+        if (
+            mode not in {"candidate", "published"}
+            or not isinstance(target["version"], str)
+            or SEMVER.fullmatch(target["version"]) is None
+            or not isinstance(target["commit"], str)
+            or GIT_COMMIT.fullmatch(target["commit"]) is None
+            or type(target["preflight_run_id"]) is not int
+            or target["preflight_run_id"] < 1
+            or (
+                mode == "published"
+                and (
+                    type(target["release_id"]) is not int
+                    or target["release_id"] < 1
+                    or target["release_ref"]
+                    != f"reallyme-wallet-v{target['version']}"
+                )
+            )
+        ):
+            raise AttestationError(AttestationErrorReason.INVALID_TARGET)
     artifacts = value["artifacts"]
     if not isinstance(artifacts, list) or not 1 <= len(artifacts) <= 32:
         raise AttestationError(AttestationErrorReason.INVALID_ARTIFACT)

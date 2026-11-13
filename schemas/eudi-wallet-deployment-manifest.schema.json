@@ -1,31 +1,31 @@
 {
   "$comment": "SPDX-FileCopyrightText: 2026 ReallyMe Technologies Limited\nSPDX-License-Identifier: MIT OR Apache-2.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://really.me/schemas/identity-conformance/eudi-wallet-deployment-manifest-v1.json",
-  "title": "ReallyMe EUDI Wallet deployment manifest",
+  "$id": "https://really.me/schemas/identity-conformance/eudi-wallet-deployment-manifest-v2.json",
+  "title": "ReallyMe EUDI Wallet target manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "plan_id", "component", "release_artifact", "component_attestation_sha256", "source_locks", "evidence_policy"],
+  "required": ["schema", "plan_id", "component", "target", "package_bundle", "component_attestation_sha256", "source_locks", "evidence_policy"],
   "properties": {
-    "schema": {"const": "reallyme.identity.eudi_wallet_deployment_manifest.v1"},
+    "schema": {"const": "reallyme.identity.eudi_wallet_deployment_manifest.v2"},
     "plan_id": {"const": "eudi-wallet-engineering-v1"},
     "component": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["component_id", "repository", "release_ref", "commit"],
+      "required": ["component_id", "repository", "commit"],
       "properties": {
         "component_id": {"const": "wallet"},
         "repository": {"const": "https://github.com/reallyme/wallet"},
-        "release_ref": {"type": "string", "pattern": "^reallyme-wallet-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"},
-        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        "commit": {"$ref": "#/$defs/git_commit"}
       }
     },
-    "release_artifact": {
+    "target": {"$ref": "#/$defs/target"},
+    "package_bundle": {
       "type": "object",
       "additionalProperties": false,
       "required": ["artifact_id", "kind", "sha256"],
       "properties": {
-        "artifact_id": {"const": "wallet-release-bundle"},
+        "artifact_id": {"const": "wallet-package-bundle"},
         "kind": {"const": "archive"},
         "sha256": {"$ref": "#/$defs/sha256"}
       }
@@ -43,5 +43,29 @@
     },
     "evidence_policy": {"$ref": "eudi-wallet-conformance-plan.schema.json#/$defs/evidence_policy"}
   },
-  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+  "$defs": {
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "version", "commit", "preflight_run_id"],
+      "properties": {
+        "mode": {"enum": ["candidate", "published"]},
+        "version": {"$ref": "#/$defs/semver"},
+        "commit": {"$ref": "#/$defs/git_commit"},
+        "preflight_run_id": {"type": "integer", "minimum": 1},
+        "release_id": {"type": "integer", "minimum": 1},
+        "release_ref": {"type": "string", "pattern": "^reallyme-wallet-v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"const": "published"}}, "required": ["mode"]},
+          "then": {"required": ["release_id", "release_ref"]},
+          "else": {"not": {"anyOf": [{"required": ["release_id"]}, {"required": ["release_ref"]}]}}
+        }
+      ]
+    }
+  }
 }
